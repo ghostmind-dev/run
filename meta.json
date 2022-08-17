@@ -1,0 +1,7 @@
+{
+    "type": "npm_package",
+    "names": [
+        "@angular/core",
+        "@angular/common"
+    ]
+}

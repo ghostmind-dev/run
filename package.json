@@ -1,0 +1,30 @@
+{
+  "name": "@ghostmind-dev/run",
+  "version": "0.1.81",
+  "description": "",
+  "main": "src/main.mjs",
+  "bin": {
+    "run": "src/bin/cmd.mjs"
+  },
+  "scripts": {
+    "publish_patch": "npm version patch && npm publish -f",
+    "publish_minor": "npm version minor && npm publish",
+    "publish_major": "npm version major && npm publish",
+    "test": "node test/utils-test.mjs"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/core": "^1.9.1",
+    "@google-cloud/storage": "^6.5.0",
+    "commander": "^9.4.0",
+    "dotenv": "^16.0.1",
+    "inquirer": "^9.1.0",
+    "lodash": "^4.17.21",
+    "zx": "^7.0.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghostmind-dev/run.git"
+  }
+}
