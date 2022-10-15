@@ -248,6 +248,7 @@ export async function terraformDestroy(component, options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function terraformApply(component, options) {
+  // test
   try {
     let { root, docker_build } = await getTerraformConfig(component);
     if (docker_build) {
