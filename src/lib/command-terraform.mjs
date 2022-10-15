@@ -68,8 +68,8 @@ async function getBucketConfig(component) {
 
   $.verbose = true;
 
-  const bcBucket = `bucket=bucket-${process.env.GCP_PROJECT_NAME}`;
-  const bcPrefix = `prefix=${bucketDirectory}`;
+  const bcBucket = `bucket=bucket-${process.env.RUN_CORE_PROJECT}`;
+  const bcPrefix = `prefix=${process.env.GCP_PROJECT_NAME}/${bucketDirectory}`;
 
   return { bcBucket, bcPrefix };
 }
@@ -250,18 +250,13 @@ export async function terraformDestroy(component, options) {
 export async function terraformApply(component, options) {
   try {
     let { root, docker_build } = await getTerraformConfig(component);
-
     if (docker_build) {
       await buildDocketImage();
       await pushDockerImage();
     }
-
     let pathResources = `${currentPath}/${root}/${component}`;
-
     cd(`${pathResources}/`);
-
     const { bcBucket, bcPrefix } = await getBucketConfig(component);
-
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform plan`;
     await $`terraform apply -auto-approve`;
