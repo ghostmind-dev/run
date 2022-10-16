@@ -58,7 +58,7 @@ async function getBucketConfig(component) {
   } else if (type === 'rds') {
     bucketDirectory = `${process.env.ENV}/rds/terraform/${component}`;
   } else if (type === 'vault') {
-    bucketDirectory = `${process.env.ENV}/vault/terraform/${component}`;
+    bucketDirectory = `vault/terraform/${component}`;
   } else if (type === 'db') {
     bucketDirectory = `${process.env.ENV}/db/${name}/terraform/${component}`;
   } else {
