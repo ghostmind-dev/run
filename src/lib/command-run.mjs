@@ -32,9 +32,10 @@ const metaConfig = await fs.readJsonSync('meta.json');
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function buildDocketImage() {
-  let { name } = metaConfig;
+  let { name, type } = metaConfig;
   const ENV = process.env.ENV;
-  const GCP_PROJECT_NAME = process.env.GCP_PROJECT_NAME;
+  const RUN_CORE_PROJECT = process.env.RUN_CORE_PROJECT;
+  const RUN_PROJECT_NAME = process.env.RUN_PROJECT_NAME;
 
   cd(`${currentPath}/container`);
   const DOCKERFILE = `${currentPath}/container/Dockerfile.${ENV}`;
@@ -42,7 +43,7 @@ export async function buildDocketImage() {
 
   $.verbose = true;
   process.env.DOCKER_DEFAULT_PLATFORM = 'linux/amd64';
-  await $`docker build -t gcr.io/${GCP_PROJECT_NAME}/${name}:${ENV} -f ${DOCKERFILE} ${DOCKER_CONTEXT}`;
+  await $`docker build -t gcr.io/${RUN_CORE_PROJECT}/${RUN_PROJECT_NAME}-${type}-${name}:${ENV} -f ${DOCKERFILE} ${DOCKER_CONTEXT}`;
 
   await sleep(1000);
 }
@@ -53,14 +54,15 @@ export async function buildDocketImage() {
 
 export async function pushDockerImage() {
   const ENV = process.env.ENV;
-  const GCP_PROJECT_NAME = process.env.GCP_PROJECT_NAME;
+  const RUN_CORE_PROJECT = process.env.RUN_CORE_PROJECT;
+  const RUN_PROJECT_NAME = process.env.RUN_PROJECT_NAME;
 
   cd(`${currentPath}/container`);
-  let { name } = metaConfig;
+  let { name, type } = metaConfig;
 
   $.verbose = true;
 
-  await $`docker push gcr.io/${GCP_PROJECT_NAME}/${name}:${ENV}`;
+  await $`docker push gcr.io/${RUN_CORE_PROJECT}/${RUN_PROJECT_NAME}-${type}-${name}:${ENV}`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -70,15 +72,16 @@ export async function pushDockerImage() {
 export async function getDockerImageDigest(path) {
   $.verbose = false;
   const ENV = process.env.ENV;
-  const GCP_PROJECT_NAME = process.env.GCP_PROJECT_NAME;
+  const RUN_CORE_PROJECT = process.env.RUN_CORE_PROJECT;
+  const RUN_PROJECT_NAME = process.env.RUN_PROJECT_NAME;
 
-  let { name } = metaConfig;
+  let { name, type } = metaConfig;
 
   if (path) {
     cd(path);
   }
 
-  const imageName = `gcr.io/${GCP_PROJECT_NAME}/${name}:dev`;
+  const imageName = `gcr.io/${RUN_CORE_PROJECT}/${RUN_PROJECT_NAME}-${type}-${name}:${ENV}`;
 
   const imageDigestRaw =
     await $`docker inspect --format='{{index .RepoDigests 0}}' ${imageName}`;
