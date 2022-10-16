@@ -1,6 +1,6 @@
 {
   "name": "@ghostmind-dev/run",
-  "version": "0.1.83",
+  "version": "0.1.84",
   "description": "",
   "main": "src/main.mjs",
   "bin": {
