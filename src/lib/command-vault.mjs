@@ -87,7 +87,12 @@ async function defineSecretNamespace() {
       break;
     }
     case 'vault': {
-      secretNamespace = `${GCP_PROJECT_NAME}/${ENV}/vault/secrets`;
+      secretNamespace = `${GCP_PROJECT_NAME}/vault/secrets`;
+      break;
+    }
+
+    case 'pgadmin': {
+      secretNamespace = `${GCP_PROJECT_NAME}/pg/secrets`;
       break;
     }
     default: {

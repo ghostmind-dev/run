@@ -61,6 +61,8 @@ async function getBucketConfig(component) {
     bucketDirectory = `vault/terraform/${component}`;
   } else if (type === 'db') {
     bucketDirectory = `${process.env.ENV}/db/${name}/terraform/${component}`;
+  } else if (type === 'pgadmin') {
+    bucketDirectory = `pg/terraform/${component}`;
   } else {
     console.log('this redirectory is neither of type project nor of type app');
     return;
