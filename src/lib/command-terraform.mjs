@@ -213,6 +213,9 @@ export async function terraformImport(
 
     cd(`${pathResources}/`);
 
+    const { bcBucket, bcPrefix } = await getBucketConfig(component);
+
+    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform import ${local_resouces_path} ${remote_resources_path}`;
   } catch (error) {
     console.error(error.message);
@@ -232,8 +235,6 @@ export async function terraformDestroy(component, options) {
     cd(`${pathResources}/`);
 
     const { bcBucket, bcPrefix } = await getBucketConfig(component);
-
-    console.log(bcBucket);
 
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform plan -destroy`;
