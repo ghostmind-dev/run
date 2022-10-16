@@ -29,8 +29,10 @@ const customConfigDefault = {
 // RUN CUSTOM SCRIPT
 ////////////////////////////////////////////////////////////////////////////////
 
-async function runCustomScript(script, arg) {
+async function runCustomScript(script, arg, options) {
   let { type, name, custom_script } = await fs.readJsonSync('meta.json');
+
+  let { dev } = options;
 
   let currentPath = process.cwd();
 
@@ -61,7 +63,7 @@ async function runCustomScript(script, arg) {
     const custom_function = await import(
       `${currentPath}/${root}/${script}.mjs`
     );
-    await custom_function.default(arg);
+    await custom_function.default(arg, dev);
   } catch (e) {
     console.log(e);
     console.log('something went wrong');
@@ -77,5 +79,6 @@ export default async function commandCustom(program) {
     .description('run custom script')
     .argument('[script]', 'script to perform')
     .arguments('[arg]', 'arguments for the script')
+    .option('--dev', 'run in dev mode')
     .action(runCustomScript);
 }
