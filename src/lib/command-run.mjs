@@ -28,22 +28,68 @@ cd(currentPath);
 const metaConfig = await fs.readJsonSync('meta.json');
 
 ////////////////////////////////////////////////////////////////////////////////
+// DEFINE IMAGE NAME
+////////////////////////////////////////////////////////////////////////////////
+
+async function defineImageName() {
+  let { type, name } = metaConfig;
+
+  const GCP_PROJECT_NAME = process.env.GCP_PROJECT_NAME;
+  const ENV = process.env.ENV;
+
+  let imageNamespace;
+
+  switch (type) {
+    case 'app': {
+      imageNamespace = `gcr.io/${GCP_PROJECT_NAME}/${name}:${ENV}`;
+      break;
+    }
+    case 'group_app': {
+      let { group } = metaConfig;
+      let { app } = group;
+      imageNamespace = `gcr.io/${GCP_PROJECT_NAME}/${app}-${name}:${ENV}`;
+      break;
+    }
+    case 'db': {
+      imageNamespace = `gcr.io/${GCP_PROJECT_NAME}/db-${name}:${ENV}`;
+      break;
+    }
+
+    case 'pgadmin': {
+      imageNamespace = `gcr.io/${GCP_PROJECT_NAME}/db-${name}:${ENV}`;
+      break;
+    }
+
+    default: {
+      console.log('Not a cloud run app');
+      throw new Error('Not a cloud run app');
+    }
+  }
+
+  $.verbose = true;
+
+  return imageNamespace;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // DOCKER BUILD
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function buildDocketImage() {
-  let { name, type } = metaConfig;
   const ENV = process.env.ENV;
-  const RUN_CORE_PROJECT = process.env.RUN_CORE_PROJECT;
-  const RUN_PROJECT_NAME = process.env.RUN_PROJECT_NAME;
+
+  let imageName = await defineImageName();
 
   cd(`${currentPath}/container`);
+
   const DOCKERFILE = `${currentPath}/container/Dockerfile.${ENV}`;
   const DOCKER_CONTEXT = `${currentPath}/container`;
 
   $.verbose = true;
+
   process.env.DOCKER_DEFAULT_PLATFORM = 'linux/amd64';
-  await $`docker build -t gcr.io/${RUN_CORE_PROJECT}/${RUN_PROJECT_NAME}-${type}-${name}:${ENV} -f ${DOCKERFILE} ${DOCKER_CONTEXT}`;
+
+  await $`docker build -t ${imageName} -f ${DOCKERFILE} ${DOCKER_CONTEXT}`;
 
   await sleep(1000);
 }
@@ -53,16 +99,14 @@ export async function buildDocketImage() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function pushDockerImage() {
-  const ENV = process.env.ENV;
-  const RUN_CORE_PROJECT = process.env.RUN_CORE_PROJECT;
-  const RUN_PROJECT_NAME = process.env.RUN_PROJECT_NAME;
+  let imageName = await defineImageName();
 
   cd(`${currentPath}/container`);
   let { name, type } = metaConfig;
 
   $.verbose = true;
 
-  await $`docker push gcr.io/${RUN_CORE_PROJECT}/${RUN_PROJECT_NAME}-${type}-${name}:${ENV}`;
+  await $`docker push ${imageName}`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -71,9 +115,6 @@ export async function pushDockerImage() {
 
 export async function getDockerImageDigest(path) {
   $.verbose = false;
-  const ENV = process.env.ENV;
-  const RUN_CORE_PROJECT = process.env.RUN_CORE_PROJECT;
-  const RUN_PROJECT_NAME = process.env.RUN_PROJECT_NAME;
 
   let { name, type } = metaConfig;
 
@@ -81,7 +122,7 @@ export async function getDockerImageDigest(path) {
     cd(path);
   }
 
-  const imageName = `gcr.io/${RUN_CORE_PROJECT}/${RUN_PROJECT_NAME}-${type}-${name}:${ENV}`;
+  let imageName = await defineImageName();
 
   const imageDigestRaw =
     await $`docker inspect --format='{{index .RepoDigests 0}}' ${imageName}`;
