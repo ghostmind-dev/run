@@ -127,6 +127,8 @@ export async function actionRunLocal(jobName, actArguments) {
     actArgmentsCombined
   );
 
+  console.log(actArgmentsCombined);
+
   actArgmentsArray.push('--job');
   actArgmentsArray.push(jobName);
 
@@ -146,9 +148,10 @@ export async function actionRunLocalEntry(jobName, options) {
     { name: '--env', value: `ENV=${ENV}` },
     { name: '--eventpath', value: '/tmp/inputs.json' },
   ];
-  if (reuse) {
+  if (reuse === true) {
     actArgments.push({ name: '--reuse', value: '' });
   }
+
   if (!secure) {
     actArgments.push({ name: '--insecure-secrets', value: '' });
   }
