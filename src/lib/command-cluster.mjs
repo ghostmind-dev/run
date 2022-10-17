@@ -235,7 +235,7 @@ export async function actionClusterRemovelocal(appName, { live, reuse }) {
     { name: '--eventpath', value: '/tmp/inputs.json' },
   ];
 
-  if (reuse) {
+  if (reuse === true) {
     actArgments.push({ name: '--reuse', value: '' });
   }
 
@@ -275,7 +275,7 @@ export async function actionClusterDeploylocal(appName, { live, reuse }) {
     { name: '--eventpath', value: '/tmp/inputs.json' },
   ];
 
-  if (reuse) {
+  if (reuse === true) {
     actArgments.push({ name: '--reuse', value: '' });
   }
 
