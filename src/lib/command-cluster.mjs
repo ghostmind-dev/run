@@ -1,18 +1,9 @@
 import { $, sleep, cd, fs } from 'zx';
 import { config } from 'dotenv';
-import {
-  detectScriptsDirectory,
-  verifyIfProjectCore,
-  getDirectories,
-} from '../utils/divers.mjs';
-
-import {
-  vaultKvCertsToVault,
-  vaultKvCertsToLocal,
-  vaultKvVaultToGkeCredentials,
-} from './command-vault.mjs';
-
+import { detectScriptsDirectory, getDirectories } from '../utils/divers.mjs';
+import { vaultKvCertsToVault, vaultKvCertsToLocal } from './command-vault.mjs';
 import { actionRunLocal } from './command-action.mjs';
+
 import _ from 'lodash';
 
 ////////////////////////////////////////////////////////////////////////////////
