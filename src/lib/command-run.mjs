@@ -1,5 +1,5 @@
-import { $, sleep, cd, fs, echo } from 'zx';
-import { detectScriptsDirectory } from '../utils/divers.mjs';
+import { $, sleep, cd, fs, echo } from "zx";
+import { detectScriptsDirectory } from "../utils/divers.mjs";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -25,7 +25,7 @@ cd(currentPath);
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-const metaConfig = await fs.readJsonSync('meta.json');
+const metaConfig = await fs.readJsonSync("meta.json");
 
 ////////////////////////////////////////////////////////////////////////////////
 // DEFINE IMAGE NAME
@@ -40,29 +40,29 @@ async function defineImageName() {
   let imageNamespace;
 
   switch (type) {
-    case 'app': {
+    case "app": {
       imageNamespace = `gcr.io/${GCP_PROJECT_NAME}/${name}:${ENV}`;
       break;
     }
-    case 'group_app': {
+    case "group_app": {
       let { group } = metaConfig;
       let { app } = group;
       imageNamespace = `gcr.io/${GCP_PROJECT_NAME}/${app}-${name}:${ENV}`;
       break;
     }
-    case 'db': {
+    case "db": {
       imageNamespace = `gcr.io/${GCP_PROJECT_NAME}/db-${name}:${ENV}`;
       break;
     }
 
-    case 'pgadmin': {
-      imageNamespace = `gcr.io/${GCP_PROJECT_NAME}/db-${name}:${ENV}`;
+    case "pgadmin": {
+      imageNamespace = `gcr.io/${GCP_PROJECT_NAME}/db-${name}`;
       break;
     }
 
     default: {
-      console.log('Not a cloud run app');
-      throw new Error('Not a cloud run app');
+      console.log("Not a cloud run app");
+      throw new Error("Not a cloud run app");
     }
   }
 
@@ -87,7 +87,7 @@ export async function buildDocketImage() {
 
   $.verbose = true;
 
-  process.env.DOCKER_DEFAULT_PLATFORM = 'linux/amd64';
+  process.env.DOCKER_DEFAULT_PLATFORM = "linux/amd64";
 
   await $`docker build -t ${imageName} -f ${DOCKERFILE} ${DOCKER_CONTEXT}`;
 
@@ -136,11 +136,11 @@ export async function getDockerImageDigest(path) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function run(program) {
-  const cr = program.command('cr');
-  cr.description('manage gcp cloud run');
+  const cr = program.command("cr");
+  cr.description("manage gcp cloud run");
 
-  const build = cr.command('build');
-  const push = cr.command('push');
+  const build = cr.command("build");
+  const push = cr.command("push");
 
   build.action(buildDocketImage);
   push.action(pushDockerImage);
