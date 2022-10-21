@@ -121,6 +121,12 @@ export default async function hasura(program) {
   const hasura = program.command('hasura');
   hasura.description('perform hasura maintenances');
 
+  const hasuraCommand = hasura.command('cmd');
+  hasuraCommand
+    .argument('[commands...]', 'command to run')
+    .option('--database-name <database-name>', 'database name')
+    .action(hasuraGlobalCmd);
+
   const hasuraConsole = hasura.command('console');
   const hasuraMigrate = hasura.command('migrate');
 
@@ -145,10 +151,4 @@ export default async function hasura(program) {
     .description('create a new migration from current schema')
     .argument('<name>', 'name of the migration')
     .action(hasuraMigrateCreate);
-
-  const hasuraCommand = hasura.command('cmd');
-  hasuraCommand
-    .argument('<commands...>', 'command to run')
-    .option('--database-name <database-name>', 'database name')
-    .action(hasuraGlobalCmd);
 }
