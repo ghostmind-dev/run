@@ -1,6 +1,15 @@
 import { $, which, sleep, cd, fs } from 'zx';
 import { detectScriptsDirectory } from '../utils/divers.mjs';
 
+//////////////////////////////////////////////////////////////////////////////
+// CLEANING MIGRATIONS
+//////////////////////////////////////////////////////////////////////////////
+
+// https://hasura.io/docs/latest/migrations-metadata-seeds/resetting-migrations-metadata
+// live hasura cmd migrate delete --all --database-name default
+// live hasura migrate create init
+// live hasura cmd metadata export
+
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
@@ -97,7 +106,7 @@ export async function hasuraMigrateApply(version) {
 export async function hasuraGlobalCmd(commands, options) {
   const { hasura: hasuraConfig } = metaConfig;
 
-  const { databaseName } = options;
+  const { databaseName, all } = options;
 
   const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
 
@@ -108,6 +117,10 @@ export async function hasuraGlobalCmd(commands, options) {
   if (databaseName !== undefined) {
     commands.push(`--database-name`);
     commands.push(`${databaseName}`);
+  }
+
+  if (all) {
+    commands.push(`--all`);
   }
 
   await $`hasura ${commands}`;
@@ -125,6 +138,7 @@ export default async function hasura(program) {
   hasuraCommand
     .argument('[commands...]', 'command to run')
     .option('--database-name <database-name>', 'database name')
+    .option('--all', 'all migrations')
     .action(hasuraGlobalCmd);
 
   const hasuraConsole = hasura.command('console');
