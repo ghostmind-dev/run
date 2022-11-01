@@ -45,7 +45,43 @@ export async function getDirectories(path) {
 
   const directories = directoriesWithFiles
     .filter((dirent) => dirent.isDirectory())
+    .filter((dirent) => dirent.name !== 'node_modules')
+    .filter((dirent) => dirent.name !== '.git')
+    .filter((dirent) => dirent.name !== 'migrations')
     .map((dirent) => dirent.name);
 
   return directories;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// DISCOVER ALL THE DIRECTORIES PATH  IN THE PROJECT (RECURSIVE)
+////////////////////////////////////////////////////////////////////////////////
+
+export async function recursiveDirectoriesDiscovery(path) {
+  const directories = await getDirectories(path);
+
+  let directoriesPath = [];
+
+  for (let directory of directories) {
+    directoriesPath.push(`${path}/${directory}`);
+    directoriesPath = directoriesPath.concat(
+      await recursiveDirectoriesDiscovery(`${path}/${directory}`)
+    );
+  }
+
+  return directoriesPath;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// VERIFY IF THERE IS A META.JSON FILE IN THE CURRENT PATH
+////////////////////////////////////////////////////////////////////////////////
+
+export async function verifyIfMetaJsonExists(path) {
+  try {
+    await fs.access(`${path}/meta.json`);
+
+    return fs.readJsonSync(`${path}/meta.json`);
+  } catch (error) {
+    return false;
+  }
 }

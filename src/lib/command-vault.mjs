@@ -1,5 +1,9 @@
 import { $, which, sleep, cd, fs } from 'zx';
-import { detectScriptsDirectory } from '../utils/divers.mjs';
+import {
+  detectScriptsDirectory,
+  recursiveDirectoriesDiscovery,
+  verifyIfMetaJsonExists,
+} from '../utils/divers.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -24,7 +28,7 @@ cd(currentPath);
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-const metaConfig = await fs.readJsonSync('meta.json');
+let metaConfig = await fs.readJsonSync('meta.json');
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONSTANTS
@@ -178,7 +182,44 @@ export async function vaultKvVaultToGkeCredentials() {
 // Export remote vault credentials to .env file
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function vaultKvVaultToLocal() {
+export async function vaultKvVaultToLocalEntry(options) {
+  const { all } = options;
+
+  if (all) {
+    await vaultKvVaultToLocalAll();
+  } else {
+    await vaultKvVaultToLocalUnit();
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Export all proeject vault secrets to .env file
+////////////////////////////////////////////////////////////////////////////////
+
+export async function vaultKvVaultToLocalAll() {
+  let allDirectories = await recursiveDirectoriesDiscovery(
+    `${process.env.SRC}`
+  );
+
+  allDirectories.push(`${process.env.SRC}`);
+
+  for (let directory of allDirectories) {
+    const meta = await verifyIfMetaJsonExists(directory);
+
+    if (meta.secrets) {
+      metaConfig = meta;
+      currentPath = directory;
+      sleep(2000);
+      await vaultKvVaultToLocalUnit();
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Export remote vault credentials to .env file
+////////////////////////////////////////////////////////////////////////////////
+
+export async function vaultKvVaultToLocalUnit() {
   const secretPath = await defineSecretNamespace();
 
   // generate a random integer number
@@ -190,6 +231,8 @@ export async function vaultKvVaultToLocal() {
   const credsValue = await fs.readJSONSync(`/tmp/env.${randomFilename}.json`);
 
   const { CREDS } = credsValue.data;
+
+  cd(currentPath);
 
   // if .env file exists, create a backup
   if (await fs.existsSync('.env')) {
@@ -222,5 +265,6 @@ export default async function vault(program) {
 
   vaultKvExport
     .description('from remote vault to .env')
-    .action(vaultKvVaultToLocal);
+    .option('--all', 'export all project secrets')
+    .action(vaultKvVaultToLocalEntry);
 }
