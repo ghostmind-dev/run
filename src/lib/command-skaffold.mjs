@@ -32,10 +32,72 @@ cd(currentPath);
 const metaConfig = await fs.readJsonSync('meta.json');
 
 ////////////////////////////////////////////////////////////////////////////////
+// SKAFFOLD DEV ENTRY
+////////////////////////////////////////////////////////////////////////////////
+
+export async function skaffoldDevEntry(profile, options) {
+  const { group } = options;
+
+  if (group) {
+    await skaffoldGroup(options, 'dev');
+    return;
+  }
+  await skaffoldUnit(profile, options, 'dev');
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SKAFFOLD DEV ENTRY
+////////////////////////////////////////////////////////////////////////////////
+
+export async function skaffoldRunEntry(profile, options) {
+  const { group } = options;
+
+  if (group) {
+    await skaffoldGroup(options, 'run');
+    return;
+  }
+  await skaffoldUnit(profile, options, 'run');
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SKAFFOLD UNIT
+////////////////////////////////////////////////////////////////////////////////
+
+export async function skaffoldUnit(profile, options, action) {
+  const { statusCheck, force = false, cacheArtifacts } = options;
+  process.env.FORCE_COLOR = 1;
+  await connectToCluster();
+  $.verbose = true;
+
+  cd(currentPath);
+
+  try {
+    const skaffoldOptions = [
+      action,
+      '--cleanup=false',
+      `--profile=${profile}`,
+      `--status-check=${statusCheck}`,
+      `--force=${force}`,
+      `--cache-artifacts=${cacheArtifacts}`,
+    ];
+
+    // keep execFileSync instead of zx
+    // to maintain script outpu color
+
+    execFileSync('skaffold', skaffoldOptions, {
+      stdio: 'inherit',
+      cwd: currentPath,
+    });
+  } catch (e) {
+    console.log(e);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // RUN ACTION LOCALLY WITH ACT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function skaffoldGroupRun(jobName, options) {
+export async function skaffoldGroup(options, action) {
   const { statusCheck, force = false, cacheArtifacts } = options;
   process.env.FORCE_COLOR = 1;
   await connectToCluster();
@@ -88,8 +150,8 @@ export async function skaffoldGroupRun(jobName, options) {
   });
   $.verbose = true;
   try {
-    const options = [
-      'dev',
+    const skaffoldOptions = [
+      action,
       '--cleanup=false',
       `--profile=${profiles.substring(1)}`,
       `--status-check=${statusCheck}`,
@@ -97,11 +159,13 @@ export async function skaffoldGroupRun(jobName, options) {
       `--cache-artifacts=${cacheArtifacts}`,
     ];
 
-    execFileSync('skaffold', options, {
+    execFileSync('skaffold', skaffoldOptions, {
       stdio: 'inherit',
       cwd: currentPath,
     });
-  } catch (e) {}
+  } catch (e) {
+    console.log(e);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -109,15 +173,32 @@ export async function skaffoldGroupRun(jobName, options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function skaffold(program) {
+  const { type } = metaConfig;
+
+  if (type !== 'cluster') {
+    program.error('This command is only available for cluster type projects');
+  }
+
   const skaffold = program.command('skaffold');
   skaffold.description('local cluster development');
 
-  const group = skaffold.command('group');
-  group
-    .description('run a group of applications')
-    .argument('[group]', 'group name to run')
+  const dev = skaffold.command('dev');
+  const run = skaffold.command('run');
+  dev
+    .description('launch cluster apps with skaffold in dev mode')
+    .argument('[profile]', 'profile to run')
+    .option('--group', 'group name to run')
     .option('--no-status-check', 'disable status check')
     .option('--force', 'rebuild images')
     .option('--no-cache-artifacts', 'disable cache artifacts')
-    .action(skaffoldGroupRun);
+    .action(skaffoldDevEntry);
+
+  run
+    .description('launch cluster apps with skaffold')
+    .argument('[profile]', 'profile to run')
+    .option('--group', 'group name to run')
+    .option('--no-status-check', 'disable status check')
+    .option('--force', 'rebuild images')
+    .option('--no-cache-artifacts', 'disable cache artifacts')
+    .action(skaffoldRunEntry);
 }
