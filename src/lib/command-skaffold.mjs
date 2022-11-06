@@ -1,9 +1,9 @@
-import { $, which, sleep, cd, fs } from 'zx';
-import * as inquirer from 'inquirer';
-import { constants } from 'perf_hooks';
-import { connectToCluster } from './command-cluster.mjs';
-import { execFileSync } from 'child_process';
-import { detectScriptsDirectory } from '../utils/divers.mjs';
+import { $, which, sleep, cd, fs } from "zx";
+import * as inquirer from "inquirer";
+import { constants } from "perf_hooks";
+import { connectToCluster } from "./command-cluster.mjs";
+import { execFileSync } from "child_process";
+import { detectScriptsDirectory } from "../utils/divers.mjs";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -29,7 +29,7 @@ cd(currentPath);
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-const metaConfig = await fs.readJsonSync('meta.json');
+const metaConfig = await fs.readJsonSync("meta.json");
 
 ////////////////////////////////////////////////////////////////////////////////
 // SKAFFOLD DEV ENTRY
@@ -39,10 +39,10 @@ export async function skaffoldDevEntry(profile, options) {
   const { group } = options;
 
   if (group) {
-    await skaffoldGroup(options, 'dev');
+    await skaffoldGroup(options, "dev");
     return;
   }
-  await skaffoldUnit(profile, options, 'dev');
+  await skaffoldUnit(profile, options, "dev");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -53,10 +53,10 @@ export async function skaffoldRunEntry(profile, options) {
   const { group } = options;
 
   if (group) {
-    await skaffoldGroup(options, 'run');
+    await skaffoldGroup(options, "run");
     return;
   }
-  await skaffoldUnit(profile, options, 'run');
+  await skaffoldUnit(profile, options, "run");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -74,7 +74,7 @@ export async function skaffoldUnit(profile, options, action) {
   try {
     const skaffoldOptions = [
       action,
-      '--cleanup=false',
+      "--cleanup=false",
       `--profile=${profile}`,
       `--status-check=${statusCheck}`,
       `--force=${force}`,
@@ -84,8 +84,8 @@ export async function skaffoldUnit(profile, options, action) {
     // keep execFileSync instead of zx
     // to maintain script outpu color
 
-    execFileSync('skaffold', skaffoldOptions, {
-      stdio: 'inherit',
+    execFileSync("skaffold", skaffoldOptions, {
+      stdio: "inherit",
       cwd: currentPath,
     });
   } catch (e) {
@@ -135,16 +135,16 @@ export async function skaffoldGroup(options, action) {
 
   const prompt = inquirer.createPromptModule();
   const result = await prompt({
-    type: 'list',
-    name: 'answer',
-    message: 'Which groupe to initiate ?',
+    type: "list",
+    name: "answer",
+    message: "Which groupe to initiate ?",
     choices: groupe.map((value) => value.name),
     pageSize: 20,
   });
   const groupInitializationIndex = groupe.findIndex(
     (value) => value.name === result.answer
   );
-  let profiles = '';
+  let profiles = "";
   groupe[groupInitializationIndex].members.map((value) => {
     profiles = `${profiles},${value}`;
   });
@@ -152,15 +152,15 @@ export async function skaffoldGroup(options, action) {
   try {
     const skaffoldOptions = [
       action,
-      '--cleanup=false',
+      "--cleanup=false",
       `--profile=${profiles.substring(1)}`,
       `--status-check=${statusCheck}`,
       `--force=${force}`,
       `--cache-artifacts=${cacheArtifacts}`,
     ];
 
-    execFileSync('skaffold', skaffoldOptions, {
-      stdio: 'inherit',
+    execFileSync("skaffold", skaffoldOptions, {
+      stdio: "inherit",
       cwd: currentPath,
     });
   } catch (e) {
@@ -173,32 +173,26 @@ export async function skaffoldGroup(options, action) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function skaffold(program) {
-  const { type } = metaConfig;
+  const skaffold = program.command("skaffold");
+  skaffold.description("local cluster development");
 
-  if (type !== 'cluster') {
-    program.error('This command is only available for cluster type projects');
-  }
-
-  const skaffold = program.command('skaffold');
-  skaffold.description('local cluster development');
-
-  const dev = skaffold.command('dev');
-  const run = skaffold.command('run');
+  const dev = skaffold.command("dev");
+  const run = skaffold.command("run");
   dev
-    .description('launch cluster apps with skaffold in dev mode')
-    .argument('[profile]', 'profile to run')
-    .option('--group', 'group name to run')
-    .option('--no-status-check', 'disable status check')
-    .option('--force', 'rebuild images')
-    .option('--no-cache-artifacts', 'disable cache artifacts')
+    .description("launch cluster apps with skaffold in dev mode")
+    .argument("[profile]", "profile to run")
+    .option("--group", "group name to run")
+    .option("--no-status-check", "disable status check")
+    .option("--force", "rebuild images")
+    .option("--no-cache-artifacts", "disable cache artifacts")
     .action(skaffoldDevEntry);
 
   run
-    .description('launch cluster apps with skaffold')
-    .argument('[profile]', 'profile to run')
-    .option('--group', 'group name to run')
-    .option('--no-status-check', 'disable status check')
-    .option('--force', 'rebuild images')
-    .option('--no-cache-artifacts', 'disable cache artifacts')
+    .description("launch cluster apps with skaffold")
+    .argument("[profile]", "profile to run")
+    .option("--group", "group name to run")
+    .option("--no-status-check", "disable status check")
+    .option("--force", "rebuild images")
+    .option("--no-cache-artifacts", "disable cache artifacts")
     .action(skaffoldRunEntry);
 }
