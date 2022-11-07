@@ -1,4 +1,4 @@
-import { $, sleep, cd, fs, echo } from 'zx';
+import { $, sleep, cd, fs, echo } from "zx";
 
 ////////////////////////////////////////////////////////////////////////////////
 // DETECT SCRIPS DIRECTORY
@@ -7,9 +7,9 @@ import { $, sleep, cd, fs, echo } from 'zx';
 export async function detectScriptsDirectory(currentPath) {
   // verify if the current path ends with scripts
 
-  if (currentPath.includes('scripts')) {
+  if (currentPath.includes("scripts")) {
     // remove /scripts from the path
-    currentPath = currentPath.replace('/scripts', '');
+    currentPath = currentPath.replace("/scripts", "");
     return currentPath;
   }
 
@@ -23,11 +23,11 @@ export async function detectScriptsDirectory(currentPath) {
 export async function verifyIfProjectCore() {
   cd(process.env.SRC);
 
-  const metaConfig = await fs.readJsonSync('meta.json');
+  const metaConfig = await fs.readJsonSync("meta.json");
   const { type, name } = metaConfig;
 
-  if (type === 'project') {
-    if (name === 'core') {
+  if (type === "project") {
+    if (name === "core") {
       return true;
     }
   }
@@ -45,9 +45,9 @@ export async function getDirectories(path) {
 
   const directories = directoriesWithFiles
     .filter((dirent) => dirent.isDirectory())
-    .filter((dirent) => dirent.name !== 'node_modules')
-    .filter((dirent) => dirent.name !== '.git')
-    .filter((dirent) => dirent.name !== 'migrations')
+    .filter((dirent) => dirent.name !== "node_modules")
+    .filter((dirent) => dirent.name !== ".git")
+    .filter((dirent) => dirent.name !== "migrations")
     .map((dirent) => dirent.name);
 
   return directories;
@@ -84,4 +84,45 @@ export async function verifyIfMetaJsonExists(path) {
   } catch (error) {
     return false;
   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// RETURN ALL FOLDER PATH THAT MAACTHES THE META.JSON FILE CONDITION
+////////////////////////////////////////////////////////////////////////////////
+
+export async function withMetaMatching(property, value) {
+  const allDirectories = await recursiveDirectoriesDiscovery(process.env.SRC);
+
+  let directories = [];
+
+  for (let directory of allDirectories) {
+    const metaConfig = await verifyIfMetaJsonExists(directory);
+
+    if (metaConfig) {
+      let metaConfigProperty;
+
+      if (property.includes(".")) {
+        const propertyArray = property.split(".");
+        // property can have many levels of depth
+        // ex: property = 'vault.type'
+        // ex: property = 'vault.type.name'
+
+        metaConfigProperty = metaConfig;
+
+        for (let propertyComponent of propertyArray) {
+          metaConfigProperty = metaConfigProperty[propertyComponent];
+
+          if (metaConfigProperty === undefined) {
+            break;
+          }
+        }
+
+        if (metaConfigProperty === value) {
+          directories.push({ directory, config: metaConfig });
+        }
+      }
+    }
+  }
+
+  return directories;
 }
