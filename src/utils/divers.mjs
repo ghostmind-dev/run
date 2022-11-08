@@ -116,10 +116,11 @@ export async function withMetaMatching(property, value) {
             break;
           }
         }
-
-        if (metaConfigProperty === value) {
-          directories.push({ directory, config: metaConfig });
-        }
+      } else {
+        metaConfigProperty = metaConfig[property];
+      }
+      if (metaConfigProperty === value) {
+        directories.push({ directory, config: metaConfig });
       }
     }
   }
