@@ -34,18 +34,16 @@ const actArgmentsDefault = [
     name: '--platform',
     value: `ubuntu-latest=catthehacker/ubuntu:act-latest`,
   },
+
   { name: '--defaultbranch', value: 'main' },
-  { name: '--directory', value: LOCALHOST_SRC },
+  { name: '--directory', value: process.env.SRC },
   { name: '--bind', value: `` },
   { name: '--use-gitignore', value: '' },
   {
     name: '--secret',
     value: `VAULT_ROOT_TOKEN=${process.env.VAULT_ROOT_TOKEN}`,
   },
-  {
-    name: '--secret',
-    value: `VAULT_ADDR=${process.env.VAULT_ADDR}`,
-  },
+  { name: '--secret', value: `VAULT_ADDR=${process.env.VAULT_ADDR}` },
   {
     name: '--secret',
     value: `GCP_PROJECT_NAME=${process.env.GCP_PROJECT_NAME}`,
@@ -136,9 +134,22 @@ export async function actionRunLocal(jobName, actArguments) {
 
 export async function actionRunLocalEntry(jobName, options) {
   const { live, input, reuse, secure } = options;
+
+  let inputsArguments = {};
+
+  if (input !== undefined) {
+    for (let inputArg in input) {
+      // split input argument into array with = as separator
+      let inputArgArray = input[inputArg].split('=');
+      // add input argument to inputsArguments object
+      inputsArguments[inputArgArray[0]] = inputArgArray[1];
+    }
+  }
+
   fs.writeJsonSync('/tmp/inputs.json', {
     inputs: {
       LIVE: live,
+      ...inputsArguments,
     },
   });
   let actArgments = [
@@ -160,7 +171,7 @@ export async function actionRunLocalEntry(jobName, options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function actionSecretsSet() {
-  $.verbose = false;
+  $.verbose = true;
 
   cd(currentPath);
 
@@ -182,7 +193,7 @@ export async function actionSecretsSet() {
     core.setSecret(secretValue);
     core.setOutput(secretName, secretValue);
 
-    await $`echo "${secretName}=${secretValue}" >> ${gitEnvPath}`;
+    await $`echo ${secretName}=${secretValue} >> ${gitEnvPath}`;
   }
 }
 
