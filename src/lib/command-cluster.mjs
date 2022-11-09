@@ -1,14 +1,14 @@
-import { $, sleep, cd, fs } from "zx";
-import { config } from "dotenv";
+import { $, sleep, cd, fs } from 'zx';
+import { config } from 'dotenv';
 import {
   detectScriptsDirectory,
   getDirectories,
   withMetaMatching,
-} from "../utils/divers.mjs";
-import { vaultKvCertsToVault, vaultKvCertsToLocal } from "./command-vault.mjs";
-import { actionRunLocal } from "./command-action.mjs";
+} from '../utils/divers.mjs';
+import { vaultKvCertsToVault, vaultKvCertsToLocal } from './command-vault.mjs';
+import { actionRunLocal } from './command-action.mjs';
 
-import _ from "lodash";
+import _ from 'lodash';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -35,7 +35,7 @@ cd(currentPath);
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-const metaConfig = await fs.readJsonSync("meta.json");
+const metaConfig = await fs.readJsonSync('meta.json');
 
 ////////////////////////////////////////////////////////////////////////////////
 // CHECK IF POD IF READY
@@ -51,7 +51,7 @@ export async function verifyIfPodReady(app, namespace) {
   let checkPodStatus =
     await $`kubectl get pods -l app=${app} -n ${namespace} -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}'`;
 
-  while (`${checkPodStatus}` !== "True") {
+  while (`${checkPodStatus}` !== 'True') {
     console.log(`waiting for ${app} pod to be ready`);
     await sleep(5000);
     checkPodStatus =
@@ -67,8 +67,8 @@ export async function verifyIfPodReady(app, namespace) {
 
 export async function verifyClusterDirectory() {
   let { type } = metaConfig;
-  if (type === "cluster" || type === "cluster_app") {
-    if (type === "cluster_app") {
+  if (type === 'cluster' || type === 'cluster_app') {
+    if (type === 'cluster_app') {
       config({ path: `../../.env` });
     }
     return true;
@@ -93,7 +93,7 @@ export async function connectToCluster() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function exportCertificatesAll() {
-  const matchingDirectories = await withMetaMatching("cluster.tls", true);
+  const matchingDirectories = await withMetaMatching('cluster.tls', true);
 
   for (let matchDirectory of matchingDirectories) {
     const { config, directory } = matchDirectory;
@@ -140,6 +140,8 @@ export async function exportCertificatesUnit() {
 export async function exportCerts(options) {
   const { all } = options;
 
+  await connectToCluster();
+
   if (all) {
     await exportCertificatesAll();
   } else {
@@ -171,9 +173,9 @@ export async function importCerts() {
 
       // remove a property metadata.creationTimestamp
       const certs = _.omit(certsUnfiltered, [
-        "metadata.creationTimestamp",
-        "metadata.resourceVersion",
-        "metadata.uid",
+        'metadata.creationTimestamp',
+        'metadata.resourceVersion',
+        'metadata.uid',
       ]);
 
       const randomFilename = Math.floor(Math.random() * 1000000);
@@ -186,7 +188,7 @@ export async function importCerts() {
         await $`kubectl get secret ${certificateName}`;
         await $`kubectl delete secret ${certificateName}`;
       } catch (error) {
-        if (!error.stderr.includes("not found")) {
+        if (!error.stderr.includes('not found')) {
           return;
         }
       }
@@ -210,8 +212,8 @@ export async function createSecrets() {
 
   const secretName = `secrets-${app}-${name}`;
 
-  if (type === "cluster" || type === "cluster_app") {
-    if (type === "cluster_app") {
+  if (type === 'cluster' || type === 'cluster_app') {
+    if (type === 'cluster_app') {
       config({ path: `../../.env` });
     }
     $.verbose = true;
@@ -219,17 +221,17 @@ export async function createSecrets() {
       await $`kubectl get secret ${secretName}`;
       await $`kubectl delete secret ${secretName}`;
     } catch (error) {
-      if (!error.stderr.includes("not found")) {
+      if (!error.stderr.includes('not found')) {
         return;
       }
     }
 
     // verify if .env file exists
-    if (fs.existsSync(".env")) {
+    if (fs.existsSync('.env')) {
       await $`kubectl create secret generic ${secretName} --from-env-file=.env`;
     }
   } else {
-    console.log("Not a cluster app");
+    console.log('Not a cluster app');
   }
 }
 
@@ -257,22 +259,22 @@ export async function actionClusterRemoveRemote(appName, { watch }) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function actionClusterRemovelocal(appName, { live, reuse }) {
-  fs.writeJsonSync("/tmp/inputs.json", {
+  fs.writeJsonSync('/tmp/inputs.json', {
     inputs: {
       APP_NAME: appName,
       LIVE: live,
     },
   });
   let actArgments = [
-    { name: "--env", value: `ENV=${ENV}` },
-    { name: "--eventpath", value: "/tmp/inputs.json" },
+    { name: '--env', value: `ENV=${ENV}` },
+    { name: '--eventpath', value: '/tmp/inputs.json' },
   ];
 
   if (reuse === true) {
-    actArgments.push({ name: "--reuse", value: "" });
+    actArgments.push({ name: '--reuse', value: '' });
   }
 
-  await actionRunLocal("cluster-remove", actArgments);
+  await actionRunLocal('cluster-remove', actArgments);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -296,7 +298,7 @@ export async function actionClusterRemove(appName, options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function actionClusterDeploylocal(appName, { live, reuse }) {
-  fs.writeJsonSync("/tmp/inputs.json", {
+  fs.writeJsonSync('/tmp/inputs.json', {
     inputs: {
       APP_NAME: appName,
       LIVE: live,
@@ -304,15 +306,15 @@ export async function actionClusterDeploylocal(appName, { live, reuse }) {
   });
 
   let actArgments = [
-    { name: "--env", value: `ENV=${ENV}` },
-    { name: "--eventpath", value: "/tmp/inputs.json" },
+    { name: '--env', value: `ENV=${ENV}` },
+    { name: '--eventpath', value: '/tmp/inputs.json' },
   ];
 
   if (reuse === true) {
-    actArgments.push({ name: "--reuse", value: "" });
+    actArgments.push({ name: '--reuse', value: '' });
   }
 
-  await actionRunLocal("cluster-deploy", actArgments);
+  await actionRunLocal('cluster-deploy', actArgments);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -369,13 +371,13 @@ export async function deployGroupGkeToCluster(appName, options) {
     );
     let { type, name } = appMeta;
 
-    if (type === "cluster" && name === appName) {
+    if (type === 'cluster' && name === appName) {
       getDirectoryPath = `${appDirectoryPath}/${appDirectory}`;
     }
   }
 
   if (getDirectoryPath === undefined) {
-    console.log("App not found");
+    console.log('App not found');
     return;
   }
 
@@ -485,66 +487,66 @@ export async function applyPod() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function cluster(program) {
-  const cluster = program.command("cluster");
-  cluster.description("manage cluster");
+  const cluster = program.command('cluster');
+  cluster.description('manage cluster');
 
-  const certs = cluster.command("certs");
-  const secrets = cluster.command("secrets");
-  const deploy = cluster.command("deploy");
-  const remove = cluster.command("remove");
-  const connect = cluster.command("connect");
-  const apps = cluster.command("apps");
-  const pod = cluster.command("pod");
-  const namespace = cluster.command("namespace");
+  const certs = cluster.command('certs');
+  const secrets = cluster.command('secrets');
+  const deploy = cluster.command('deploy');
+  const remove = cluster.command('remove');
+  const connect = cluster.command('connect');
+  const apps = cluster.command('apps');
+  const pod = cluster.command('pod');
+  const namespace = cluster.command('namespace');
 
   connect
-    .description("connect to cluster")
-    .argument("[clusterName]", "cluster name")
+    .description('connect to cluster')
+    .argument('[clusterName]', 'cluster name')
     .action(connectToCluster);
 
   secrets
-    .command("create")
-    .description("from local .env to gke secret")
+    .command('create')
+    .description('from local .env to gke secret')
     .action(createSecrets);
 
   certs
-    .command("export")
-    .description("from gke secrets to vault secrets")
-    .option("--all", "export all cluster apps tls certificates")
+    .command('export')
+    .description('from gke secrets to vault secrets')
+    .option('--all', 'export all cluster apps tls certificates')
     .action(exportCerts);
   certs
-    .command("import")
-    .description("from vault secrets to gke credential secrets")
+    .command('import')
+    .description('from vault secrets to gke credential secrets')
     .action(importCerts);
 
   deploy
-    .argument("[name]", "cluster name")
-    .option("--local", "deploy cluster from local runner")
-    .option("--no-reuse", "do not resuse existing state in act")
-    .option("--live", "live-command mode in act")
-    .option("--watch", "watch remote action")
+    .argument('[name]', 'cluster name')
+    .option('--local', 'deploy cluster from local runner')
+    .option('--no-reuse', 'do not resuse existing state in act')
+    .option('--live', 'live-command mode in act')
+    .option('--watch', 'watch remote action')
     .action(actionClusterDeploy);
 
   remove
-    .argument("[name]", "cluster name")
-    .option("--local", "destroy cluster from local runner")
-    .option("--no-reuse", "do not resuse existing state in act")
-    .option("--live", "live-command mode in act")
-    .option("--watch", "watch remote action")
+    .argument('[name]', 'cluster name')
+    .option('--local', 'destroy cluster from local runner')
+    .option('--no-reuse', 'do not resuse existing state in act')
+    .option('--live', 'live-command mode in act')
+    .option('--watch', 'watch remote action')
     .action(actionClusterRemove);
 
   apps
-    .command("deploy")
-    .argument("[name]", "app name")
-    .option("--no-tls", "do not get certificates from vault")
+    .command('deploy')
+    .argument('[name]', 'app name')
+    .option('--no-tls', 'do not get certificates from vault')
     .action(deployGroupGkeToCluster);
 
-  const docker = pod.command("docker").argument("[name]", "app name");
+  const docker = pod.command('docker').argument('[name]', 'app name');
 
-  docker.command("build").action(dockerBuildApp);
-  docker.command("push").action(dockerPushApp);
+  docker.command('build').action(dockerBuildApp);
+  docker.command('push').action(dockerPushApp);
 
-  namespace.command("set").argument("[name]", "namespace").action(setNamespace);
+  namespace.command('set').argument('[name]', 'namespace').action(setNamespace);
 
-  pod.command("apply").action(applyPod);
+  pod.command('apply').action(applyPod);
 }
