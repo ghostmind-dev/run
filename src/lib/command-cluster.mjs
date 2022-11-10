@@ -321,8 +321,10 @@ export async function actionClusterDeploylocal(appName, { live, reuse }) {
 // CLUSTER DEPLOY REMOTE
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function actionClusterDeployRemote(appName, watch) {
-  await $`gh workflow run cluster-deploy.yaml -f APP_NAME=${appName} --ref main`;
+export async function actionClusterDeployRemote(appName, { watch, branch }) {
+  branch = branch || 'main';
+
+  await $`gh workflow run cluster-deploy.yaml -f APP_NAME=${appName} --ref ${branch}`;
 
   if (watch) {
     $.verbose = false;
@@ -342,14 +344,14 @@ export async function actionClusterDeployRemote(appName, watch) {
 
 export async function actionClusterDeploy(appName, options) {
   $.verbose = true;
-  const { local, watch, live, reuse } = options;
+  const { local, watch, live, reuse, branch } = options;
 
   if (local) {
     await actionClusterDeploylocal(appName, { live, reuse });
     return;
   }
 
-  await actionClusterDeployRemote(appName, watch);
+  await actionClusterDeployRemote(appName, { watch, branch });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -525,6 +527,7 @@ export default async function cluster(program) {
     .option('--no-reuse', 'do not resuse existing state in act')
     .option('--live', 'live-command mode in act')
     .option('--watch', 'watch remote action')
+    .option('--branch <branch>', 'branch to deploy')
     .action(actionClusterDeploy);
 
   remove
