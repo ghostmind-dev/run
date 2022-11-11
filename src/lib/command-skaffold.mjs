@@ -1,6 +1,5 @@
 import { $, which, sleep, cd, fs } from "zx";
 import * as inquirer from "inquirer";
-import { constants } from "perf_hooks";
 import { connectToCluster } from "./command-cluster.mjs";
 import { execFileSync } from "child_process";
 import { detectScriptsDirectory } from "../utils/divers.mjs";
