@@ -151,7 +151,7 @@ export async function actionRunLocalEntry(jobName, options) {
 
   fs.writeJsonSync('/tmp/inputs.json', {
     inputs: {
-      LIVE: live,
+      LIVE: live ? 'true' : 'false',
       ...inputsArguments,
     },
   });
