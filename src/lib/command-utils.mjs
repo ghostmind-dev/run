@@ -1,5 +1,5 @@
-import { $, which } from 'zx';
-import { detectScriptsDirectory } from '../utils/divers.mjs';
+import { $, which, cd, sleep } from 'zx';
+import { detectScriptsDirectory, withMetaMatching } from '../utils/divers.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -47,6 +47,30 @@ export async function quickCommit() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// DEV INSTALL
+////////////////////////////////////////////////////////////////////////////////
+
+export async function devInstallDependencies() {
+  const directories = await withMetaMatching('development.init');
+
+  for (const directoryDetails of directories) {
+    const { directory, config } = directoryDetails;
+
+    const { init } = config.development;
+
+    $.verbose = true;
+
+    for (let script of init) {
+      const scriptArray = script.split(' ');
+
+      cd(directory);
+
+      await $`${scriptArray}`;
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -55,6 +79,8 @@ export default async function utils(program) {
   utils.description('collection of utils');
   const git = utils.command('git');
   git.description('git utils');
+  const dev = utils.command('dev');
+  dev.description('devcontainer utils');
 
   const gitAmend = git.command('amend');
   gitAmend.description('amend the last commit');
@@ -63,4 +89,8 @@ export default async function utils(program) {
   const gitCommit = git.command('commit');
   gitCommit.description('quick commit');
   gitCommit.action(quickCommit);
+
+  const devInstall = dev.command('install');
+  devInstall.description('install app dependencies');
+  devInstall.action(devInstallDependencies);
 }
