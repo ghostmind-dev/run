@@ -1,5 +1,6 @@
 import { $, which, cd, sleep } from 'zx';
 import { detectScriptsDirectory, withMetaMatching } from '../utils/divers.mjs';
+import { nanoid } from 'nanoid/async';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -71,6 +72,18 @@ export async function devInstallDependencies() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// CREATE A SHORT UUID
+////////////////////////////////////////////////////////////////////////////////
+
+export async function createShortUUID() {
+  const id = await nanoid(12);
+
+  console.log(id);
+
+  return id;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -80,6 +93,8 @@ export default async function utils(program) {
   const git = utils.command('git');
   git.description('git utils');
   const dev = utils.command('dev');
+  dev.description('devcontainer utils');
+  const nanoid = utils.command('nanoid');
   dev.description('devcontainer utils');
 
   const gitAmend = git.command('amend');
@@ -93,4 +108,8 @@ export default async function utils(program) {
   const devInstall = dev.command('install');
   devInstall.description('install app dependencies');
   devInstall.action(devInstallDependencies);
+
+  const id = nanoid.command('id');
+  id.description('generate a nanoid');
+  id.action(createShortUUID);
 }

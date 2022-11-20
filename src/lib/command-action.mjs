@@ -34,7 +34,6 @@ const actArgmentsDefault = [
     name: '--platform',
     value: `ubuntu-latest=catthehacker/ubuntu:act-latest`,
   },
-
   { name: '--defaultbranch', value: 'main' },
   { name: '--directory', value: LOCALHOST_SRC },
   { name: '--bind', value: `` },
@@ -120,23 +119,28 @@ export async function actionRunRemote(workflow, options) {
 // RUN ACTION LOCALLY WITH ACT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function actionRunLocal(jobName, actArguments) {
+export async function actionRunLocal(target, actArguments, event) {
   const actArgmentsCombined = [...actArgmentsDefault, ...actArguments];
 
   const actArgmentsArray = await actArgmentsToOneDimensionArray(
     actArgmentsCombined
   );
 
-  actArgmentsArray.push('--job');
-  actArgmentsArray.push(jobName);
-
   $.verbose = true;
 
-  await $`act ${actArgmentsArray}`;
+  if (event === undefined) {
+    actArgmentsArray.push('--job');
+    actArgmentsArray.push(target);
+    await $`act ${actArgmentsArray}`;
+  } else {
+    actArgmentsArray.push('--workflows');
+    actArgmentsArray.push(`./.github/workflows/${target}.yaml`);
+    await $`act ${event} ${actArgmentsArray}`;
+  }
 }
 
-export async function actionRunLocalEntry(jobName, options) {
-  const { live, input, reuse, secure } = options;
+export async function actionRunLocalEntry(target, options) {
+  const { live, input, reuse, secure, event } = options;
 
   let inputsArguments = {};
 
@@ -166,7 +170,7 @@ export async function actionRunLocalEntry(jobName, options) {
   if (!secure) {
     actArgments.push({ name: '--insecure-secrets', value: '' });
   }
-  await actionRunLocal(jobName, actArgments);
+  await actionRunLocal(target, actArgments, event);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -214,11 +218,12 @@ export default async function act(program) {
 
   actLocal
     .description('run local action with at')
-    .argument('[job]', 'workflow name')
+    .argument('[target]', 'workflow or job name')
     .option('--live', 'run live version on run')
     .option('--no-reuse', 'do not reuse container state')
     .option('--no-secure', "show secrets in logs (don't use in production)")
     .option('-i, --input [inputs...]', 'action inputs')
+    .option('--event <string>", " trigger event (ex: workflow_run')
     .action(actionRunLocalEntry);
 
   actRemote

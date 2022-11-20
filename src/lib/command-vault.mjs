@@ -1,9 +1,9 @@
-import { $, which, sleep, cd, fs } from "zx";
+import { $, which, sleep, cd, fs } from 'zx';
 import {
   detectScriptsDirectory,
   recursiveDirectoriesDiscovery,
   verifyIfMetaJsonExists,
-} from "../utils/divers.mjs";
+} from '../utils/divers.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -28,7 +28,7 @@ cd(currentPath);
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let metaConfig = await fs.readJsonSync("meta.json");
+let metaConfig = await fs.readJsonSync('meta.json');
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONSTANTS
@@ -42,67 +42,14 @@ const GCP_PROJECT_NAME = process.env.GCP_PROJECT_NAME;
 ////////////////////////////////////////////////////////////////////////////////
 
 async function defineSecretNamespace() {
-  let { type, name } = metaConfig;
+  let { id, scope } = metaConfig;
 
   let secretNamespace;
 
-  switch (type) {
-    case "project": {
-      secretNamespace = `${GCP_PROJECT_NAME}/admin/secrets`;
-      break;
-    }
-    case "app": {
-      let { vault } = metaConfig;
-
-      secretNamespace = `${GCP_PROJECT_NAME}/${ENV}/app/${name}/secrets`;
-
-      break;
-    }
-    case "cluster": {
-      let { cluster } = metaConfig;
-      let { app } = cluster;
-      secretNamespace = `${GCP_PROJECT_NAME}/${ENV}/app/${app}/global/secrets`;
-      break;
-    }
-    case "cluster_app": {
-      let { cluster } = metaConfig;
-      let { app } = cluster;
-      secretNamespace = `${GCP_PROJECT_NAME}/${ENV}/app/${app}/app/${name}/secrets`;
-      break;
-    }
-    case "group": {
-      let { group } = metaConfig;
-      let { app } = group;
-      secretNamespace = `${GCP_PROJECT_NAME}/${ENV}/app/${app}/global/secrets`;
-      break;
-    }
-    case "group_app": {
-      let { group } = metaConfig;
-      let { app } = group;
-      secretNamespace = `${GCP_PROJECT_NAME}/${ENV}/app/${app}/app/${name}/secrets`;
-      break;
-    }
-    case "db": {
-      secretNamespace = `${GCP_PROJECT_NAME}/${ENV}/db/${name}/secrets`;
-      break;
-    }
-    case "rds": {
-      secretNamespace = `${GCP_PROJECT_NAME}/${ENV}/rds/secrets`;
-      break;
-    }
-    case "vault": {
-      secretNamespace = `${GCP_PROJECT_NAME}/vault/secrets`;
-      break;
-    }
-
-    case "pgadmin": {
-      secretNamespace = `${GCP_PROJECT_NAME}/pg/secrets`;
-      break;
-    }
-    default: {
-      console.log("No secret namespace defined");
-      throw new Error("No secret namespace defined");
-    }
+  if (scope === 'global') {
+    secretNamespace = `${id}/global`;
+  } else {
+    secretNamespace = `${id}/${ENV}`;
   }
 
   $.verbose = true;
@@ -119,10 +66,9 @@ export async function vaultKvCertsToVault(data, directoryPath) {
     metaConfig = await verifyIfMetaJsonExists(directoryPath);
   }
 
-  let { name, cluster } = metaConfig;
-  let { app } = cluster;
+  let secretPath = await defineSecretNamespace();
 
-  const secretPath = `${GCP_PROJECT_NAME}/${ENV}/app/${app}/app/${name}/certificats`;
+  secretPath = `${secretPath}/certificats`;
 
   await $`vault kv put kv/${secretPath} CREDS=${data}`;
 }
@@ -132,10 +78,9 @@ export async function vaultKvCertsToVault(data, directoryPath) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function vaultKvCertsToLocal(data) {
-  let { name, cluster } = metaConfig;
-  let { app } = cluster;
+  let secretPath = await defineSecretNamespace();
 
-  const secretPath = `${GCP_PROJECT_NAME}/${ENV}/app/${app}/app/${name}/certificats`;
+  secretPath = `${secretPath}/certificats`;
 
   const randomFilename = Math.floor(Math.random() * 1000000);
 
@@ -155,8 +100,10 @@ export async function vaultKvCertsToLocal(data) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function vaultKvLocalToVault() {
-  const envFileRaw = await fs.readFileSync(".env", "utf8");
-  const secretPath = await defineSecretNamespace();
+  const envFileRaw = await fs.readFileSync('.env', 'utf8');
+  let secretPath = await defineSecretNamespace();
+
+  secretPath = `${secretPath}/secrets`;
 
   $.verbose = true;
   await $`vault kv put kv/${secretPath} CREDS=${envFileRaw}`;
@@ -167,7 +114,9 @@ export async function vaultKvLocalToVault() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function vaultKvVaultToGkeCredentials() {
-  const secretPath = await defineSecretNamespace();
+  let secretPath = await defineSecretNamespace();
+
+  secretPath = `${secretPath}/secrets`;
 
   const randomFilename = Math.floor(Math.random() * 1000000);
 
@@ -224,7 +173,9 @@ export async function vaultKvVaultToLocalAll() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function vaultKvVaultToLocalUnit() {
-  const secretPath = await defineSecretNamespace();
+  let secretPath = await defineSecretNamespace();
+
+  secretPath = `${secretPath}/secrets`;
 
   // generate a random integer number
 
@@ -239,11 +190,11 @@ export async function vaultKvVaultToLocalUnit() {
   cd(currentPath);
 
   // if .env file exists, create a backup
-  if (await fs.existsSync(".env")) {
-    await fs.copyFileSync(".env", ".env.backup");
+  if (await fs.existsSync('.env')) {
+    await fs.copyFileSync('.env', '.env.backup');
   }
 
-  await fs.writeFileSync(".env", CREDS, "utf8");
+  await fs.writeFileSync('.env', CREDS, 'utf8');
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -255,20 +206,20 @@ export async function vaultKvVaultToLocalUnit() {
 // actions
 
 export default async function vault(program) {
-  const vault = program.command("vault");
-  vault.description("manage project secrets");
-  const vaultKv = vault.command("kv");
-  vaultKv.description("manage key-value pairs");
+  const vault = program.command('vault');
+  vault.description('manage project secrets');
+  const vaultKv = vault.command('kv');
+  vaultKv.description('manage key-value pairs');
 
-  const vaultKvImport = vaultKv.command("import");
-  const vaultKvExport = vaultKv.command("export");
+  const vaultKvImport = vaultKv.command('import');
+  const vaultKvExport = vaultKv.command('export');
 
   vaultKvImport
-    .description("from .env to remote vault")
+    .description('from .env to remote vault')
     .action(vaultKvLocalToVault);
 
   vaultKvExport
-    .description("from remote vault to .env")
-    .option("--all", "export all project secrets")
+    .description('from remote vault to .env')
+    .option('--all', 'export all project secrets')
     .action(vaultKvVaultToLocalEntry);
 }

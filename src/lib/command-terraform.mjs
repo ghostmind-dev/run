@@ -42,36 +42,19 @@ const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 ////////////////////////////////////////////////////////////////////////////////
 
 async function getBucketConfig(component) {
-  let { type, name } = metaConfig;
+  let { id, scope } = metaConfig;
   let bucketDirectory;
 
-  if (type === 'project') {
-    bucketDirectory = `admin/terraform/${component}`;
-  } else if (type === 'app') {
-    bucketDirectory = `${process.env.ENV}/app/${name}/terraform/${component}`;
-  } else if (type === 'cluster') {
-    bucketDirectory = `${process.env.ENV}/app/${name}/terraform/${component}`;
-  } else if (type === 'cluster_core') {
-    bucketDirectory = `${process.env.ENV}/cluster/terraform/${component}`;
-  } else if (type === 'group') {
-    bucketDirectory = `${process.env.ENV}/app/${name}/terraform/${component}`;
-  } else if (type === 'rds') {
-    bucketDirectory = `${process.env.ENV}/rds/terraform/${component}`;
-  } else if (type === 'vault') {
-    bucketDirectory = `vault/terraform/${component}`;
-  } else if (type === 'db') {
-    bucketDirectory = `${process.env.ENV}/db/${name}/terraform/${component}`;
-  } else if (type === 'pgadmin') {
-    bucketDirectory = `pg/terraform/${component}`;
+  if (scope === 'global') {
+    bucketDirectory = `${id}/global/terraform/${component}`;
   } else {
-    console.log('this redirectory is neither of type project nor of type app');
-    return;
+    bucketDirectory = `${id}/${ENV}/terraform/${component}`;
   }
 
   $.verbose = true;
 
   const bcBucket = `bucket=bucket-${process.env.RUN_CORE_PROJECT}`;
-  const bcPrefix = `prefix=${process.env.GCP_PROJECT_NAME}/${bucketDirectory}`;
+  const bcPrefix = `prefix=${bucketDirectory}`;
 
   return { bcBucket, bcPrefix };
 }
@@ -254,11 +237,12 @@ export async function terraformApply(component, options) {
   // test
   try {
     let { root, docker_build } = await getTerraformConfig(component);
-    if (docker_build) {
-      await buildDocketImage();
-      await pushDockerImage();
-    }
+    // if (docker_build) {
+    //   await buildDocketImage();
+    //   await pushDockerImage();
+    // }
     let pathResources = `${currentPath}/${root}/${component}`;
+
     cd(`${pathResources}/`);
     const { bcBucket, bcPrefix } = await getBucketConfig(component);
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
