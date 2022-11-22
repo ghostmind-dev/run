@@ -35,10 +35,8 @@ const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 // GET BACKEND BUCKET NAME AND DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
-async function getBucketConfig(component) {
-  const metaConfig = await fs.readJsonSync("meta.json");
-
-  let { id, scope } = metaConfig;
+async function getBucketConfig(component, config) {
+  let { id, scope } = config;
   let bucketDirectory;
 
   if (scope === "global") {
@@ -117,7 +115,7 @@ export async function terraformStateMv(
     cd(`${targetResources}/`);
 
     let { bcBucket: targetBcBucket, bcPrefix: targetBcPrefix } =
-      await getBucketConfig(target_component);
+      await getBucketConfig(target_component, metaConfig);
 
     await $`terraform init -backend-config=${targetBcBucket} -backend-config=${targetBcPrefix} --lock=false`;
     await $`terraform state pull > terraform.tfstate`;
@@ -132,7 +130,10 @@ export async function terraformStateMv(
       new_name = current_name;
     }
 
-    let { bcBucket, bcPrefix } = await getBucketConfig(source_component);
+    let { bcBucket, bcPrefix } = await getBucketConfig(
+      source_component,
+      metaConfig
+    );
 
     $.verbose = true;
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
@@ -148,13 +149,14 @@ export async function terraformStateMv(
 
 export async function terraformStatePull(component) {
   try {
+    const metaConfig = await fs.readJsonSync("meta.json");
     let { root } = await getTerraformConfig();
 
     let pathResources = `${currentPath}/${root}/${component}`;
 
     cd(`${pathResources}/`);
 
-    let { bcBucket, bcPrefix } = await getBucketConfig(component);
+    let { bcBucket, bcPrefix } = await getBucketConfig(component, metaConfig);
 
     $.verbose = true;
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
@@ -194,13 +196,14 @@ export async function terraformImport(
   remote_resources_path
 ) {
   try {
+    const metaConfig = await fs.readJsonSync("meta.json");
     let { root } = await getTerraformConfig(component);
 
     let pathResources = `${currentPath}/${root}/${component}`;
 
     cd(`${pathResources}/`);
 
-    const { bcBucket, bcPrefix } = await getBucketConfig(component);
+    const { bcBucket, bcPrefix } = await getBucketConfig(component, metaConfig);
 
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform import ${local_resouces_path} ${remote_resources_path}`;
@@ -215,13 +218,14 @@ export async function terraformImport(
 
 export async function terraformDestroy(component, options) {
   try {
+    const metaConfig = await fs.readJsonSync("meta.json");
     let { root } = await getTerraformConfig(component);
 
     let pathResources = `${currentPath}/${root}/${component}`;
 
     cd(`${pathResources}/`);
 
-    const { bcBucket, bcPrefix } = await getBucketConfig(component);
+    const { bcBucket, bcPrefix } = await getBucketConfig(component, metaConfig);
 
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform plan -destroy`;
@@ -247,12 +251,11 @@ export async function terraformApply(component, options) {
     let pathResources = `${currentPath}/${root}/${component}`;
 
     cd(`${pathResources}/`);
-    console.log(pathResources);
 
-    const { bcBucket, bcPrefix } = await getBucketConfig(component);
-    // await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
-    // await $`terraform plan`;
-    // await $`terraform apply -auto-approve`;
+    const { bcBucket, bcPrefix } = await getBucketConfig(component, metaConfig);
+    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
+    await $`terraform plan`;
+    await $`terraform apply -auto-approve`;
   } catch (error) {
     console.error(error.message);
   }
