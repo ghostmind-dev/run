@@ -247,6 +247,8 @@ export async function terraformApply(component, options) {
     let pathResources = `${currentPath}/${root}/${component}`;
 
     cd(`${pathResources}/`);
+    console.log(pathResources);
+
     const { bcBucket, bcPrefix } = await getBucketConfig(component);
     // await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     // await $`terraform plan`;
