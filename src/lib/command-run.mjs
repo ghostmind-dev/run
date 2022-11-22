@@ -22,16 +22,11 @@ let currentPath = await detectScriptsDirectory(process.cwd());
 cd(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
-// RUNNING COMMAND LOCATION
-////////////////////////////////////////////////////////////////////////////////
-
-const metaConfig = await fs.readJsonSync('meta.json');
-
-////////////////////////////////////////////////////////////////////////////////
 // DEFINE IMAGE NAME
 ////////////////////////////////////////////////////////////////////////////////
 
 async function defineImageName() {
+  const metaConfig = await fs.readJsonSync('meta.json');
   let { scope, name } = metaConfig;
 
   const GCP_PROJECT_NAME = process.env.GCP_PROJECT_NAME;
@@ -55,6 +50,7 @@ async function defineImageName() {
 export async function buildDocketImage() {
   const ENV = process.env.ENV;
 
+  const metaConfig = await fs.readJsonSync('meta.json');
   const { scope } = metaConfig;
 
   let imageName = await defineImageName();
@@ -85,6 +81,7 @@ export async function buildDocketImage() {
 
 export async function pushDockerImage() {
   let imageName = await defineImageName();
+  const metaConfig = await fs.readJsonSync('meta.json');
 
   cd(`${currentPath}/container`);
   let { name, type } = metaConfig;
@@ -100,7 +97,7 @@ export async function pushDockerImage() {
 
 export async function getDockerImageDigest(path) {
   $.verbose = false;
-
+  const metaConfig = await fs.readJsonSync('meta.json');
   let { name, type } = metaConfig;
 
   if (path) {

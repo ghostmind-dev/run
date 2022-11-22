@@ -1,6 +1,8 @@
-import { $, which, cd, sleep } from 'zx';
-import { detectScriptsDirectory, withMetaMatching } from '../utils/divers.mjs';
+import { $, cd, sleep } from 'zx';
+import { withMetaMatching } from '../utils/divers.mjs';
 import { nanoid } from 'nanoid/async';
+import jsonfile from 'jsonfile';
+import * as inquirer from 'inquirer';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -78,9 +80,30 @@ export async function devInstallDependencies() {
 export async function createShortUUID() {
   const id = await nanoid(12);
 
-  console.log(id);
-
   return id;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// CREATE A METADATA FILE
+////////////////////////////////////////////////////////////////////////////////
+
+export async function createMetaFile() {
+  const id = await createShortUUID();
+
+  const prompt = inquirer.createPromptModule();
+
+  const { name } = await prompt({
+    type: 'input',
+    name: 'name',
+    message: 'What is the name of this object?',
+  });
+
+  const meta = {
+    name,
+    id,
+  };
+
+  await jsonfile.writeFile('meta.json', meta, { spaces: 2 });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -96,6 +119,8 @@ export default async function utils(program) {
   dev.description('devcontainer utils');
   const nanoid = utils.command('nanoid');
   dev.description('devcontainer utils');
+  const meta = utils.command('meta');
+  meta.description('meta utils');
 
   const gitAmend = git.command('amend');
   gitAmend.description('amend the last commit');
@@ -112,4 +137,8 @@ export default async function utils(program) {
   const id = nanoid.command('id');
   id.description('generate a nanoid');
   id.action(createShortUUID);
+
+  const metaCreate = meta.command('create');
+  metaCreate.description('create a meta.json file');
+  metaCreate.action(createMetaFile);
 }

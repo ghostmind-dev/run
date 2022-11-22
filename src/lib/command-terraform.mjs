@@ -25,12 +25,6 @@ let currentPath = await detectScriptsDirectory(process.cwd());
 cd(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
-// RUNNING COMMAND LOCATION
-////////////////////////////////////////////////////////////////////////////////
-
-const metaConfig = await fs.readJsonSync('meta.json');
-
-////////////////////////////////////////////////////////////////////////////////
 // CONSTANTS
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -42,6 +36,8 @@ const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 ////////////////////////////////////////////////////////////////////////////////
 
 async function getBucketConfig(component) {
+  const metaConfig = await fs.readJsonSync('meta.json');
+
   let { id, scope } = metaConfig;
   let bucketDirectory;
 
@@ -78,6 +74,7 @@ async function getTerraformConfig() {
 ////////////////////////////////////////////////////////////////////////////////
 
 async function buildDocketImage() {
+  const metaConfig = await fs.readJsonSync('meta.json');
   let { name } = metaConfig;
   cd(`${currentPath}/app`);
 
@@ -107,6 +104,7 @@ export async function terraformStateMv(
   current_name,
   new_name
 ) {
+  const metaConfig = await fs.readJsonSync('meta.json');
   try {
     let { root } = await getTerraformConfig();
 

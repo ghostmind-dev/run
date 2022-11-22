@@ -32,12 +32,6 @@ let currentPath = await detectScriptsDirectory(process.cwd());
 cd(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
-// RUNNING COMMAND LOCATION
-////////////////////////////////////////////////////////////////////////////////
-
-const metaConfig = await fs.readJsonSync('meta.json');
-
-////////////////////////////////////////////////////////////////////////////////
 // CHECK IF POD IF READY
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -66,6 +60,7 @@ export async function verifyIfPodReady(app, namespace) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function verifyClusterDirectory() {
+  const metaConfig = await fs.readJsonSync('meta.json');
   let { type } = metaConfig;
   if (type === 'cluster' || type === 'cluster_app') {
     if (type === 'cluster_app') {
@@ -83,9 +78,19 @@ export async function verifyClusterDirectory() {
 
 export async function connectToCluster() {
   const CLUSTER_PROJECT = process.env.RUN_CLUSTER_PROJECT;
-  $.verbose = true;
+  $.verbose = false;
 
-  await $`gcloud container clusters get-credentials core-${ENV} --project ${CLUSTER_PROJECT} --zone us-central1-b`;
+  try {
+    await $`gcloud container clusters get-credentials core-${ENV} --project ${CLUSTER_PROJECT} --zone us-central1-b`;
+    return { status: 'success', message: 'connected to cluster' };
+  } catch (e) {
+    let { stderr } = e;
+    // if sterr contains 404
+    if (stderr.includes('404')) {
+      return { status: 'error', message: 'cluster not found' };
+    }
+    return { status: 'error', message: 'unknown error' };
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -117,6 +122,7 @@ export async function exportCertificatesAll() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function exportCertificatesUnit() {
+  const metaConfig = await fs.readJsonSync('meta.json');
   const { cluster, name } = metaConfig;
 
   const { namespace, app, tls } = cluster;
@@ -157,6 +163,8 @@ export async function importCerts() {
   if (await verifyClusterDirectory()) {
     cd(currentPath);
     $.verbose = true;
+
+    const metaConfig = await fs.readJsonSync('meta.json');
 
     let { name, cluster } = metaConfig;
 
@@ -204,6 +212,7 @@ export async function importCerts() {
 
 export async function createSecrets() {
   $.verbose = true;
+  const metaConfig = await fs.readJsonSync('meta.json');
   const { type, name, cluster } = metaConfig;
 
   const { app, namespace } = cluster;
@@ -417,6 +426,7 @@ export async function deployGroupGkeToCluster(appName, options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerBuildApp() {
+  const metaConfig = await fs.readJsonSync('meta.json');
   const { name, cluster } = metaConfig;
 
   const { app } = cluster;
@@ -442,6 +452,7 @@ export async function dockerBuildApp() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerPushApp() {
+  const metaConfig = await fs.readJsonSync('meta.json');
   const { name, cluster } = metaConfig;
 
   const { app } = cluster;
@@ -475,6 +486,7 @@ export async function setNamespace(namespace) {
 
 export async function applyPod() {
   $.verbose = true;
+  const metaConfig = await fs.readJsonSync('meta.json');
   const { cluster } = metaConfig;
 
   const { namespace } = cluster;

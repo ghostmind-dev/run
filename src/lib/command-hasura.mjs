@@ -33,16 +33,12 @@ let currentPath = await detectScriptsDirectory(process.cwd());
 cd(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
-// RUNNING COMMAND LOCATION
-////////////////////////////////////////////////////////////////////////////////
-
-const metaConfig = await fs.readJsonSync('meta.json');
-
-////////////////////////////////////////////////////////////////////////////////
 // RUN ACTION LOCALLY WITH ACT
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraOpenConsole() {
+  const metaConfig = await fs.readJsonSync('meta.json');
+
   const { hasura: hasuraConfig } = metaConfig;
 
   const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
@@ -58,6 +54,8 @@ export async function hasuraOpenConsole() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraMigrateSquash(version) {
+  const metaConfig = await fs.readJsonSync('meta.json');
+
   const { hasura: hasuraConfig } = metaConfig;
 
   const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
@@ -73,6 +71,8 @@ export async function hasuraMigrateSquash(version) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraMigrateCreate(name) {
+  const metaConfig = await fs.readJsonSync('meta.json');
+
   const { hasura: hasuraConfig } = metaConfig;
 
   const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
@@ -89,6 +89,8 @@ export async function hasuraMigrateCreate(name) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraMigrateApply(version) {
+  const metaConfig = await fs.readJsonSync('meta.json');
+
   const { hasura: hasuraConfig } = metaConfig;
 
   const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
@@ -104,6 +106,8 @@ export async function hasuraMigrateApply(version) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraGlobalCmd(commands, options) {
+  const metaConfig = await fs.readJsonSync('meta.json');
+
   const { hasura: hasuraConfig } = metaConfig;
 
   const { databaseName, all } = options;

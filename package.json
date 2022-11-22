@@ -20,6 +20,7 @@
     "commander": "^9.4.0",
     "dotenv": "^16.0.1",
     "inquirer": "^9.1.0",
+    "jsonfile": "^6.1.0",
     "lodash": "^4.17.21",
     "nanoid": "^4.0.0",
     "zx": "^7.0.8"

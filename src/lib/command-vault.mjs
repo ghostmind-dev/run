@@ -24,11 +24,6 @@ const vaultConfigDefault = {};
 let currentPath = await detectScriptsDirectory(process.cwd());
 
 cd(currentPath);
-////////////////////////////////////////////////////////////////////////////////
-// RUNNING COMMAND LOCATION
-////////////////////////////////////////////////////////////////////////////////
-
-let metaConfig = await fs.readJsonSync('meta.json');
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONSTANTS
@@ -42,6 +37,7 @@ const GCP_PROJECT_NAME = process.env.GCP_PROJECT_NAME;
 ////////////////////////////////////////////////////////////////////////////////
 
 async function defineSecretNamespace() {
+  let metaConfig = await fs.readJsonSync('meta.json');
   let { id, scope } = metaConfig;
 
   let secretNamespace;
@@ -150,6 +146,7 @@ export async function vaultKvVaultToLocalEntry(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function vaultKvVaultToLocalAll() {
+  let metaConfig = await fs.readJsonSync('meta.json');
   let allDirectories = await recursiveDirectoriesDiscovery(
     `${process.env.SRC}`
   );
