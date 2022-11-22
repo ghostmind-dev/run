@@ -64,7 +64,6 @@ async function getTerraformConfig() {
 
   cd(currentPath);
 
-  console.log(currentPath);
   let { terraform } = await fs.readJsonSync("meta.json");
 
   if (terraform === undefined) {
@@ -245,10 +244,10 @@ export async function terraformApply(component, options) {
     // //   await buildDocketImage();
     // //   await pushDockerImage();
     // // }
-    // let pathResources = `${currentPath}/${root}/${component}`;
+    let pathResources = `${currentPath}/${root}/${component}`;
 
-    // cd(`${pathResources}/`);
-    // const { bcBucket, bcPrefix } = await getBucketConfig(component);
+    cd(`${pathResources}/`);
+    const { bcBucket, bcPrefix } = await getBucketConfig(component);
     // await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     // await $`terraform plan`;
     // await $`terraform apply -auto-approve`;
