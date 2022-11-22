@@ -240,8 +240,8 @@ export async function terraformDestroy(component, options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function terraformApply(component, options) {
-  console.log(currentPath);
-  // test
+  const metaConfig = await fs.readJsonSync("meta.json");
+
   try {
     let { root, docker_build } = await getTerraformConfig(component);
     // // if (docker_build) {
