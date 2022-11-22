@@ -178,24 +178,24 @@ export async function actionSecretsSet() {
 
   await $`run vault kv export`;
 
-  const envContents = await $`grep -v '^#' .env | xargs`;
-  const envContentsArray = `${envContents}`.split(' ');
+  // const envContents = await $`grep -v '^#' .env | xargs`;
+  // const envContentsArray = `${envContents}`.split(' ');
 
-  const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
+  // const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
 
-  const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
+  // const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
 
-  for (let secret of envContentsArray) {
-    const secretArray = secret.split('=');
-    const secretName = secretArray[0];
-    const secretValueRaw = secretArray[1];
-    const secretValue = secretValueRaw.replace(/(\r\n|\n|\r)/gm, '');
+  // for (let secret of envContentsArray) {
+  //   const secretArray = secret.split('=');
+  //   const secretName = secretArray[0];
+  //   const secretValueRaw = secretArray[1];
+  //   const secretValue = secretValueRaw.replace(/(\r\n|\n|\r)/gm, '');
 
-    core.setSecret(secretValue);
-    core.setOutput(secretName, secretValue);
+  //   core.setSecret(secretValue);
+  //   core.setOutput(secretName, secretValue);
 
-    await $`echo ${secretName}=${secretValue} >> ${gitEnvPath}`;
-  }
+  //   await $`echo ${secretName}=${secretValue} >> ${gitEnvPath}`;
+  // }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
