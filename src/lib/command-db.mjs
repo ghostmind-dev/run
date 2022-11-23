@@ -1,7 +1,10 @@
 import { $, which, sleep, cd, fs } from 'zx';
 import core from '@actions/core';
 import { Storage } from '@google-cloud/storage';
-import { detectScriptsDirectory } from '../utils/divers.mjs';
+import {
+  detectScriptsDirectory,
+  verifyIfMetaJsonExists,
+} from '../utils/divers.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -16,6 +19,12 @@ $.verbose = false;
 let currentPath = await detectScriptsDirectory(process.cwd());
 
 cd(currentPath);
+
+////////////////////////////////////////////////////////////////////////////////
+// CURRENT METADATA
+////////////////////////////////////////////////////////////////////////////////
+
+let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONSTANTS

@@ -1,5 +1,8 @@
 import { $, which, sleep, cd, fs } from 'zx';
-import { detectScriptsDirectory } from '../utils/divers.mjs';
+import {
+  detectScriptsDirectory,
+  verifyIfMetaJsonExists,
+} from '../utils/divers.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -44,6 +47,12 @@ const coreSecrets = {
 let currentPath = await detectScriptsDirectory(process.cwd());
 
 cd(currentPath);
+
+////////////////////////////////////////////////////////////////////////////////
+// CURRENT METADATA
+////////////////////////////////////////////////////////////////////////////////
+
+let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
 // VERIFY IF IT IS A PROJECT DIRECTORY

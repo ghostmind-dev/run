@@ -1,5 +1,9 @@
 import { $, cd, sleep } from 'zx';
-import { withMetaMatching } from '../utils/divers.mjs';
+import {
+  withMetaMatching,
+  verifyIfMetaJsonExists,
+  detectScriptsDirectory,
+} from '../utils/divers.mjs';
 import { nanoid } from 'nanoid/async';
 import jsonfile from 'jsonfile';
 import * as inquirer from 'inquirer';
@@ -9,6 +13,20 @@ import * as inquirer from 'inquirer';
 ////////////////////////////////////////////////////////////////////////////////
 
 $.verbose = false;
+
+////////////////////////////////////////////////////////////////////////////////
+// RUNNING COMMAND LOCATION
+////////////////////////////////////////////////////////////////////////////////
+
+let currentPath = await detectScriptsDirectory(process.cwd());
+
+cd(currentPath);
+
+////////////////////////////////////////////////////////////////////////////////
+// CURRENT METADATA
+////////////////////////////////////////////////////////////////////////////////
+
+let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
 // QUICK COMMIT AMEND
@@ -97,9 +115,20 @@ export async function createMetaFile() {
     name: 'name',
     message: 'What is the name of this object?',
   });
-
+  const { type } = await prompt({
+    type: 'input',
+    name: 'type',
+    message: 'What is the type of this object?',
+  });
+  const { scope } = await prompt({
+    type: 'input',
+    name: 'scope',
+    message: 'What is the scope of this object?',
+  });
   const meta = {
     name,
+    type,
+    scope,
     id,
   };
 

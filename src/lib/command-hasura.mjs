@@ -1,5 +1,8 @@
 import { $, which, sleep, cd, fs } from 'zx';
-import { detectScriptsDirectory } from '../utils/divers.mjs';
+import {
+  detectScriptsDirectory,
+  verifyIfMetaJsonExists,
+} from '../utils/divers.mjs';
 
 //////////////////////////////////////////////////////////////////////////////
 // CLEANING MIGRATIONS
@@ -31,6 +34,12 @@ const hasuraConfigDefault = {
 let currentPath = await detectScriptsDirectory(process.cwd());
 
 cd(currentPath);
+
+////////////////////////////////////////////////////////////////////////////////
+// CURRENT METADATA
+////////////////////////////////////////////////////////////////////////////////
+
+let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
 // RUN ACTION LOCALLY WITH ACT

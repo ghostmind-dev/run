@@ -2,7 +2,10 @@ import { $, which, sleep, cd, fs } from 'zx';
 import * as inquirer from 'inquirer';
 import { connectToCluster } from './command-cluster.mjs';
 import { execFileSync } from 'child_process';
-import { detectScriptsDirectory } from '../utils/divers.mjs';
+import {
+  detectScriptsDirectory,
+  verifyIfMetaJsonExists,
+} from '../utils/divers.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -17,6 +20,12 @@ $.verbose = false;
 let currentPath = await detectScriptsDirectory(process.cwd());
 
 cd(currentPath);
+
+////////////////////////////////////////////////////////////////////////////////
+// CURRENT METADATA
+////////////////////////////////////////////////////////////////////////////////
+
+let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
 // SKAFFOLD DEV ENTRY

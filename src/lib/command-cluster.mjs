@@ -3,6 +3,7 @@ import { config } from 'dotenv';
 import {
   detectScriptsDirectory,
   getDirectories,
+  verifyIfMetaJsonExists,
   withMetaMatching,
 } from '../utils/divers.mjs';
 import { vaultKvCertsToVault, vaultKvCertsToLocal } from './command-vault.mjs';
@@ -30,6 +31,12 @@ const SRC = process.env.SRC;
 let currentPath = await detectScriptsDirectory(process.cwd());
 
 cd(currentPath);
+
+////////////////////////////////////////////////////////////////////////////////
+// CURRENT METADATA
+////////////////////////////////////////////////////////////////////////////////
+
+let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
 // CHECK IF POD IF READY
