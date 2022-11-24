@@ -2,7 +2,9 @@ import { $, which, sleep, cd, fs } from 'zx';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
+  withMetaMatching,
 } from '../utils/divers.mjs';
+import _ from 'lodash';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -44,18 +46,13 @@ const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 // GET BACKEND BUCKET NAME AND DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
-async function getBucketConfig(component, config) {
-  if (config !== undefined) {
-    metaConfig = config;
-  }
-
-  let { id, scope } = metaConfig;
+async function getBucketConfig(id, scope) {
   let bucketDirectory;
 
   if (scope === 'global') {
-    bucketDirectory = `${id}/global/terraform/${component}`;
+    bucketDirectory = `${id}/global/terraform`;
   } else {
-    bucketDirectory = `${id}/${ENV}/terraform/${component}`;
+    bucketDirectory = `${id}/${ENV}/terraform}`;
   }
 
   $.verbose = true;
@@ -85,31 +82,6 @@ async function getTerraformConfig() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// BUILD AND PUSH DOCKER IMAGE
-////////////////////////////////////////////////////////////////////////////////
-
-async function buildDocketImage() {
-  const metaConfig = await fs.readJsonSync('meta.json');
-  let { name } = metaConfig;
-  cd(`${currentPath}/app`);
-
-  const DOCKERFILE = `${currentPath}/app/Dockerfile.${ENV}`;
-  const DOCKER_CONTEXT = `${currentPath}/app`;
-
-  $.verbose = true;
-  process.env.DOCKER_DEFAULT_PLATFORM = 'linux/amd64';
-  await $`docker build -t gcr.io/${GCP_PROJECT_NAME}/${name}:${ENV} -f ${DOCKERFILE} ${DOCKER_CONTEXT}`;
-
-  await sleep(1000);
-}
-
-async function pushDockerImage() {
-  let { name } = metaConfig;
-
-  await $`docker push gcr.io/${GCP_PROJECT_NAME}/${name}:${ENV}`;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // RUN TERRAFORM STATE MV
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -119,23 +91,36 @@ export async function terraformStateMv(
   current_name,
   new_name
 ) {
-  const metaConfig = await fs.readJsonSync('meta.json');
   try {
-    let { root } = await getTerraformConfig();
+    let metaConfig = await verifyIfMetaJsonExists(currentPath);
+    let { type } = metaConfig;
+
+    let pathResources;
+
+    if (type === 'component') {
+      console.log(
+        `Need to be in a the parent of the root directory of the component you want to move`
+      );
+      return;
+    }
+
+    let { terraform } = metaConfig;
+
+    let { root } = terraform;
 
     let targetResources = `${currentPath}/${root}/${target_component}`;
 
     cd(`${targetResources}/`);
 
+    let targetMeta = await verifyIfMetaJsonExists(targetResources);
+
+    let { id: targetId, scope: targetScope } = targetMeta;
+
     let { bcBucket: targetBcBucket, bcPrefix: targetBcPrefix } =
-      await getBucketConfig(target_component, metaConfig);
+      await getBucketConfig(targetId, targetScope);
 
     await $`terraform init -backend-config=${targetBcBucket} -backend-config=${targetBcPrefix} --lock=false`;
     await $`terraform state pull > terraform.tfstate`;
-
-    let sourceResources = `${currentPath}/${root}/${source_component}`;
-
-    cd(`${sourceResources}/`);
 
     let pathTargetStateFile = `../${target_component}/terraform.tfstate`;
 
@@ -143,10 +128,16 @@ export async function terraformStateMv(
       new_name = current_name;
     }
 
-    let { bcBucket, bcPrefix } = await getBucketConfig(
-      source_component,
-      metaConfig
-    );
+    let sourceResources = `${currentPath}/${root}/${source_component}`;
+
+    cd(`${sourceResources}/`);
+
+    let sourceMeta = await verifyIfMetaJsonExists(sourceResources);
+
+    let { id: sourceId, scope: sourceScope } = targetMeta;
+
+    let { bcBucket: sourceBcBucket, bcPrefix: sourceBcPrefix } =
+      await getBucketConfig(sourceId, sourceScope);
 
     $.verbose = true;
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
@@ -162,14 +153,27 @@ export async function terraformStateMv(
 
 export async function terraformStatePull(component) {
   try {
-    const metaConfig = await fs.readJsonSync('meta.json');
-    let { root } = await getTerraformConfig();
+    let metaConfig = await verifyIfMetaJsonExists(currentPath);
+    let { type } = metaConfig;
 
-    let pathResources = `${currentPath}/${root}/${component}`;
+    let pathResources;
 
-    cd(`${pathResources}/`);
+    if (component !== undefined) {
+      let { terraform } = metaConfig;
+      let { root } = terraform;
+      pathResources = `${currentPath}/${root}/${component}`;
+      cd(`${pathResources}/`);
+      metaConfig = await verifyIfMetaJsonExists(pathResources);
+    }
 
-    let { bcBucket, bcPrefix } = await getBucketConfig(component, metaConfig);
+    if (type !== 'component' && component === undefined) {
+      console.log(`something is wrong`);
+      return;
+    }
+
+    let { id, scope } = metaConfig;
+
+    const { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
 
     $.verbose = true;
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
@@ -185,13 +189,22 @@ export async function terraformStatePull(component) {
 
 export async function terraformStatePush(component) {
   try {
-    let { root } = await getTerraformConfig(component);
+    let metaConfig = await verifyIfMetaJsonExists(currentPath);
+    let { type } = metaConfig;
 
-    let pathResources = `${currentPath}/${root}/${component}`;
+    let pathResources;
 
-    cd(`${pathResources}/`);
+    if (component !== undefined) {
+      let { terraform } = metaConfig;
+      let { root } = terraform;
+      pathResources = `${currentPath}/${root}/${component}`;
+      cd(`${pathResources}/`);
+    }
 
-    $.verbose = true;
+    if (type !== 'component' && component === undefined) {
+      console.log(`something is wrong`);
+      return;
+    }
 
     await $`terraform state push terraform.tfstate`;
   } catch (error) {
@@ -209,14 +222,27 @@ export async function terraformImport(
   remote_resources_path
 ) {
   try {
-    const metaConfig = await fs.readJsonSync('meta.json');
-    let { root } = await getTerraformConfig(component);
+    let metaConfig = await verifyIfMetaJsonExists(currentPath);
+    let { type } = metaConfig;
 
-    let pathResources = `${currentPath}/${root}/${component}`;
+    let pathResources;
 
-    cd(`${pathResources}/`);
+    if (component !== undefined) {
+      let { terraform } = metaConfig;
+      let { root } = terraform;
+      pathResources = `${currentPath}/${root}/${component}`;
+      cd(`${pathResources}/`);
+      metaConfig = await verifyIfMetaJsonExists(pathResources);
+    }
 
-    const { bcBucket, bcPrefix } = await getBucketConfig(component, metaConfig);
+    if (type !== 'component' && component === undefined) {
+      console.log(`something is wrong`);
+      return;
+    }
+
+    let { id, scope } = metaConfig;
+
+    const { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
 
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform import ${local_resouces_path} ${remote_resources_path}`;
@@ -226,20 +252,85 @@ export async function terraformImport(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// TERRAFORM DESTROY
+// TERRAFORM DESTROY ENTRYPOINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformDestroy(component, options) {
+export async function terraformDestroyEntry(component, options) {
+  const { all, local } = options;
+
+  if (all) {
+    await terraformDestroAll(options);
+  } else {
+    await terraformDestroyUnit(component, options);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// TERRAFORM DESTROY ALL
+////////////////////////////////////////////////////////////////////////////////
+
+export async function terraformDestroAll(options) {
+  const metaConfig = await fs.readJsonSync('meta.json');
+
+  let { root } = await getTerraformConfig();
+
+  const componentDirectories = await withMetaMatching({
+    property: 'type',
+    value: 'component',
+    path: `${currentPath}/${root}`,
+  });
+
+  const componentsByPriority = _.sortBy(componentDirectories, (composante) => {
+    return composante.config.terraform.priority;
+  });
+
+  for (let component of componentsByPriority) {
+    let { directory, config } = component;
+    let { id, scope } = config;
+
+    let { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
+
+    cd(`${directory}/`);
+
+    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
+    await $`terraform plan -destroy`;
+    await $`terraform destroy -auto-approve`;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// TERRAFORM DESTROY UNIT
+////////////////////////////////////////////////////////////////////////////////
+
+export async function terraformDestroyUnit(component, options) {
   try {
-    const metaConfig = await fs.readJsonSync('meta.json');
-    let { root } = await getTerraformConfig(component);
+    let metaConfig = await verifyIfMetaJsonExists(currentPath);
+    let { type } = metaConfig;
 
-    let pathResources = `${currentPath}/${root}/${component}`;
+    let pathResources;
 
-    cd(`${pathResources}/`);
+    if (component !== undefined) {
+      let { terraform } = metaConfig;
+      let { root } = terraform;
+      pathResources = `${currentPath}/${root}/${component}`;
+      cd(`${pathResources}/`);
+      metaConfig = await verifyIfMetaJsonExists(pathResources);
+    }
 
-    const { bcBucket, bcPrefix } = await getBucketConfig(component, metaConfig);
+    if (type !== 'component' && component === undefined) {
+      console.log(`
+      # from parent directory
+      $ run terraform apply component
 
+      # from component directory
+      $ run terraform apply
+    `);
+      return;
+    }
+
+    let { id, scope } = metaConfig;
+
+    const { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform plan -destroy`;
     await $`terraform destroy -auto-approve`;
@@ -249,23 +340,85 @@ export async function terraformDestroy(component, options) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// TERRAFORM APPLY
+// TERRAFORM APPLY ENTRYPOINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformApply(component, options) {
+export async function terraformApplyEntry(component, options) {
+  const { all, local } = options;
+
+  if (all) {
+    await terraformApplyAll(options);
+  } else {
+    await terraformApplyUnit(component, options);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// TERRAFORM APPLY ALL
+////////////////////////////////////////////////////////////////////////////////
+
+export async function terraformApplyAll(options) {
   const metaConfig = await fs.readJsonSync('meta.json');
 
+  let { root } = await getTerraformConfig();
+
+  const componentDirectories = await withMetaMatching({
+    property: 'type',
+    value: 'component',
+    path: `${currentPath}/${root}`,
+  });
+
+  const componentsByPriority = _.sortBy(componentDirectories, (composante) => {
+    return composante.config.terraform.priority;
+  });
+
+  for (let component of componentsByPriority) {
+    let { directory, config } = component;
+    let { id, scope } = config;
+
+    let { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
+
+    cd(`${directory}/`);
+
+    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
+    await $`terraform plan`;
+    await $`terraform apply -auto-approve`;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// TERRAFORM APPLY UNIT
+////////////////////////////////////////////////////////////////////////////////
+
+export async function terraformApplyUnit(component, options) {
   try {
-    let { root, docker_build } = await getTerraformConfig(component);
-    // // if (docker_build) {
-    // //   await buildDocketImage();
-    // //   await pushDockerImage();
-    // // }
-    let pathResources = `${currentPath}/${root}/${component}`;
+    let metaConfig = await verifyIfMetaJsonExists(currentPath);
+    let { type } = metaConfig;
 
-    cd(`${pathResources}/`);
+    let pathResources;
 
-    const { bcBucket, bcPrefix } = await getBucketConfig(component);
+    if (component !== undefined) {
+      let { terraform } = metaConfig;
+      let { root } = terraform;
+      pathResources = `${currentPath}/${root}/${component}`;
+      cd(`${pathResources}/`);
+      metaConfig = await verifyIfMetaJsonExists(pathResources);
+    }
+
+    if (type !== 'component' && component === undefined) {
+      console.log(`
+      # from parent directory
+      $ run terraform apply component
+
+      # from component directory
+      $ run terraform apply
+    `);
+      return;
+    }
+
+    let { id, scope } = metaConfig;
+
+    const { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform plan`;
     await $`terraform apply -auto-approve`;
@@ -309,12 +462,13 @@ export default async function commandTerraform(program) {
     .description('apply the infrastructure')
     .argument('[component]', 'component to deploy')
     .option('--local', 'use local state')
-    .action(terraformApply);
+    .option('--all', 'deploy all components')
+    .action(terraformApplyEntry);
 
   tfDestroy
     .description('terminate the infrastructure')
     .argument('[component]', 'component to destroy')
-    .action(terraformDestroy);
+    .action(terraformDestroyEntry);
 
   tfImport
     .description('import the infrastructure')

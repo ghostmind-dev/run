@@ -94,8 +94,12 @@ export async function verifyIfMetaJsonExists(path) {
 // return {array} - an array of path that matches the condition
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function withMetaMatching(property, value) {
-  const allDirectories = await recursiveDirectoriesDiscovery(process.env.SRC);
+export async function withMetaMatching({ property, value, path }) {
+  let directoryEntryPath = path || process.env.SRC;
+
+  const allDirectories = await recursiveDirectoriesDiscovery(
+    directoryEntryPath
+  );
 
   let directories = [];
 

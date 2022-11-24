@@ -105,7 +105,10 @@ export async function connectToCluster() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function exportCertificatesAll() {
-  const matchingDirectories = await withMetaMatching('cluster.tls', true);
+  const matchingDirectories = await withMetaMatching({
+    property: 'cluster.tls',
+    value: true,
+  });
 
   for (let matchDirectory of matchingDirectories) {
     const { config, directory } = matchDirectory;
