@@ -52,7 +52,7 @@ async function getBucketConfig(id, scope) {
   if (scope === 'global') {
     bucketDirectory = `${id}/global/terraform`;
   } else {
-    bucketDirectory = `${id}/${ENV}/terraform}`;
+    bucketDirectory = `${id}/${ENV}/terraform`;
   }
 
   $.verbose = true;
