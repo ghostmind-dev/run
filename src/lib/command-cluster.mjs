@@ -85,10 +85,11 @@ export async function verifyClusterDirectory() {
 
 export async function connectToCluster() {
   const CLUSTER_PROJECT = process.env.RUN_CLUSTER_PROJECT;
+  const CLUSTER_ZONE = process.env.RUN_CLUSTER_ZONE;
   $.verbose = false;
 
   try {
-    await $`gcloud container clusters get-credentials core-${ENV} --project ${CLUSTER_PROJECT} --zone us-central1-b`;
+    await $`gcloud container clusters get-credentials core-${ENV} --project ${CLUSTER_PROJECT} --zone ${CLUSTER_ZONE}`;
     return { status: 'success', message: 'connected to cluster' };
   } catch (e) {
     let { stderr } = e;
