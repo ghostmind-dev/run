@@ -43,10 +43,53 @@ const ENV = `${process.env.ENV}`;
 const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 
 ////////////////////////////////////////////////////////////////////////////////
+// GET DOCKERFILE NAME AND IMAGE NAME
+////////////////////////////////////////////////////////////////////////////////
+
+export async function getDockerfileAndImageName() {
+  let { type, scope, docker } = metaConfig;
+
+  let { root } = docker;
+
+  let dockerFileName;
+
+  let dockerfile;
+  let dockerContext;
+
+  if (scope === 'global') {
+    dockerFileName = `Dockerfile`;
+  } else {
+    dockerFileName = `Dockerfile.${ENV}`;
+  }
+
+  if (type === 'container') {
+    dockerfile = `${currentPath}/${dockerFileName}`;
+    dockerContext = `${currentPath}`;
+  } else if (root !== undefined) {
+    dockerfile = `${currentPath}/${root}/${dockerFileName}`;
+    dockerContext = `${currentPath}/${root}`;
+    metaConfig = await verifyIfMetaJsonExists(dockerContext);
+    cd(dockerContext);
+  }
+
+  $.verbose = true;
+
+  let { image } = metaConfig.docker;
+
+  if (scope !== 'global') {
+    image = `${image}:${ENV}`;
+  }
+
+  return { dockerfile, dockerContext, image };
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // GET LATEST IMAGE DIGEST
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDockerImageDigest(image) {
+export async function getDockerImageDigest() {
+  let { image } = await getDockerfileAndImageName();
+
   const imageDigestRaw =
     await $`docker inspect --format='{{index .RepoDigests 0}}' ${image}`;
 
@@ -80,39 +123,7 @@ export async function dockerPushAll() {}
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerPushUnit() {
-  let { type, scope, docker } = metaConfig;
-
-  let { root } = docker;
-
-  let dockerFileName;
-
-  let dockerfile;
-  let dockerContext;
-
-  if (scope === 'global') {
-    dockerFileName = `Dockerfile`;
-  } else {
-    dockerFileName = `Dockerfile.${ENV}`;
-  }
-
-  if (type === 'container') {
-    dockerfile = `${currentPath}/${dockerFileName}`;
-    dockerContext = `${currentPath}`;
-  } else if (root !== undefined) {
-    dockerfile = `${currentPath}/${root}/${dockerFileName}`;
-    dockerContext = `${currentPath}/${root}`;
-    metaConfig = await verifyIfMetaJsonExists(dockerContext);
-    cd(dockerContext);
-  }
-
-  $.verbose = true;
-
-  let { image } = metaConfig.docker;
-
-  if (scope !== 'global') {
-    image = `${image}:${ENV}`;
-  }
-
+  const { image } = await getDockerfileAndImageName();
   await $`docker push ${image}`;
 }
 
@@ -141,38 +152,8 @@ export async function dockerBuildAll() {}
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerBuildUnit() {
-  let { type, scope, docker } = metaConfig;
-
-  let { root } = docker;
-
-  let dockerFileName;
-
-  let dockerfile;
-  let dockerContext;
-
-  if (scope === 'global') {
-    dockerFileName = `Dockerfile`;
-  } else {
-    dockerFileName = `Dockerfile.${ENV}`;
-  }
-
-  if (type === 'container') {
-    dockerfile = `${currentPath}/${dockerFileName}`;
-    dockerContext = `${currentPath}`;
-  } else if (root !== undefined) {
-    dockerfile = `${currentPath}/${root}/${dockerFileName}`;
-    dockerContext = `${currentPath}/${root}`;
-    metaConfig = await verifyIfMetaJsonExists(dockerContext);
-    cd(dockerContext);
-  }
-
-  $.verbose = true;
-
-  let { image } = metaConfig.docker;
-
-  if (scope !== 'global') {
-    image = `${image}:${ENV}`;
-  }
+  const { dockerfile, dockerContext, image } =
+    await getDockerfileAndImageName();
 
   await $`docker build -t ${image} -f ${dockerfile} ${dockerContext}`;
 }
