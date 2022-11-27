@@ -15,6 +15,7 @@ import commandCluster from '../lib/command-cluster.mjs';
 import commandDb from '../lib/command-db.mjs';
 import commandRun from '../lib/command-run.mjs';
 import commandUtils from '../lib/command-utils.mjs';
+import commandDocker from '../lib/command-docker.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONST
@@ -63,6 +64,7 @@ await commandCluster(program);
 await commandDb(program);
 await commandRun(program);
 await commandUtils(program);
+await commandDocker(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // GIT COMMAND
