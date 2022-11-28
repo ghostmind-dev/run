@@ -3,6 +3,7 @@ import {
   withMetaMatching,
   verifyIfMetaJsonExists,
   detectScriptsDirectory,
+  setSecretsUptoProject,
 } from '../utils/divers.mjs';
 import { nanoid } from 'nanoid/async';
 import jsonfile from 'jsonfile';
@@ -136,6 +137,20 @@ export async function createMetaFile() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// RUN DEVCONTAINER OSTCREATECOMMAND
+////////////////////////////////////////////////////////////////////////////////
+
+export async function initDevcontainer() {
+  $.verbose = true;
+
+  cd(currentPath);
+
+  await setSecretsUptoProject(currentPath);
+
+  await $`${process.env.SRC}/.devcontainer/library-scripts/post-create.mjs dev`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -162,6 +177,10 @@ export default async function utils(program) {
   const devInstall = dev.command('install');
   devInstall.description('install app dependencies');
   devInstall.action(devInstallDependencies);
+
+  const devInit = dev.command('init');
+  devInit.description('devcontainer post create command');
+  devInit.action(initDevcontainer);
 
   const id = nanoid.command('id');
   id.description('generate a nanoid');
