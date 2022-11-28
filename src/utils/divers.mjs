@@ -1,4 +1,9 @@
 import { $, sleep, cd, fs, echo } from 'zx';
+import { config } from 'dotenv';
+
+////////////////////////////////////////////////////////////////////////////////
+// CONSTANTS
+////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // DETECT SCRIPS DIRECTORY
@@ -134,4 +139,40 @@ export async function withMetaMatching({ property, value, path }) {
   }
 
   return directories;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// setSecretsUptoProject
+////////////////////////////////////////////////////////////////////////////////
+
+export async function setSecretsUptoProject(path) {
+  // print all the parent directories
+  // example: if path == /home/ghostmind/dev/src/projects/ghostmind
+  // print: /home/ghostmind/dev/src/projects/ghostmind
+  // print: /home/ghostmind/dev/src/projects
+  // print: /home/ghostmind/dev/src
+  // print: /home/ghostmind/dev
+  // print: /home/ghostmind
+  // print: /home
+  // print: /
+
+  const directories = path.split('/');
+  let directoriesPath = [];
+
+  for (let i = directories.length; i > 0; i--) {
+    directoriesPath.push(directories.slice(0, i).join('/'));
+  }
+
+  for (let directory of directoriesPath) {
+    let metaConfig = await verifyIfMetaJsonExists(directory);
+
+    if (metaConfig) {
+      if (metaConfig.secrets) {
+        config({ path: `${directory}/.env` });
+      }
+      if (metaConfig.type === 'project') {
+        return;
+      }
+    }
+  }
 }

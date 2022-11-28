@@ -17,5 +17,6 @@ export * from './lib/command-compose.mjs';
 export * from './lib/command-custom.mjs';
 export * from './lib/command-db.mjs';
 export * from './lib/command-github.mjs';
-export * from './utils/divers.mjs';
 export * from './lib/command-docker.mjs';
+export * from './lib/command-utils.mjs';
+export * from './utils/divers.mjs';

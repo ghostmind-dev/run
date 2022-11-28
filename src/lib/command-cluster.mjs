@@ -45,6 +45,8 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 export async function verifyIfPodReady(app, namespace) {
   $.verbose = false;
 
+  await $`run cluster connect core`;
+
   // to test this funciton, trigger this command
   // kubectl scale --replicas=0 deployment/
   // kubectl scale --replicas=1 deployment/
@@ -52,7 +54,7 @@ export async function verifyIfPodReady(app, namespace) {
   let checkPodStatus =
     await $`kubectl get pods -l app=${app} -n ${namespace} -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}'`;
 
-  while (`${checkPodStatus}` !== 'True') {
+  while (`${checkPodStatus}`.includes('Trues')) {
     console.log(`waiting for ${app} pod to be ready`);
     await sleep(5000);
     checkPodStatus =
@@ -433,56 +435,6 @@ export async function deployGroupGkeToCluster(appName, options) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// DOCKER BUILD
-////////////////////////////////////////////////////////////////////////////////
-
-export async function dockerBuildApp() {
-  const metaConfig = await fs.readJsonSync('meta.json');
-  const { name, cluster } = metaConfig;
-
-  const { app } = cluster;
-
-  $.verbose = true;
-
-  // loop through all directory in containers]
-
-  const CLUSTER_PROJECT = process.env.RUN_CLUSTER_PROJECT;
-
-  const directories = await getDirectories(`${currentPath}/containers`);
-
-  for (const directory of directories) {
-    let dockerfile = `${currentPath}/containers/${directory}/Dockerfile.${ENV}`;
-    let dockerfileContext = `${currentPath}/containers/${directory}/`;
-    let dockerfileImage = `gcr.io/${CLUSTER_PROJECT}/${app}-${name}-${directory}:${ENV}`;
-    await $`docker build -t ${dockerfileImage} -f ${dockerfile} ${dockerfileContext}`;
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// DOCKER PUSH
-////////////////////////////////////////////////////////////////////////////////
-
-export async function dockerPushApp() {
-  const metaConfig = await fs.readJsonSync('meta.json');
-  const { name, cluster } = metaConfig;
-
-  const { app } = cluster;
-
-  $.verbose = true;
-  // loop through all directory in containers]
-
-  const CLUSTER_PROJECT = process.env.RUN_CLUSTER_PROJECT;
-
-  const directories = await getDirectories(`${currentPath}/containers`);
-
-  for (const directory of directories) {
-    let dockerfileImage = `gcr.io/${CLUSTER_PROJECT}/${app}-${name}-${directory}:${ENV}`;
-
-    await $`docker push ${dockerfileImage}`;
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // NAMESPACE SET
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -566,11 +518,6 @@ export default async function cluster(program) {
     .argument('[name]', 'app name')
     .option('--no-tls', 'do not get certificates from vault')
     .action(deployGroupGkeToCluster);
-
-  const docker = pod.command('docker').argument('[name]', 'app name');
-
-  docker.command('build').action(dockerBuildApp);
-  docker.command('push').action(dockerPushApp);
 
   namespace.command('set').argument('[name]', 'namespace').action(setNamespace);
 

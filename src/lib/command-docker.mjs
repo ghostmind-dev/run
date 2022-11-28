@@ -3,6 +3,7 @@ import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
   withMetaMatching,
+  recursiveDirectoriesDiscovery,
 } from '../utils/divers.mjs';
 import _ from 'lodash';
 
@@ -47,15 +48,14 @@ const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function getDockerfileAndImageName() {
-  let { type, scope, docker } = metaConfig;
+  let currentPath = await detectScriptsDirectory(process.cwd());
+  let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
+  let { type, scope, docker } = await verifyIfMetaJsonExists(currentPath);
   let { root } = docker;
-
   let dockerFileName;
-
   let dockerfile;
   let dockerContext;
-
   if (scope === 'global') {
     dockerFileName = `Dockerfile`;
   } else {
@@ -73,13 +73,10 @@ export async function getDockerfileAndImageName() {
   }
 
   $.verbose = true;
-
   let { image } = metaConfig.docker;
-
   if (scope !== 'global') {
     image = `${image}:${ENV}`;
   }
-
   return { dockerfile, dockerContext, image };
 }
 
@@ -116,7 +113,37 @@ export async function dockerPushActionEntry(options) {
 // DOCKER PUSH ALL
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerPushAll() {}
+export async function dockerPushAll() {
+  let metaConfig = await fs.readJsonSync('meta.json');
+
+  let { docker } = metaConfig;
+
+  if (docker !== undefined) {
+    if (docker.root !== undefined) {
+      let allDirectories = await recursiveDirectoriesDiscovery(
+        `${currentPath}/${docker.root}`
+      );
+
+      // remove first element of the array
+
+      for (let directory of allDirectories) {
+        let metaConfig = await verifyIfMetaJsonExists(directory);
+
+        if (metaConfig && metaConfig.type === 'container') {
+          $.verbose = true;
+
+          cd(directory);
+
+          await dockerPushUnit();
+        }
+      }
+    }
+  } else {
+    console.log('No docker configuration found');
+  }
+
+  cd(currentPath);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // DOCKER PUSH UNIT
@@ -124,6 +151,8 @@ export async function dockerPushAll() {}
 
 export async function dockerPushUnit() {
   const { image } = await getDockerfileAndImageName();
+  console.log(image);
+
   await $`docker push ${image}`;
 }
 
@@ -145,7 +174,36 @@ export async function dockerBuildActionEntry(options) {
 // DOCKER BUILD ALL
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerBuildAll() {}
+export async function dockerBuildAll() {
+  let metaConfig = await fs.readJsonSync('meta.json');
+
+  let { docker } = metaConfig;
+
+  if (docker !== undefined) {
+    if (docker.root !== undefined) {
+      let allDirectories = await recursiveDirectoriesDiscovery(
+        `${currentPath}/${docker.root}`
+      );
+
+      // remove first element of the array
+
+      for (let directory of allDirectories) {
+        let metaConfig = await verifyIfMetaJsonExists(directory);
+
+        if (metaConfig && metaConfig.type === 'container') {
+          $.verbose = true;
+
+          cd(directory);
+
+          await dockerBuildUnit();
+        }
+      }
+    }
+  } else {
+    console.log('No docker configuration found');
+  }
+  cd(currentPath);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // DOCKER BUILD UNIT

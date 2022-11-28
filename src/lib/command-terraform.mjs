@@ -18,7 +18,6 @@ $.verbose = false;
 
 const terraformConfigDefault = {
   root: 'gcp',
-  docker_build: true,
 };
 
 ////////////////////////////////////////////////////////////////////////////////
