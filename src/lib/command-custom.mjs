@@ -47,7 +47,7 @@ const customConfigDefault = {
 ////////////////////////////////////////////////////////////////////////////////
 
 async function runCustomScript(script, arg, options) {
-  let { type, name, custom_script } = await fs.readJsonSync('meta.json');
+  let { custom_script } = await fs.readJsonSync('meta.json');
 
   let { dev } = options;
 

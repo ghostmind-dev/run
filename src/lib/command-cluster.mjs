@@ -74,7 +74,7 @@ export async function verifyClusterDirectory() {
   const metaConfig = await fs.readJsonSync('meta.json');
   let { type } = metaConfig;
   if (type === 'cluster' || type === 'pod') {
-    if (type === 'cluster_app') {
+    if (type === 'pod') {
       config({ path: `../../.env` });
     }
     return true;
@@ -236,8 +236,8 @@ export async function createSecrets() {
 
   const secretName = `secrets-${app}-${name}`;
 
-  if (type === 'cluster' || type === 'cluster_app') {
-    if (type === 'cluster_app') {
+  if (type === 'cluster' || type === 'pod') {
+    if (type === 'pod') {
       config({ path: `../../.env` });
     }
     $.verbose = true;
