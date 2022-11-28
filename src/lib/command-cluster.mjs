@@ -73,7 +73,7 @@ export async function verifyIfPodReady(app, namespace) {
 export async function verifyClusterDirectory() {
   const metaConfig = await fs.readJsonSync('meta.json');
   let { type } = metaConfig;
-  if (type === 'cluster' || type === 'cluster_app') {
+  if (type === 'cluster' || type === 'pod') {
     if (type === 'cluster_app') {
       config({ path: `../../.env` });
     }
