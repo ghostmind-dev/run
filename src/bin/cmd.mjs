@@ -4,7 +4,6 @@ import { $, which, fs } from 'zx';
 import { config } from 'dotenv';
 import { Command } from 'commander';
 import commandTerraform from '../lib/command-terraform.mjs';
-import commandCompose from '../lib/command-compose.mjs';
 import commandCustom from '../lib/command-custom.mjs';
 import commandVault from '../lib/command-vault.mjs';
 import commandAction from '../lib/command-action.mjs';
@@ -52,7 +51,6 @@ program.name('run');
 ////////////////////////////////////////////////////////////////////////////////
 
 await commandTerraform(program);
-await commandCompose(program);
 await commandCustom(program);
 await commandVault(program);
 await commandAction(program);

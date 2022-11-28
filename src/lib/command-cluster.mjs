@@ -43,9 +43,11 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function verifyIfPodReady(app, namespace) {
+  const CLUSTER_NAME = process.env.CLUSTER_NAME;
+
   $.verbose = false;
 
-  await $`run cluster connect core`;
+  await $`run cluster connect ${CLUSTER_NAME}`;
 
   // to test this funciton, trigger this command
   // kubectl scale --replicas=0 deployment/
