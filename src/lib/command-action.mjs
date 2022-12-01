@@ -110,10 +110,11 @@ export async function actionRunRemote(workflow, options) {
   if (watch) {
     $.verbose = true;
 
+    await sleep(5000);
+
     const runId =
       await $`gh run list --limit 1 | sed -En '1p' | awk '{ print $(NF - 2) }'`;
 
-    await sleep(5000);
     await $`gh run watch ${runId}`;
   }
 }
