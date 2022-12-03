@@ -417,20 +417,26 @@ export async function deployGroupGkeToCluster(appName, options) {
   let appList = [];
   for (const directory of directories) {
     // read all meta.json files
-    const { cluster, name } = await fs.readJsonSync(
-      `${getDirectoryPath}/app/${directory}/meta.json`
+
+    let podDirectory = `${getDirectoryPath}/app/${directory}`;
+
+    const { cluster, name, type } = await fs.readJsonSync(
+      `${podDirectory}/meta.json`
     );
-    const { priority } = cluster;
-    appList.push({ name, priority });
+    if (type === 'pod') {
+      const { priority } = cluster;
+
+      appList.push({ podDirectory, priority });
+    }
   }
+
   const appsByPriorityGroup = _.groupBy(appList, (app) => app.priority);
   for (let group in appsByPriorityGroup) {
     let groupApps = appsByPriorityGroup[group];
     for (let app in groupApps) {
-      let { name } = groupApps[app];
-      const init_script = await import(
-        `${getDirectoryPath}/app/${name}/scripts/init.mjs`
-      );
+      let { podDirectory: podToDeploy } = groupApps[app];
+
+      const init_script = await import(`${podToDeploy}/scripts/init.mjs`);
       await init_script.default({ tls });
     }
   }
