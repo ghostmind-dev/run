@@ -260,125 +260,6 @@ export async function createSecrets() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// CLUSTER DESTROY REMOTE
-////////////////////////////////////////////////////////////////////////////////
-
-export async function actionClusterRemoveRemote(appName, { watch }) {
-  await $`gh workflow run cluster-remove.yaml -f APP_NAME=${appName} --ref main`;
-
-  if (watch) {
-    $.verbose = false;
-
-    await sleep(5000);
-    const runId =
-      await $`gh run list --limit 1 | sed -En '1p' | awk '{ print $(NF - 2) }'`;
-
-    $.verbose = true;
-    await $`gh run watch ${runId}`;
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// CLUSTER DEPLOY LOCAL
-////////////////////////////////////////////////////////////////////////////////
-
-export async function actionClusterRemovelocal(appName, { live, reuse }) {
-  fs.writeJsonSync('/tmp/inputs.json', {
-    inputs: {
-      APP_NAME: appName,
-      LIVE: live,
-    },
-  });
-  let actArgments = [
-    { name: '--env', value: `ENV=${ENV}` },
-    { name: '--eventpath', value: '/tmp/inputs.json' },
-  ];
-
-  if (reuse === true) {
-    actArgments.push({ name: '--reuse', value: '' });
-  }
-
-  await actionRunLocal('cluster-remove', actArgments);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// CLUSTER DEPLOY ENTRY
-////////////////////////////////////////////////////////////////////////////////
-
-export async function actionClusterRemove(appName, options) {
-  $.verbose = true;
-  const { local, watch, live, reuse } = options;
-
-  if (local) {
-    await actionClusterRemovelocal(appName, { live, reuse });
-    return;
-  }
-
-  await actionClusterRemoveRemote(appName, { watch });
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// CLUSTER DEPLOY LOCAL
-////////////////////////////////////////////////////////////////////////////////
-
-export async function actionClusterDeploylocal(appName, { live, reuse }) {
-  fs.writeJsonSync('/tmp/inputs.json', {
-    inputs: {
-      APP_NAME: appName,
-      LIVE: live,
-    },
-  });
-
-  let actArgments = [
-    { name: '--env', value: `ENV=${ENV}` },
-    { name: '--eventpath', value: '/tmp/inputs.json' },
-  ];
-
-  if (reuse === true) {
-    actArgments.push({ name: '--reuse', value: '' });
-  }
-
-  await actionRunLocal('cluster-deploy', actArgments);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// CLUSTER DEPLOY REMOTE
-////////////////////////////////////////////////////////////////////////////////
-
-export async function actionClusterDeployRemote(appName, { watch, branch }) {
-  branch = branch || 'main';
-
-  await $`gh workflow run cluster-deploy.yaml -f APP_NAME=${appName} --ref ${branch}`;
-
-  if (watch) {
-    $.verbose = false;
-
-    await sleep(5000);
-    const runId =
-      await $`gh run list --limit 1 | sed -En '1p' | awk '{ print $(NF - 2) }'`;
-
-    $.verbose = true;
-    await $`gh run watch ${runId}`;
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// CLUSTER DEPLOY ENTRY
-////////////////////////////////////////////////////////////////////////////////
-
-export async function actionClusterDeploy(appName, options) {
-  $.verbose = true;
-  const { local, watch, live, reuse, branch } = options;
-
-  if (local) {
-    await actionClusterDeploylocal(appName, { live, reuse });
-    return;
-  }
-
-  await actionClusterDeployRemote(appName, { watch, branch });
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // DEPlOY CLUSTER
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -480,7 +361,6 @@ export default async function cluster(program) {
   const deploy = cluster.command('deploy');
   const remove = cluster.command('remove');
   const connect = cluster.command('connect');
-  const apps = cluster.command('apps');
   const pod = cluster.command('pod');
   const namespace = cluster.command('namespace');
 
@@ -505,24 +385,6 @@ export default async function cluster(program) {
     .action(importCerts);
 
   deploy
-    .argument('[name]', 'cluster name')
-    .option('--local', 'deploy cluster from local runner')
-    .option('--no-reuse', 'do not resuse existing state in act')
-    .option('--live', 'live-command mode in act')
-    .option('--watch', 'watch remote action')
-    .option('--branch <branch>', 'branch to deploy')
-    .action(actionClusterDeploy);
-
-  remove
-    .argument('[name]', 'cluster name')
-    .option('--local', 'destroy cluster from local runner')
-    .option('--no-reuse', 'do not resuse existing state in act')
-    .option('--live', 'live-command mode in act')
-    .option('--watch', 'watch remote action')
-    .action(actionClusterRemove);
-
-  apps
-    .command('deploy')
     .argument('[name]', 'app name')
     .option('--no-tls', 'do not get certificates from vault')
     .action(deployGroupGkeToCluster);
