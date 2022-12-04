@@ -96,8 +96,14 @@ export async function devInstallDependencies() {
 // CREATE A SHORT UUID
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function createShortUUID() {
+export async function createShortUUID(options) {
+  const { print } = options;
   const id = await nanoid(12);
+
+  if (print) {
+    console.log(id);
+    return;
+  }
 
   return id;
 }
@@ -184,6 +190,7 @@ export default async function utils(program) {
 
   const id = nanoid.command('id');
   id.description('generate a nanoid');
+  id.option('p, --print', 'print the id');
   id.action(createShortUUID);
 
   const metaCreate = meta.command('create');
