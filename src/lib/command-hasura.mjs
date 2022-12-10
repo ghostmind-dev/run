@@ -55,7 +55,7 @@ export async function hasuraOpenConsole() {
   cd(`${currentPath}/${state}`);
 
   $.verbose = true;
-  await $`hasura console --no-browser `;
+  await $`hasura console --no-browser --skip-update-check`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
