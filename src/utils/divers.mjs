@@ -176,3 +176,42 @@ export async function setSecretsUptoProject(path) {
     }
   }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// ENVIRONMENT SAFEGUARD
+////////////////////////////////////////////////////////////////////////////////
+
+export async function environmentSafeguard(currentPath) {
+  const metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+  let directoryNoMatchEnv = [];
+
+  for (const directoryObject of directoriesBindToEnv) {
+    const { directory } = directoryObject;
+    config({ path: `${directory}/.env`, override: true });
+
+    if (process.env.ENV !== process.env.ENVIRONMENT) {
+      directoryNoMatchEnv.push(directory);
+    }
+  }
+
+  if (directoryNoMatchEnv.length > 0) {
+    const prompt = inquirer.createPromptModule();
+
+    const answer = await prompt({
+      type: 'confirm',
+      name: 'answer',
+      message:
+        '\n' +
+        `Some directories are bind to a different environment than ${process.env.ENV}` +
+        `\n` +
+        `\n${directoryNoMatchEnv.join('\n')}` +
+        `\n` +
+        `\nDo you want to continue?`,
+    });
+
+    if (!answer) {
+      process.exit(1);
+    }
+  }
+}

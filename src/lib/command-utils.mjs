@@ -93,6 +93,44 @@ export async function devInstallDependencies() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// CHANGE ENVIRONMENT
+////////////////////////////////////////////////////////////////////////////////
+
+export async function envDevcontainer() {
+  // const directories = await withMetaMatching({
+  //   property: 'scope',
+  //   value: 'environment',
+  // });
+
+  const HOME = process.env.HOME;
+
+  $.verbose = false;
+
+  const currentBranchRaw = await $`git branch --show-current`;
+  // trim the trailing newline
+  const currentBranch = currentBranchRaw.stdout.trim();
+
+  let environemnt;
+  if (currentBranch === 'main') {
+    environemnt = 'prod';
+  } else if (currentBranch === 'preview') {
+    environemnt = 'preview';
+  } else {
+    environemnt = 'dev';
+  }
+
+  $.verbose = true;
+
+  // set environment name in zshenv
+
+  await $`echo "export ENV=${environemnt}" > ${HOME}/.zshenv`;
+
+  process.env.ENV = environemnt;
+
+  return environemnt;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // CREATE A SHORT UUID
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -187,6 +225,10 @@ export default async function utils(program) {
   const devInit = dev.command('init');
   devInit.description('devcontainer post create command');
   devInit.action(initDevcontainer);
+
+  const devEnv = dev.command('env');
+  devEnv.description('change environement');
+  devEnv.action(envDevcontainer);
 
   const id = nanoid.command('id');
   id.description('generate a nanoid');

@@ -38,7 +38,6 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 // CONSTANTS
 ////////////////////////////////////////////////////////////////////////////////
 
-const ENV = `${process.env.ENV}`;
 const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -46,12 +45,14 @@ const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 ////////////////////////////////////////////////////////////////////////////////
 
 async function getBucketConfig(id, scope) {
+  const ENV = `${process.env.ENV}`;
   let bucketDirectory;
 
   if (scope === 'global') {
     bucketDirectory = `${id}/global/terraform`;
   } else {
-    bucketDirectory = `${id}/${ENV}/terraform`;
+    let environment = ENV === 'prod' ? 'prod' : 'dev';
+    bucketDirectory = `${id}/${environment}/terraform`;
   }
 
   $.verbose = true;
@@ -421,6 +422,7 @@ export async function terraformApplyUnit(component, options) {
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform plan`;
     await $`terraform apply -auto-approve`;
+    // await $`terraform 0.13upgrade`;
   } catch (error) {
     console.error(error.message);
   }

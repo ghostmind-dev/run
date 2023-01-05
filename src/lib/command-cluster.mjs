@@ -21,7 +21,6 @@ $.verbose = false;
 // CONSTANTS
 ////////////////////////////////////////////////////////////////////////////////
 
-const ENV = process.env.ENV;
 const SRC = process.env.SRC;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -88,9 +87,10 @@ export async function verifyClusterDirectory() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function connectToCluster() {
+  const ENV = process.env.ENV;
   const CLUSTER_PROJECT = process.env.RUN_CLUSTER_PROJECT;
   const CLUSTER_ZONE = process.env.RUN_CLUSTER_ZONE;
-  $.verbose = false;
+  $.verbose = true;
 
   try {
     await $`gcloud container clusters get-credentials core-${ENV} --project ${CLUSTER_PROJECT} --zone ${CLUSTER_ZONE}`;
@@ -338,6 +338,7 @@ export async function setNamespace(namespace) {
 
 export async function applyPod() {
   $.verbose = true;
+  const ENV = process.env.ENV;
   const metaConfig = await fs.readJsonSync('meta.json');
   const { cluster } = metaConfig;
 

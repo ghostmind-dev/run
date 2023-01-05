@@ -5,6 +5,8 @@ import {
   verifyIfMetaJsonExists,
 } from '../utils/divers.mjs';
 
+import { envDevcontainer } from '../main.mjs';
+
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
@@ -14,8 +16,6 @@ $.verbose = false;
 ////////////////////////////////////////////////////////////////////////////////
 // CONSTANTS
 ////////////////////////////////////////////////////////////////////////////////
-
-const ENV = process.env.ENV;
 
 const LOCALHOST_SRC =
   process.env.CODESPACES === 'true'
@@ -146,6 +146,7 @@ export async function actionRunLocal(target, actArguments, event) {
 }
 
 export async function actionRunLocalEntry(target, options) {
+  const ENV = process.env.ENV;
   const { live, input, reuse, secure, event } = options;
 
   let inputsArguments = {};
@@ -166,7 +167,7 @@ export async function actionRunLocalEntry(target, options) {
     },
   });
   let actArgments = [
-    { name: '--env', value: `ENV=${ENV}` },
+    // { name: '--env', value: `ENV=${ENV}` },
     { name: '--eventpath', value: '/tmp/inputs.json' },
   ];
   if (reuse === true) {
@@ -211,6 +212,23 @@ export async function actionSecretsSet() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SET ENVIRONMENT NAME IN ACTION STEPS
+////////////////////////////////////////////////////////////////////////////////
+
+export async function actionEnvSet() {
+  const environement = await envDevcontainer();
+
+  const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
+
+  const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
+
+  core.setSecret(environement);
+  core.setOutput('ENV', environement);
+
+  await $`echo ENV=${environement} >> ${gitEnvPath}`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -221,6 +239,7 @@ export default async function act(program) {
   const actLocal = act.command('local');
   const actRemote = act.command('remote');
   const actSecrets = act.command('secrets');
+  const actEnv = act.command('env');
 
   actLocal
     .description('run local action with at')
@@ -244,4 +263,9 @@ export default async function act(program) {
     .command('set')
     .action(actionSecretsSet)
     .description('set secrets for all the next action steps');
+
+  actEnv
+    .command('set')
+    .action(actionEnvSet)
+    .description('set environment variables for all the next action steps');
 }

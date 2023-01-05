@@ -3,6 +3,7 @@ import {
   detectScriptsDirectory,
   recursiveDirectoriesDiscovery,
   verifyIfMetaJsonExists,
+  environmentSafeguard,
 } from '../utils/divers.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -32,16 +33,11 @@ cd(currentPath);
 let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
-// CONSTANTS
-////////////////////////////////////////////////////////////////////////////////
-
-const ENV = process.env.ENV;
-
-////////////////////////////////////////////////////////////////////////////////
 // UTILS
 ////////////////////////////////////////////////////////////////////////////////
 
 async function defineSecretNamespace() {
+  const ENV = process.env.ENV;
   let currentPath = await detectScriptsDirectory(process.cwd());
   cd(currentPath);
   let metaConfig = await fs.readJsonSync('meta.json');
@@ -50,7 +46,16 @@ async function defineSecretNamespace() {
   if (scope === 'global') {
     secretNamespace = `${id}/global`;
   } else {
-    secretNamespace = `${id}/${ENV}`;
+    let environment;
+    if (ENV === 'main') {
+      environment = 'prod';
+    } else if (ENV === 'preview') {
+      environment = 'preview';
+    } else {
+      environment = 'dev';
+    }
+
+    secretNamespace = `${id}/${environment}`;
   }
   $.verbose = true;
   return secretNamespace;

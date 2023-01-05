@@ -40,7 +40,6 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 // CONSTANTS
 ////////////////////////////////////////////////////////////////////////////////
 
-const ENV = `${process.env.ENV}`;
 const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -48,6 +47,7 @@ const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function getDockerfileAndImageName() {
+  const ENV = `${process.env.ENV}`;
   let currentPath = await detectScriptsDirectory(process.cwd());
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -59,7 +59,11 @@ export async function getDockerfileAndImageName() {
   if (scope === 'global') {
     dockerFileName = `Dockerfile`;
   } else {
-    dockerFileName = `Dockerfile.${ENV}`;
+    if (ENV === 'prod' || ENV === 'preview') {
+      dockerFileName = `Dockerfile.prod`;
+    } else {
+      dockerFileName = `Dockerfile.dev`;
+    }
   }
 
   if (type === 'container') {
@@ -151,7 +155,6 @@ export async function dockerPushAll() {
 
 export async function dockerPushUnit() {
   const { image } = await getDockerfileAndImageName();
-  console.log(image);
 
   await $`docker push ${image}`;
 }
