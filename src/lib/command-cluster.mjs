@@ -116,17 +116,22 @@ export async function exportCertificatesAll() {
   });
 
   for (let matchDirectory of matchingDirectories) {
-    const { config, directory } = matchDirectory;
+    const { config: metaConfig, directory } = matchDirectory;
 
-    const { cluster, name } = config;
+    const { cluster, name } = metaConfig;
 
     const { namespace, app, tls } = cluster;
 
     cd(directory);
+
+    config({ path: '.env', override: true });
+
+    const NAMESPACE = process.env.NAMESPACE;
+
     $.verbose = true;
 
     const certificatJsonRaw =
-      await $`kubectl get secret certificat-${app}-${name} -n ${namespace} -o json`;
+      await $`kubectl get secret certificat-${app}-${name} -n ${NAMESPACE} -o json`;
 
     await vaultKvCertsToVault(certificatJsonRaw.stdout, directory);
   }
@@ -140,6 +145,8 @@ export async function exportCertificatesUnit() {
   const metaConfig = await fs.readJsonSync('meta.json');
   const { cluster, name } = metaConfig;
 
+  const NAMESPACE = process.env.NAMESPACE;
+
   const { namespace, app, tls } = cluster;
   if (await verifyClusterDirectory()) {
     cd(currentPath);
@@ -147,7 +154,7 @@ export async function exportCertificatesUnit() {
 
     if (tls) {
       const certificatJsonRaw =
-        await $`kubectl get secret certificat-${app}-${name} -n ${namespace} -o json`;
+        await $`kubectl get secret certificat-${app}-${name} -n ${NAMESPACE} -o json`;
 
       await vaultKvCertsToVault(certificatJsonRaw.stdout);
     }
@@ -185,7 +192,7 @@ export async function importCerts() {
 
     const { tls, namespace, app } = cluster;
 
-    await $`kubectl config set-context --current --namespace=${namespace}`;
+    await $`kubectl config set-context --current --namespace=${process.env.NAMESPACE}`;
 
     const certificateName = `certificat-${app}-${name}`;
 
@@ -232,7 +239,7 @@ export async function createSecrets() {
 
   const { app, namespace } = cluster;
 
-  await $`kubectl config set-context --current --namespace=${namespace}`;
+  await $`kubectl config set-context --current --namespace=${process.env.NAMESPACE}`;
 
   const secretName = `secrets-${app}-${name}`;
 
@@ -343,10 +350,19 @@ export async function applyPod() {
   const { cluster } = metaConfig;
 
   const { namespace } = cluster;
+  let environment;
 
-  await $`kubectl config set-context --current --namespace=${namespace}`;
+  if (ENV === 'prod' || ENV === 'preview') {
+    environment = ENV;
+  } else {
+    environment = 'dev';
+  }
 
-  await $`kustomize build --load-restrictor LoadRestrictionsNone ${currentPath}/k8s/${ENV} | kubectl apply -f -`;
+  await $`kubectl config set-context --current --namespace=${process.env.NAMESPACE}`;
+
+  await $`kustomize build --load-restrictor LoadRestrictionsNone ${currentPath}/k8s/${environment} | kubectl apply -f -`;
+
+  // await $`kustomize build --load-restrictor LoadRestrictionsNone ${currentPath}/k8s/${environment} > ${SRC}/kusomize.yaml`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
