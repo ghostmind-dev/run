@@ -92,8 +92,16 @@ export async function connectToCluster() {
   const CLUSTER_ZONE = process.env.RUN_CLUSTER_ZONE;
   $.verbose = true;
 
+  let environment;
+
+  if (ENV === 'prod') {
+    environment = 'prod';
+  } else {
+    environment = 'dev';
+  }
+
   try {
-    await $`gcloud container clusters get-credentials core-${ENV} --project ${CLUSTER_PROJECT} --zone ${CLUSTER_ZONE}`;
+    await $`gcloud container clusters get-credentials core-${environment} --project ${CLUSTER_PROJECT} --zone ${CLUSTER_ZONE}`;
     return { status: 'success', message: 'connected to cluster' };
   } catch (e) {
     let { stderr } = e;
@@ -302,6 +310,8 @@ export async function deployGroupGkeToCluster(appName, options) {
 
   const directories = await getDirectories(`${getDirectoryPath}/app`);
 
+  console.log(directories);
+
   let appList = [];
   for (const directory of directories) {
     // read all meta.json files
@@ -311,8 +321,23 @@ export async function deployGroupGkeToCluster(appName, options) {
     const { cluster, name, type } = await fs.readJsonSync(
       `${podDirectory}/meta.json`
     );
+
+    const currentBranchRaw = await $`git branch --show-current`;
+    // trim the trailing newline
+    const currentBranch = currentBranchRaw.stdout.trim();
+
+    const { ignoreEnv } = cluster;
+
     if (type === 'pod') {
-      const { priority } = cluster;
+      const { priority, ignoreEnv } = cluster;
+
+      if (ignoreEnv !== undefined) {
+        // check if current branch is in ignoreEnv
+        if (ignoreEnv.includes(currentBranch)) {
+          console.log(`Ignoring ${name} on branch ${currentBranch}`);
+          continue;
+        }
+      }
 
       appList.push({ podDirectory, priority });
     }

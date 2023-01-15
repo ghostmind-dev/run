@@ -185,6 +185,23 @@ export async function vaultKvVaultToLocalUnit(currentPathNew) {
   }
 
   cd(currentPath);
+
+  let metaConfig = await fs.readJsonSync('meta.json');
+
+  let { vault } = metaConfig;
+
+  if (vault !== undefined) {
+    let { ignoreEnv } = vault;
+    if (ignoreEnv) {
+      const environment = process.env.ENV;
+
+      // verify if environment is included in ignoreEnv array
+      if (ignoreEnv.includes(environment)) {
+        return;
+      }
+    }
+  }
+
   let secretPath = await defineSecretNamespace();
 
   secretPath = `${secretPath}/secrets`;
