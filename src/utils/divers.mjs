@@ -92,7 +92,7 @@ export async function verifyIfMetaJsonExists(path) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// RETURN ALL FOLDER PATH THAT MAACTHES THE META.JSON FILE CONDITION
+// RETURN ALL FOLDER PATH THAT MATCHES THE META.JSON FILE CONDITION
 // document this function
 // @param {string} property - the property to match
 // @param {string} value - the value to match (optional)

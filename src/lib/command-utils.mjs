@@ -8,6 +8,9 @@ import {
 import { nanoid } from 'nanoid/async';
 import jsonfile from 'jsonfile';
 import * as inquirer from 'inquirer';
+import fs from 'fs';
+import path from 'path';
+import { loadAll } from 'js-yaml';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -195,6 +198,71 @@ export async function initDevcontainer() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// COMMIT CHANGES
+////////////////////////////////////////////////////////////////////////////////
+
+export async function commitChangesReturn(commit) {
+  $.verbose = false;
+
+  const filesChnaged = await $`git show ${commit} --pretty=format: --name-only`;
+
+  // convert to array
+  const filesChnagedArray = filesChnaged.stdout.split('\n');
+
+  // remove empty strings
+  const filesChnagedArrayFiltered = filesChnagedArray.filter((file) => {
+    return file !== '';
+  });
+
+  // remove \n from each string
+
+  const filesChnagedArrayFilteredTrimmed = filesChnagedArrayFiltered.map(
+    (file) => {
+      return file.replace(/\n/g, '');
+    }
+  );
+
+  $.verbose = true;
+
+  let appsToDeploy = [];
+
+  for (let file of filesChnagedArrayFilteredTrimmed) {
+    let filePath = `${process.env.SRC}/${file}`;
+
+    async function moveUpDirectoryRecursively(folderPath) {
+      if (folderPath === process.env.SRC) {
+        return;
+      }
+
+      let metaConfig = await verifyIfMetaJsonExists(folderPath);
+
+      if (metaConfig) {
+        let { type, ci } = metaConfig;
+
+        if (type === 'project') {
+          return;
+        }
+
+        if (ci) {
+          appsToDeploy.push(folderPath);
+          return;
+        }
+      }
+
+      let fileParentDirectory = path.dirname(folderPath);
+
+      await moveUpDirectoryRecursively(fileParentDirectory);
+    }
+
+    await moveUpDirectoryRecursively(path.dirname(filePath));
+  }
+
+  $.verbose = true;
+
+  await $`echo "::set-output name=value::${appsToDeploy}"`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -209,6 +277,7 @@ export default async function utils(program) {
   dev.description('devcontainer utils');
   const meta = utils.command('meta');
   meta.description('meta utils');
+  const commit = utils.command('commit');
 
   const gitAmend = git.command('amend');
   gitAmend.description('amend the last commit');
@@ -238,4 +307,9 @@ export default async function utils(program) {
   const metaCreate = meta.command('create');
   metaCreate.description('create a meta.json file');
   metaCreate.action(createMetaFile);
+
+  const commitChanges = commit.command('changes');
+  commitChanges.description('return an array of changed files');
+  commitChanges.argument('[commit]', 'commit to compare to]');
+  commitChanges.action(commitChangesReturn);
 }
