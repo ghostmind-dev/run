@@ -258,7 +258,10 @@ export async function commitChangesReturn(commit) {
 
   $.verbose = true;
 
-  await $`echo "::set-output name=value::${appsToDeploy}"`;
+  for (let app of appsToDeploy) {
+    const init_script = await import(`${app}/scripts/init.mjs`);
+    await init_script.default({ tls: true });
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
