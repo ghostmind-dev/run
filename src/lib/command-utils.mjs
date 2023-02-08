@@ -258,10 +258,12 @@ export async function commitChangesReturn(commit) {
 
   $.verbose = true;
 
-  for (let app of appsToDeploy) {
-    const init_script = await import(`${app}/scripts/init.mjs`);
-    await init_script.default({ tls: true });
-  }
+  console.log(appsToDeploy);
+
+  // for (let app of appsToDeploy) {
+  //   const init_script = await import(`${app}/scripts/init.mjs`);
+  //   await init_script.default({ tls: true });
+  // }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
