@@ -201,64 +201,65 @@ export async function initDevcontainer() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function commitChangesReturn(commit) {
-  $.verbose = false;
+  console.log(8723);
+  // $.verbose = false;
 
-  const filesChnaged = await $`git show ${commit} --pretty=format: --name-only`;
+  // const filesChnaged = await $`git show ${commit} --pretty=format: --name-only`;
 
-  // convert to array
-  const filesChnagedArray = filesChnaged.stdout.split('\n');
+  // // convert to array
+  // const filesChnagedArray = filesChnaged.stdout.split('\n');
 
-  // remove empty strings
-  const filesChnagedArrayFiltered = filesChnagedArray.filter((file) => {
-    return file !== '';
-  });
+  // // remove empty strings
+  // const filesChnagedArrayFiltered = filesChnagedArray.filter((file) => {
+  //   return file !== '';
+  // });
 
-  // remove \n from each string
+  // // remove \n from each string
 
-  const filesChnagedArrayFilteredTrimmed = filesChnagedArrayFiltered.map(
-    (file) => {
-      return file.replace(/\n/g, '');
-    }
-  );
+  // const filesChnagedArrayFilteredTrimmed = filesChnagedArrayFiltered.map(
+  //   (file) => {
+  //     return file.replace(/\n/g, '');
+  //   }
+  // );
 
-  $.verbose = true;
+  // $.verbose = true;
 
-  let appsToDeploy = [];
+  // let appsToDeploy = [];
 
-  for (let file of filesChnagedArrayFilteredTrimmed) {
-    let filePath = `${process.env.SRC}/${file}`;
+  // for (let file of filesChnagedArrayFilteredTrimmed) {
+  //   let filePath = `${process.env.SRC}/${file}`;
 
-    async function moveUpDirectoryRecursively(folderPath) {
-      if (folderPath === process.env.SRC) {
-        return;
-      }
+  //   async function moveUpDirectoryRecursively(folderPath) {
+  //     if (folderPath === process.env.SRC) {
+  //       return;
+  //     }
 
-      let metaConfig = await verifyIfMetaJsonExists(folderPath);
+  //     let metaConfig = await verifyIfMetaJsonExists(folderPath);
 
-      if (metaConfig) {
-        let { type, ci } = metaConfig;
+  //     if (metaConfig) {
+  //       let { type, ci } = metaConfig;
 
-        if (type === 'project') {
-          return;
-        }
+  //       if (type === 'project') {
+  //         return;
+  //       }
 
-        if (ci) {
-          appsToDeploy.push(folderPath);
-          return;
-        }
-      }
+  //       if (ci) {
+  //         appsToDeploy.push(folderPath);
+  //         return;
+  //       }
+  //     }
 
-      let fileParentDirectory = path.dirname(folderPath);
+  //     let fileParentDirectory = path.dirname(folderPath);
 
-      await moveUpDirectoryRecursively(fileParentDirectory);
-    }
+  //     await moveUpDirectoryRecursively(fileParentDirectory);
+  //   }
 
-    await moveUpDirectoryRecursively(path.dirname(filePath));
-  }
+  //   await moveUpDirectoryRecursively(path.dirname(filePath));
+  // }
 
-  $.verbose = true;
+  // $.verbose = true;
 
-  console.log(appsToDeploy);
+  // console.log(appsToDeploy);
 
   // for (let app of appsToDeploy) {
   //   const init_script = await import(`${app}/scripts/init.mjs`);
