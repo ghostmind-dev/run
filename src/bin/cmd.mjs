@@ -14,6 +14,7 @@ import commandCluster from '../lib/command-cluster.mjs';
 import commandDb from '../lib/command-db.mjs';
 import commandUtils from '../lib/command-utils.mjs';
 import commandDocker from '../lib/command-docker.mjs';
+import commandVercel from '../lib/command-vercel.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONST
@@ -61,6 +62,7 @@ await commandCluster(program);
 await commandDb(program);
 await commandUtils(program);
 await commandDocker(program);
+await commandVercel(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // GIT COMMAND
