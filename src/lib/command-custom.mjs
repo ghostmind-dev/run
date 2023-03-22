@@ -49,12 +49,15 @@ const customConfigDefault = {
 async function runCustomScript(script, arg, options) {
   let { custom_script } = await fs.readJsonSync('meta.json');
 
-  let { dev } = options;
+  let { dev, test } = options;
 
   let currentPath = process.cwd();
 
-  const { root } = { ...customConfigDefault, ...custom_script };
+  let testMode = test === undefined ? {} : { root: 'test' };
+
+  const { root } = { ...customConfigDefault, ...custom_script, ...testMode };
   cd(`${currentPath}/${root}`);
+
   // if there is no custom script
   // return the list of available custom scripts
   if (script === undefined) {
@@ -97,5 +100,6 @@ export default async function commandCustom(program) {
     .argument('[script]', 'script to perform')
     .arguments('[arg]', 'arguments for the script')
     .option('--dev', 'run in dev mode')
+    .option('--test', 'run in test mode')
     .action(runCustomScript);
 }
