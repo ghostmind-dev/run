@@ -1,6 +1,6 @@
 {
   "name": "@ghostmind-dev/run",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A global command interface for devcontainer development",
   "main": "src/main.mjs",
   "bin": {
