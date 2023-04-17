@@ -144,11 +144,11 @@ export async function hasuraGlobalCmd(commands, options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraSchemaExportToLocal() {
-  const REMOTE_SCHEMA_URL = process.env.HASURA_GRAPHQL_ENDPOINT;
-  const REMOTE_SCHEMA_PASSWORD = process.env.HASURA_GRAPHQL_ADMIN_SECRET;
+  const HASURA_GRAPHQL_API_ENDPOINT = process.env.HASURA_GRAPHQL_API_ENDPOINT;
+  const HASURA_GRAPHQL_ADMIN_SECRET = process.env.HASURA_GRAPHQL_ADMIN_SECRET;
   const SRC = process.env.SRC;
 
-  await $`gq ${REMOTE_SCHEMA_URL} -H "X-Hasura-Admin-Secret: ${REMOTE_SCHEMA_PASSWORD}" --introspect > ${SRC}/schema.graphql`;
+  await $`gq ${HASURA_GRAPHQL_API_ENDPOINT} -H "X-Hasura-Admin-Secret: ${HASURA_GRAPHQL_ADMIN_SECRET}" --introspect > ${SRC}/schema.graphql`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
