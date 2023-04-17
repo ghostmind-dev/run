@@ -140,6 +140,18 @@ export async function hasuraGlobalCmd(commands, options) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//  EXPORT SCHEMA
+////////////////////////////////////////////////////////////////////////////////
+
+export async function hasuraSchemaExportToLocal() {
+  const REMOTE_SCHEMA_URL = process.env.REMOTE_SCHEMA_URL;
+  const REMOTE_SCHEMA_PASSWORD = process.env.REMOTE_SCHEMA_PASSWORD;
+  const SRC = process.env.SRC;
+
+  await $`gq ${REMOTE_SCHEMA_URL} -H "X-Hasura-Admin-Secret: ${REMOTE_SCHEMA_PASSWORD}" --introspect > ${SRC}/schema.graphql`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -178,4 +190,11 @@ export default async function hasura(program) {
     .description('create a new migration from current schema')
     .argument('<name>', 'name of the migration')
     .action(hasuraMigrateCreate);
+
+  const hasuraSchema = hasura.command('schema');
+
+  const hasuraSchemaExport = hasuraSchema.command('export');
+  hasuraSchemaExport
+    .description('export schema')
+    .action(hasuraSchemaExportToLocal);
 }
