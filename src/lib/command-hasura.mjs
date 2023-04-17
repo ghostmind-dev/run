@@ -1,8 +1,8 @@
-import { $, which, sleep, cd, fs } from 'zx';
+import { $, which, sleep, cd, fs } from "zx";
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-} from '../utils/divers.mjs';
+} from "../utils/divers.mjs";
 
 //////////////////////////////////////////////////////////////////////////////
 // CLEANING MIGRATIONS
@@ -24,7 +24,7 @@ $.verbose = false;
 ////////////////////////////////////////////////////////////////////////////////
 
 const hasuraConfigDefault = {
-  state: 'container/state',
+  state: "container/state",
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -46,7 +46,7 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraOpenConsole() {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -63,7 +63,7 @@ export async function hasuraOpenConsole() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraMigrateSquash(version) {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -80,7 +80,7 @@ export async function hasuraMigrateSquash(version) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraMigrateCreate(name) {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -98,7 +98,7 @@ export async function hasuraMigrateCreate(name) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraMigrateApply(version) {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -115,7 +115,7 @@ export async function hasuraMigrateApply(version) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraGlobalCmd(commands, options) {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -144,8 +144,8 @@ export async function hasuraGlobalCmd(commands, options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraSchemaExportToLocal() {
-  const REMOTE_SCHEMA_URL = process.env.REMOTE_SCHEMA_URL;
-  const REMOTE_SCHEMA_PASSWORD = process.env.REMOTE_SCHEMA_PASSWORD;
+  const REMOTE_SCHEMA_URL = process.env.HASURA_GRAPHQL_ENDPOINT;
+  const REMOTE_SCHEMA_PASSWORD = process.env.HASURA_GRAPHQL_ADMIN_SECRET;
   const SRC = process.env.SRC;
 
   await $`gq ${REMOTE_SCHEMA_URL} -H "X-Hasura-Admin-Secret: ${REMOTE_SCHEMA_PASSWORD}" --introspect > ${SRC}/schema.graphql`;
@@ -156,45 +156,45 @@ export async function hasuraSchemaExportToLocal() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function hasura(program) {
-  const hasura = program.command('hasura');
-  hasura.description('perform hasura maintenances');
+  const hasura = program.command("hasura");
+  hasura.description("perform hasura maintenances");
 
-  const hasuraCommand = hasura.command('cmd');
+  const hasuraCommand = hasura.command("cmd");
   hasuraCommand
-    .argument('[commands...]', 'command to run')
-    .option('--database-name <database-name>', 'database name')
-    .option('--all', 'all migrations')
+    .argument("[commands...]", "command to run")
+    .option("--database-name <database-name>", "database name")
+    .option("--all", "all migrations")
     .action(hasuraGlobalCmd);
 
-  const hasuraConsole = hasura.command('console');
-  const hasuraMigrate = hasura.command('migrate');
+  const hasuraConsole = hasura.command("console");
+  const hasuraMigrate = hasura.command("migrate");
 
   hasuraConsole
-    .description('open hasura console locally ')
+    .description("open hasura console locally ")
     .action(hasuraOpenConsole);
 
-  const migrateSquash = hasuraMigrate.command('squash');
+  const migrateSquash = hasuraMigrate.command("squash");
   migrateSquash
-    .description('squash all migrations')
-    .argument('<version>', 'version to squash to')
+    .description("squash all migrations")
+    .argument("<version>", "version to squash to")
     .action(hasuraMigrateSquash);
 
-  const migrateApply = hasuraMigrate.command('apply');
+  const migrateApply = hasuraMigrate.command("apply");
   migrateApply
-    .description('apply all migrations')
-    .argument('<version>', 'version to apply')
+    .description("apply all migrations")
+    .argument("<version>", "version to apply")
     .action(hasuraMigrateApply);
 
-  const migrateCreate = hasuraMigrate.command('create');
+  const migrateCreate = hasuraMigrate.command("create");
   migrateCreate
-    .description('create a new migration from current schema')
-    .argument('<name>', 'name of the migration')
+    .description("create a new migration from current schema")
+    .argument("<name>", "name of the migration")
     .action(hasuraMigrateCreate);
 
-  const hasuraSchema = hasura.command('schema');
+  const hasuraSchema = hasura.command("schema");
 
-  const hasuraSchemaExport = hasuraSchema.command('export');
+  const hasuraSchemaExport = hasuraSchema.command("export");
   hasuraSchemaExport
-    .description('export schema')
+    .description("export schema")
     .action(hasuraSchemaExportToLocal);
 }
