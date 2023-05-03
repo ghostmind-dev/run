@@ -4,11 +4,11 @@ import {
   verifyIfMetaJsonExists,
   detectScriptsDirectory,
   setSecretsUptoProject,
+  recursiveDirectoriesDiscovery,
 } from '../utils/divers.mjs';
 import { nanoid } from 'nanoid/async';
 import jsonfile from 'jsonfile';
 import * as inquirer from 'inquirer';
-import fs from 'fs';
 import path from 'path';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -197,75 +197,59 @@ export async function initDevcontainer() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// CHANGE ALL IDS IN A META.JSON FILE
+////////////////////////////////////////////////////////////////////////////////
+
+export async function changeAllIds() {
+  const SRC = process.env.SRC;
+
+  // ask the user if they want to change all ids
+
+  const prompt = inquirer.createPromptModule();
+
+  const { changeAllIds } = await prompt({
+    type: 'confirm',
+    name: 'changeAllIds',
+    message: 'Do you want to change all ids?',
+  });
+
+  if (!changeAllIds) {
+    return;
+  }
+
+  const directories = await recursiveDirectoriesDiscovery(SRC);
+
+  for (const directory of directories) {
+    const metaConfig = await verifyIfMetaJsonExists(directory);
+
+    // if directory matches ${SRC}/dev/** continue to next iteration
+
+    if (directory.includes(`${SRC}/dev`)) {
+      continue;
+    }
+
+    if (metaConfig) {
+      metaConfig.id = await nanoid(12);
+
+      await jsonfile.writeFile(path.join(directory, 'meta.json'), metaConfig, {
+        spaces: 2,
+      });
+    }
+  }
+
+  let metaConfig = await verifyIfMetaJsonExists(SRC);
+
+  metaConfig.id = await nanoid(12);
+
+  await jsonfile.writeFile(path.join(currentPath, 'meta.json'), metaConfig, {
+    spaces: 2,
+  });
+}
+////////////////////////////////////////////////////////////////////////////////
 // COMMIT CHANGES
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function commitChangesReturn(commit) {
-  console.log(8723);
-  // $.verbose = false;
-
-  // const filesChnaged = await $`git show ${commit} --pretty=format: --name-only`;
-
-  // // convert to array
-  // const filesChnagedArray = filesChnaged.stdout.split('\n');
-
-  // // remove empty strings
-  // const filesChnagedArrayFiltered = filesChnagedArray.filter((file) => {
-  //   return file !== '';
-  // });
-
-  // // remove \n from each string
-
-  // const filesChnagedArrayFilteredTrimmed = filesChnagedArrayFiltered.map(
-  //   (file) => {
-  //     return file.replace(/\n/g, '');
-  //   }
-  // );
-
-  // $.verbose = true;
-
-  // let appsToDeploy = [];
-
-  // for (let file of filesChnagedArrayFilteredTrimmed) {
-  //   let filePath = `${process.env.SRC}/${file}`;
-
-  //   async function moveUpDirectoryRecursively(folderPath) {
-  //     if (folderPath === process.env.SRC) {
-  //       return;
-  //     }
-
-  //     let metaConfig = await verifyIfMetaJsonExists(folderPath);
-
-  //     if (metaConfig) {
-  //       let { type, ci } = metaConfig;
-
-  //       if (type === 'project') {
-  //         return;
-  //       }
-
-  //       if (ci) {
-  //         appsToDeploy.push(folderPath);
-  //         return;
-  //       }
-  //     }
-
-  //     let fileParentDirectory = path.dirname(folderPath);
-
-  //     await moveUpDirectoryRecursively(fileParentDirectory);
-  //   }
-
-  //   await moveUpDirectoryRecursively(path.dirname(filePath));
-  // }
-
-  // $.verbose = true;
-
-  // console.log(appsToDeploy);
-
-  // for (let app of appsToDeploy) {
-  //   const init_script = await import(`${app}/scripts/init.mjs`);
-  //   await init_script.default({ tls: true });
-  // }
-}
+export async function commitChangesReturn(commit) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
@@ -312,6 +296,10 @@ export default async function utils(program) {
   const metaCreate = meta.command('create');
   metaCreate.description('create a meta.json file');
   metaCreate.action(createMetaFile);
+
+  const devMetaChangeId = meta.command('ids');
+  devMetaChangeId.description('change all ids in a meta.json file');
+  devMetaChangeId.action(changeAllIds);
 
   const commitChanges = commit.command('changes');
   commitChanges.description('return an array of changed files');

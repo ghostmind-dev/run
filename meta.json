@@ -1,7 +1,8 @@
 {
-    "type": "npm_package",
-    "names": [
-        "@angular/core",
-        "@angular/common"
-    ]
+  "type": "npm_package",
+  "names": [
+    "@angular/core",
+    "@angular/common"
+  ],
+  "id": "ic9ETB7juz3g"
 }
