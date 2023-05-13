@@ -252,6 +252,19 @@ export async function changeAllIds() {
 export async function commitChangesReturn(commit) {}
 
 ////////////////////////////////////////////////////////////////////////////////
+// INSTALL DEPENDENCIES
+////////////////////////////////////////////////////////////////////////////////
+
+export async function installDependencies() {
+  $.verbose = true;
+  await $`brew install vault`;
+
+  const VAULT_TOKEN = process.env.VAULT_ROOT_TOKEN;
+
+  await $`vault login ${VAULT_TOKEN}`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -267,6 +280,8 @@ export default async function utils(program) {
   const meta = utils.command("meta");
   meta.description("meta utils");
   const commit = utils.command("commit");
+  const dependencies = utils.command("dependencies");
+  dependencies.description("dependencies install");
 
   const gitAmend = git.command("amend");
   gitAmend.description("amend the last commit");
@@ -305,4 +320,8 @@ export default async function utils(program) {
   commitChanges.description("return an array of changed files");
   commitChanges.argument("[commit]", "commit to compare to]");
   commitChanges.action(commitChangesReturn);
+
+  const dependenciesInstall = dependencies.command("install");
+  dependenciesInstall.description("install dependencies");
+  dependenciesInstall.action(installDependencies);
 }

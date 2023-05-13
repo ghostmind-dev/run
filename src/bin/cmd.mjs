@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 
-import { $, which, fs } from 'zx';
-import { config } from 'dotenv';
-import { Command } from 'commander';
-import commandTerraform from '../lib/command-terraform.mjs';
-import commandCustom from '../lib/command-custom.mjs';
-import commandVault from '../lib/command-vault.mjs';
-import commandAction from '../lib/command-action.mjs';
-import commandGithub from '../lib/command-github.mjs';
-import commandSkaffold from '../lib/command-skaffold.mjs';
-import commandHasura from '../lib/command-hasura.mjs';
-import commandCluster from '../lib/command-cluster.mjs';
-import commandDb from '../lib/command-db.mjs';
-import commandUtils from '../lib/command-utils.mjs';
-import commandDocker from '../lib/command-docker.mjs';
-import commandVercel from '../lib/command-vercel.mjs';
+import { $, which, fs } from "zx";
+import { config } from "dotenv";
+import { Command } from "commander";
+import commandTerraform from "../lib/command-terraform.mjs";
+import commandCustom from "../lib/command-custom.mjs";
+import commandVault from "../lib/command-vault.mjs";
+import commandAction from "../lib/command-action.mjs";
+import commandGithub from "../lib/command-github.mjs";
+import commandSkaffold from "../lib/command-skaffold.mjs";
+import commandHasura from "../lib/command-hasura.mjs";
+import commandCluster from "../lib/command-cluster.mjs";
+import commandDb from "../lib/command-db.mjs";
+import commandUtils from "../lib/command-utils.mjs";
+import commandDocker from "../lib/command-docker.mjs";
+import commandVercel from "../lib/command-vercel.mjs";
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONST
@@ -45,7 +45,7 @@ const program = new Command();
 
 program.exitOverride();
 
-program.name('run');
+program.name("run");
 
 ////////////////////////////////////////////////////////////////////////////////
 // GIT COMMAND
@@ -73,7 +73,7 @@ try {
 } catch (err) {
   const { exitCode, name, code, message } = err;
 
-  if (!message.includes('outputHelp')) {
-    console.error('something went wrong');
+  if (!message.includes("outputHelp")) {
+    console.error("something went wrong");
   }
 }
