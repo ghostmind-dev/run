@@ -46,10 +46,10 @@ const customConfigDefault = {
 // RUN CUSTOM SCRIPT
 ////////////////////////////////////////////////////////////////////////////////
 
-async function runCustomScript(script, arg, options) {
+async function runCustomScript(script, argument, options) {
   let { custom_script } = await fs.readJsonSync('meta.json');
 
-  let { dev, test } = options;
+  let { dev, test, arg } = options;
 
   let currentPath = process.cwd();
 
@@ -83,7 +83,7 @@ async function runCustomScript(script, arg, options) {
     const custom_function = await import(
       `${currentPath}/${root}/${script}.mjs`
     );
-    await custom_function.default(arg, dev);
+    await custom_function.default(argument, dev, arg);
   } catch (e) {
     console.log(e);
     console.log('something went wrong');
@@ -98,7 +98,8 @@ export default async function commandCustom(program) {
   custom
     .description('run custom script')
     .argument('[script]', 'script to perform')
-    .arguments('[arg]', 'arguments for the script')
+    .arguments('[argument]', 'argument for the script')
+    .option('-a, --arg <items...>', 'arguments for the script')
     .option('--dev', 'run in dev mode')
     .option('--test', 'run in test mode')
     .action(runCustomScript);
