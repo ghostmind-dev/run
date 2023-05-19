@@ -139,15 +139,19 @@ export async function actionRunLocal(target, actArguments, event) {
     actArgmentsArray.push(target);
     await $`act ${actArgmentsArray}`;
   } else {
-    actArgmentsArray.push('--workflows');
-    actArgmentsArray.push(`./.github/workflows/${target}.yaml`);
+    // actArgmentsArray.push('--workflows');
+    // actArgmentsArray.push(`./.github/workflows/${target}.yaml`);
+
+    // if(event === "push") {
+    //   actArgmentsArray.push('--eventpath');
+    // }
     await $`act ${event} ${actArgmentsArray}`;
   }
 }
 
 export async function actionRunLocalEntry(target, options) {
   const ENV = process.env.ENV;
-  const { live, input, reuse, secure, event } = options;
+  const { live, input, reuse, secure, event, push } = options;
 
   let inputsArguments = {};
 
@@ -175,6 +179,25 @@ export async function actionRunLocalEntry(target, options) {
     actArgments.push({ name: '--reuse', value: '' });
   }
 
+  if (event === 'push') {
+    const eventFile = await fs.readFile(
+      `${LOCALHOST_SRC}/.github/mocking/push.json`,
+      'utf8'
+    );
+
+    // this push has 3 properties: ref, before, after
+    // add these properties to the /tmp/inputs.json file
+
+    const currentInputs = JSON.parse(
+      fs.readFileSync('/tmp/inputs.json', 'utf8')
+    );
+    const eventFileJson = JSON.parse(eventFile);
+
+    fs.writeJsonSync('/tmp/inputs.json', {
+      ...eventFileJson,
+      ...currentInputs,
+    });
+  }
   if (!secure) {
     actArgments.push({ name: '--insecure-secrets', value: '' });
   }
@@ -219,6 +242,8 @@ export async function actionSecretsSet() {
 export async function actionEnvSet() {
   const environement = await envDevcontainer();
 
+  console.log(environement);
+
   const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
 
   const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
@@ -246,6 +271,7 @@ export default async function act(program) {
     .description('run local action with at')
     .argument('[target]', 'workflow or job name')
     .option('--live', 'run live version on run')
+    .option('--push', 'simulate push event')
     .option('--no-reuse', 'do not reuse container state')
     .option('--no-secure', "show secrets in logs (don't use in production)")
     .option('-i, --input [inputs...]', 'action inputs')
