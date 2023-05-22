@@ -374,7 +374,6 @@ export async function applyPod() {
   const metaConfig = await fs.readJsonSync('meta.json');
   const { cluster } = metaConfig;
 
-  const { namespace } = cluster;
   let environment;
 
   if (ENV === 'prod' || ENV === 'preview') {

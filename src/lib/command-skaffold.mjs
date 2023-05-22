@@ -5,6 +5,8 @@ import { execFileSync } from 'child_process';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
+  getDirectories,
+  recursiveDirectoriesDiscovery,
 } from '../utils/divers.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -109,19 +111,24 @@ export async function skaffoldGroup(options, action) {
     return;
   }
 
-  const app_directory = `${currentPath}/app`;
+  const app_directory = `${currentPath}`;
   const groupe = [];
-  const filesName = await fs.readdir(app_directory, { withFileTypes: true });
-  const foldersName = filesName
-    .filter((fileOrDirectory) => fileOrDirectory.isDirectory())
-    .map((directory) => directory.name);
-  for (let folder of foldersName) {
-    const { skaffold, name } = await fs.readJsonSync(
-      `${currentPath}/app/${folder}/meta.json`
-    );
+
+  let directories = await recursiveDirectoriesDiscovery(app_directory);
+
+  for (let directory of directories) {
+    const metaConfig = await verifyIfMetaJsonExists(directory);
+
+    if (metaConfig === false) {
+      continue;
+    }
+
+    const { skaffold, name } = metaConfig;
+
     if (skaffold == undefined) {
       continue;
     }
+
     const { group } = skaffold;
     for (let groupInMeta of group) {
       const matchIndex = groupe.findIndex(
@@ -130,13 +137,13 @@ export async function skaffoldGroup(options, action) {
       if (matchIndex > -1) {
         groupe[matchIndex] = {
           ...groupe[matchIndex],
-          members: [...groupe[matchIndex].members, name],
+          members: [...groupe[matchIndex].members, { name, directory }],
         };
         continue;
       }
       groupe.push({
         name: groupInMeta,
-        members: [name],
+        members: [{ name, directory }],
       });
     }
   }
@@ -154,7 +161,7 @@ export async function skaffoldGroup(options, action) {
   );
   let profiles = '';
   groupe[groupInitializationIndex].members.map((value) => {
-    profiles = `${profiles},${value}`;
+    profiles = `${profiles},${value.name}`;
   });
   $.verbose = true;
   try {
