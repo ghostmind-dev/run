@@ -23,9 +23,11 @@
         "humao.rest-client",
         "sdras.inbedby7pm",
         "foxundermoon.shell-format",
-        "github.copilot",
         "mikestead.dotenv",
-        "wesbos.theme-cobalt2"
+        "wesbos.theme-cobalt2",
+        "github.github-vscode-theme",
+        "github.copilot-nightly",
+        "github.copilot-chat"
       ]
     }
   },
