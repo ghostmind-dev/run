@@ -71,7 +71,7 @@ class TreeViewTool extends Tool {
           fullPath.includes('.next') ||
           fullPath.includes('.vercel') ||
           fullPath.includes('.terraform') ||
-          fullPath.includes('.cache') ||
+          fullPath.includes('.cache')
         ) {
           continue;
         }
@@ -110,18 +110,18 @@ export default async function ai(program) {
       agentType: 'zero-shot-react-description',
     });
 
-    console.log('Loaded agent.');
+    //     console.log('Loaded agent.');
 
-    const input = `
-    Context of the question: User app directory
-å
-    Question: ${question.question}
-    
-    `;
+    //     const input = `
+    //     Context of the question: User app directory
+    // å
+    //     Question: ${question.question}
 
-    const result = await executor.call({ input });
+    //     `;
 
-    console.log(`Got output ${result.output}`);
-    console.log(answer);
+    //     const result = await executor.call({ input });
+
+    //     console.log(`Got output ${result.output}`);
+    //     console.log(answer);
   });
 }
