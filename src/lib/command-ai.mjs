@@ -3,6 +3,7 @@ import core from '@actions/core';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
+  recursiveDirectoriesDiscovery,
 } from '../utils/divers.mjs';
 
 import fs from 'fs/promises';
@@ -50,38 +51,52 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 class TreeViewTool extends Tool {
   name = 'tree-view';
 
-  description = 'This tool return the tree view of thhe user directory';
+  description = `This tool return the tree view of the app directory. This directory path is /workspaces/core/app`;
 
   async _call() {
-    const treeView = await this.generateTreeView(LOCALHOST_SRC);
+    const treeView = await this.generateTreeView(`${LOCALHOST_SRC}/app`);
     return JSON.stringify(treeView, null, 2);
   }
 
   async generateTreeView(dir, tree = {}) {
-    const entries = await fs.readdir(dir, { withFileTypes: true });
+    const treeView = await $`tree -I 'node_modules' ${dir}`;
 
-    for (const entry of entries) {
-      // ignore node_modules by default
+    return treeView.stdout;
+  }
+}
 
-      if (entry.isDirectory()) {
-        const fullPath = path.join(dir, entry.name);
-        if (
-          fullPath.includes('node_modules') ||
-          fullPath.includes('.git') ||
-          fullPath.includes('.next') ||
-          fullPath.includes('.vercel') ||
-          fullPath.includes('.terraform') ||
-          fullPath.includes('.cache')
-        ) {
-          continue;
-        }
-        tree[entry.name] = await this.generateTreeView(fullPath);
-      } else {
-        tree[entry.name] = entry.name;
-      }
+class ReadFileTool extends Tool {
+  name = 'read-file';
+
+  description = 'This tool return the content of a file. Just provide the path';
+
+  async _call(filePath) {
+    // convert space with slash
+
+    filePath = filePath.replace(/ /g, '/');
+
+    const content = await fs.readFile(`${filePath}`, 'utf8');
+    return content.toString();
+  }
+}
+
+class ExecuteCommand extends Tool {
+  name = 'execute-shell-command';
+
+  description = 'Execute any shell command and return the output';
+
+  async _call(command) {
+    const commandArray = command.split(' ');
+
+    const output = await $`${commandArray}`;
+
+    console.log(output);
+
+    if (output.exitCode === 0) {
+      return 'Command executed successfully';
     }
 
-    return tree;
+    return 'Command failed';
   }
 }
 
@@ -105,23 +120,33 @@ export default async function ai(program) {
 
     const OPEANAI_API_KEY = process.env.OPEANAI_API_KEY;
     const tree = new TreeViewTool();
-    const model = new OpenAI({ temperature: 0 });
-    const executor = await initializeAgentExecutorWithOptions([tree], model, {
-      agentType: 'zero-shot-react-description',
-    });
+    const fileContent = new ReadFileTool();
+    const command = new ExecuteCommand();
+    const model = new OpenAI({ temperature: 0, modelName: 'gpt-4' });
+    const executor = await initializeAgentExecutorWithOptions(
+      [tree, fileContent, command],
+      model,
+      {
+        agentType: 'zero-shot-react-description',
+        verbose: true,
+      }
+    );
 
-    //     console.log('Loaded agent.');
+    console.log('Loaded agent.');
 
-    //     const input = `
-    //     Context of the question: User app directory
-    // å
-    //     Question: ${question.question}
+    const input = `
+        Context of the question: User app directory. 
+    
+        Question: ${question.question}
 
-    //     `;
+        Instructions: 
+          - If you create a new file, always validate that it workd before confirm
+          - If you add content to a file, always validate that it workd before confirm
 
-    //     const result = await executor.call({ input });
+        `;
 
-    //     console.log(`Got output ${result.output}`);
-    //     console.log(answer);
+    const result = await executor.call({ input });
+
+    console.log(`${result.output}`);
   });
 }

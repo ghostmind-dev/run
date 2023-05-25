@@ -15,10 +15,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@actions/core": "^1.9.1",
+    "@actions/core": "latest",
     "@google-cloud/storage": "^6.5.0",
     "commander": "^9.4.0",
     "dotenv": "^16.0.1",
+    "filetree": "^0.0.1",
     "inquirer": "^9.1.0",
     "jsonfile": "^6.1.0",
     "langchain": "^0.0.81",
