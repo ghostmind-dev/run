@@ -15,6 +15,14 @@ import { initializeAgentExecutorWithOptions } from 'langchain/agents';
 import { Tool } from 'langchain/tools';
 import * as inquirer from 'inquirer';
 
+
+import { ChatOpenAI } from 'langchain/chat_models/openai';
+
+const model = new ChatOpenAI({
+  temperature: 0.9,
+  modelName: 'gpt-4',
+});
+
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
@@ -47,6 +55,9 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
+
+
+
 
 class TreeViewTool extends Tool {
   name = 'tree-view';
@@ -122,7 +133,7 @@ export default async function ai(program) {
     const tree = new TreeViewTool();
     const fileContent = new ReadFileTool();
     const command = new ExecuteCommand();
-    const model = new OpenAI({ temperature: 0, modelName: 'gpt-4' });
+    // const model = new OpenAI({ temperature: 0, modelName: 'gpt-4' });
     const executor = await initializeAgentExecutorWithOptions(
       [tree, fileContent, command],
       model,
