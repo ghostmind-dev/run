@@ -15,13 +15,7 @@ import { initializeAgentExecutorWithOptions } from 'langchain/agents';
 import { Tool } from 'langchain/tools';
 import * as inquirer from 'inquirer';
 
-
 import { ChatOpenAI } from 'langchain/chat_models/openai';
-
-const model = new ChatOpenAI({
-  temperature: 0.9,
-  modelName: 'gpt-4',
-});
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -55,9 +49,6 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
-
-
-
 
 class TreeViewTool extends Tool {
   name = 'tree-view';
@@ -120,6 +111,10 @@ export default async function ai(program) {
   // need a multi word question
 
   aiAsk.action(async (arg) => {
+    const model = new ChatOpenAI({
+      temperature: 0.9,
+      modelName: 'gpt-4',
+    });
     const promptUser = inquirer.createPromptModule();
     const question = await promptUser([
       {
