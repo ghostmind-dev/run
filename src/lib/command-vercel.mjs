@@ -1,11 +1,11 @@
-import { $, which, sleep, cd, fs } from 'zx';
-import core from '@actions/core';
+import { $, which, sleep, cd, fs } from "zx";
+import core from "@actions/core";
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-} from '../utils/divers.mjs';
+} from "../utils/divers.mjs";
 
-import { envDevcontainer } from '../main.mjs';
+import { envDevcontainer } from "../main.mjs";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -44,17 +44,17 @@ async function vercelListDeployments() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function vercel(program) {
-  const vercel = program.command('vercel');
-  vercel.description('manage vercel deployments');
+  const vercel = program.command("vercel");
+  vercel.description("manage vercel deployments");
 
-  const vercelList = vercel.command('list');
+  const vercelList = vercel.command("list");
 
-  vercelList.description('list all deployments').action(vercelListDeployments);
+  vercelList.description("list all deployments").action(vercelListDeployments);
 
-  const vercelLogs = vercel.command('logs');
+  const vercelLogs = vercel.command("logs");
 
   vercelLogs
-    .description('get logs for a deployment')
-    .argument('<deploymentId>', 'deployment id')
+    .description("get logs for a deployment")
+    .argument("<deploymentId>", "deployment id")
     .action(vercelLogsDeployment);
 }
