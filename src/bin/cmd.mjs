@@ -16,6 +16,7 @@ import commandUtils from '../lib/command-utils.mjs';
 import commandDocker from '../lib/command-docker.mjs';
 import commandVercel from '../lib/command-vercel.mjs';
 import commandAi from '../lib/command-ai.mjs';
+import commandLib from '../lib/command-lib.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONST
@@ -65,6 +66,7 @@ await commandUtils(program);
 await commandDocker(program);
 await commandVercel(program);
 await commandAi(program);
+await commandLib(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // GIT COMMAND
