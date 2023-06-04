@@ -85,6 +85,9 @@ async function runCustomScript(script, argument, options) {
     const custom_function = await import(
       `${currentPath}/${root}/${script}.mjs`
     );
+
+    $.verbose = true;
+
     await custom_function.default(argument, {
       input,
       metaConfig,
