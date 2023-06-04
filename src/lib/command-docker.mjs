@@ -89,15 +89,14 @@ export async function getDockerfileAndImageName() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function getDockerImageDigest() {
-  console.log(238992389);
-  // let { image } = await getDockerfileAndImageName();
+  let { image } = await getDockerfileAndImageName();
 
-  // const imageDigestRaw =
-  //   await $`docker inspect --format='{{index .RepoDigests 0}}' ${image}`;
+  const imageDigestRaw =
+    await $`docker inspect --format='{{index .RepoDigests 0}}' ${image}`;
 
-  // //  remove /n from the end of the string
-  // const imageDigest = imageDigestRaw.stdout.slice(0, -1);
-  // return imageDigest;
+  //  remove /n from the end of the string
+  const imageDigest = imageDigestRaw.stdout.slice(0, -1);
+  return imageDigest;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

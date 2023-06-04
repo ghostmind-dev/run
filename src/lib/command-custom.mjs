@@ -97,12 +97,13 @@ async function runCustomScript(script, argument, options) {
     $.verbose = true;
 
     await custom_function.default(argument, {
-      input,
+      input: input === undefined ? [] : input,
       metaConfig,
       currentPath,
       zx,
       run,
       utils,
+      env: process.env,
     });
   } catch (e) {
     console.log(e);
