@@ -3,14 +3,11 @@ import core from '@actions/core';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-  recursiveDirectoriesDiscovery,
 } from '../utils/divers.mjs';
 
 import fs from 'fs/promises';
 import path from 'path';
 
-import { envDevcontainer } from '../main.mjs';
-import { OpenAI } from 'langchain/llms/openai';
 import { initializeAgentExecutorWithOptions } from 'langchain/agents';
 import { Tool } from 'langchain/tools';
 import * as inquirer from 'inquirer';

@@ -55,7 +55,15 @@ async function runCustomScript(script, argument, options) {
 
   const SRC = process.env.SRC;
 
-  const run = dev === true ? `${SRC}/dev/src/bin/cmd.mjs` : 'run';
+  const run =
+    dev === true
+      ? `${SRC}/dev/src/bin/cmd.mjs`
+      : `${SRC}/node_modules/@ghostmind-dev/run/src/bin/cmd.mjs`;
+
+  const utils =
+    dev === true
+      ? `${SRC}/dev/src/main.mjs`
+      : `${SRC}/node_modules/@ghostmind-dev/run/src/main.mjs`;
 
   const { root } = { ...customConfigDefault, ...custom_script, ...testMode };
   cd(`${currentPath}/${root}`);
@@ -94,6 +102,7 @@ async function runCustomScript(script, argument, options) {
       currentPath,
       zx,
       run,
+      utils,
     });
   } catch (e) {
     console.log(e);
