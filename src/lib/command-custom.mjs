@@ -1,9 +1,15 @@
-import { $, cd, fs } from 'zx';
+import * as zx from 'zx';
 import { createRequire } from 'module';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.mjs';
+
+////////////////////////////////////////////////////////////////////////////////
+//  SETTING UP ZX
+////////////////////////////////////////////////////////////////////////////////
+
+const { $, cd, sleep, fs } = zx;
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -21,20 +27,6 @@ const pathZx = require.resolve('zx');
 process.env.ZX = pathZx;
 
 ////////////////////////////////////////////////////////////////////////////////
-// RUNNING COMMAND LOCATION
-////////////////////////////////////////////////////////////////////////////////
-
-let currentPath = await detectScriptsDirectory(process.cwd());
-
-cd(currentPath);
-
-////////////////////////////////////////////////////////////////////////////////
-// CURRENT METADATA
-////////////////////////////////////////////////////////////////////////////////
-
-let metaConfig = await verifyIfMetaJsonExists(currentPath);
-
-////////////////////////////////////////////////////////////////////////////////
 // CUSTOM CONFIG DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -49,11 +41,21 @@ const customConfigDefault = {
 async function runCustomScript(script, argument, options) {
   let { custom_script } = await fs.readJsonSync('meta.json');
 
-  let { dev, test, arg } = options;
-
   let currentPath = process.cwd();
 
+  let { test, input, dev } = options;
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // CURRENT METADATA
+  ////////////////////////////////////////////////////////////////////////////////
+
+  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+
   let testMode = test === undefined ? {} : { root: 'test' };
+
+  const SRC = process.env.SRC;
+
+  const run = dev === true ? `${SRC}/dev/src/bin/cmd.mjs` : 'run';
 
   const { root } = { ...customConfigDefault, ...custom_script, ...testMode };
   cd(`${currentPath}/${root}`);
@@ -83,7 +85,13 @@ async function runCustomScript(script, argument, options) {
     const custom_function = await import(
       `${currentPath}/${root}/${script}.mjs`
     );
-    await custom_function.default(argument, dev, arg);
+    await custom_function.default(argument, {
+      input,
+      metaConfig,
+      currentPath,
+      zx,
+      run,
+    });
   } catch (e) {
     console.log(e);
     console.log('something went wrong');
@@ -98,8 +106,8 @@ export default async function commandCustom(program) {
   custom
     .description('run custom script')
     .argument('[script]', 'script to perform')
-    .arguments('[argument]', 'argument for the script')
-    .option('-a, --arg <items...>', 'arguments for the script')
+    .argument('[argument]', 'single argument for the script')
+    .option('-i, --input <items...>', 'multiple arguments for the script')
     .option('--dev', 'run in dev mode')
     .option('--test', 'run in test mode')
     .action(runCustomScript);
