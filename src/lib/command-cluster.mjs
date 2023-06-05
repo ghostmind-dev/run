@@ -348,9 +348,9 @@ export async function deployGroupGkeToCluster(appName, options) {
     let groupApps = appsByPriorityGroup[group];
     for (let app in groupApps) {
       let { podDirectory: podToDeploy } = groupApps[app];
-
-      const init_script = await import(`${podToDeploy}/scripts/init.mjs`);
-      await init_script.default({ tls });
+      console.log(128912981298);
+      cd(podToDeploy);
+      await $`run custom init`;
     }
   }
 }
