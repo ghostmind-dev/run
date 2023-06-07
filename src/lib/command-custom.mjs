@@ -3,6 +3,7 @@ import { createRequire } from 'module';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
+  setSecretsUptoProject,
 } from '../utils/divers.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -32,6 +33,7 @@ process.env.ZX = pathZx;
 
 const customConfigDefault = {
   root: 'scripts',
+  getSecretsUpToProject: true,
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -65,8 +67,16 @@ async function runCustomScript(script, argument, options) {
       ? `${SRC}/dev/src/main.mjs`
       : `${SRC}/node_modules/@ghostmind-dev/run/src/main.mjs`;
 
-  const { root } = { ...customConfigDefault, ...custom_script, ...testMode };
+  const { root, getSecretsUpToProject } = {
+    ...customConfigDefault,
+    ...custom_script,
+    ...testMode,
+  };
   cd(`${currentPath}/${root}`);
+
+  if (getSecretsUpToProject === true) {
+    await setSecretsUptoProject(currentPath);
+  }
 
   // if there is no custom script
   // return the list of available custom scripts
