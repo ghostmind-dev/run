@@ -1,11 +1,11 @@
-import { $, which, sleep, cd, fs } from 'zx';
-import core from '@actions/core';
+import { $, which, sleep, cd, fs } from "zx";
+import core from "@actions/core";
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-} from '../utils/divers.mjs';
+} from "../utils/divers.mjs";
 
-import { envDevcontainer } from '../main.mjs';
+import { envDevcontainer } from "../main.mjs";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -18,7 +18,7 @@ $.verbose = false;
 ////////////////////////////////////////////////////////////////////////////////
 
 const LOCALHOST_SRC =
-  process.env.CODESPACES === 'true'
+  process.env.CODESPACES === "true"
     ? process.env.SRC
     : process.env.LOCALHOST_SRC;
 
@@ -48,20 +48,20 @@ const actionConfigDefault = {};
 
 const actArgmentsDefault = [
   {
-    name: '--platform',
+    name: "--platform",
     value: `ubuntu-latest=catthehacker/ubuntu:act-latest`,
   },
-  { name: '--defaultbranch', value: 'main' },
-  { name: '--directory', value: LOCALHOST_SRC },
-  { name: '--bind', value: `` },
-  { name: '--use-gitignore', value: '' },
+  { name: "--defaultbranch", value: "main" },
+  { name: "--directory", value: LOCALHOST_SRC },
+  { name: "--bind", value: `` },
+  { name: "--use-gitignore", value: "" },
   {
-    name: '--secret',
+    name: "--secret",
     value: `VAULT_ROOT_TOKEN=${process.env.VAULT_ROOT_TOKEN}`,
   },
-  { name: '--secret', value: `VAULT_ADDR=${process.env.VAULT_ADDR}` },
+  { name: "--secret", value: `VAULT_ADDR=${process.env.VAULT_ADDR}` },
   {
-    name: '--secret',
+    name: "--secret",
     value: `GCP_PROJECT_NAME=${process.env.GCP_PROJECT_NAME}`,
   },
 ];
@@ -74,7 +74,7 @@ async function actArgmentsToOneDimensionArray(actArgmentsConstants) {
   let actArgmentsArray = [];
   for (let i = 0; i < actArgmentsConstants.length; i++) {
     actArgmentsArray.push(actArgmentsConstants[i].name);
-    if (actArgmentsConstants[i].value !== '') {
+    if (actArgmentsConstants[i].value !== "") {
       actArgmentsArray.push(actArgmentsConstants[i].value);
     }
   }
@@ -90,13 +90,13 @@ export async function actionRunRemote(workflow, options) {
 
   const { watch, input, branch } = options;
 
-  let refBranch = branch ? branch : 'main';
+  let refBranch = branch ? branch : "main";
 
   let inputsArguments = [];
 
   if (input !== undefined) {
     for (let inputArg in input) {
-      inputsArguments.push('-f');
+      inputsArguments.push("-f");
       inputsArguments.push(input[inputArg]);
     }
   }
@@ -135,7 +135,7 @@ export async function actionRunLocal(target, actArguments, event) {
   $.verbose = true;
 
   if (event === undefined) {
-    actArgmentsArray.push('--job');
+    actArgmentsArray.push("--job");
     actArgmentsArray.push(target);
     await $`act ${actArgmentsArray}`;
   } else {
@@ -158,48 +158,48 @@ export async function actionRunLocalEntry(target, options) {
   if (input !== undefined) {
     for (let inputArg in input) {
       // split input argument into array with = as separator
-      let inputArgArray = input[inputArg].split('=');
+      let inputArgArray = input[inputArg].split("=");
       // add input argument to inputsArguments object
       inputsArguments[inputArgArray[0]] = inputArgArray[1];
     }
   }
 
-  fs.writeJsonSync('/tmp/inputs.json', {
+  fs.writeJsonSync("/tmp/inputs.json", {
     inputs: {
-      LIVE: live ? 'true' : 'false',
-      LOCAL: 'true',
+      LIVE: live ? "true" : "false",
+      LOCAL: "true",
       ...inputsArguments,
     },
   });
   let actArgments = [
     // { name: '--env', value: `ENV=${ENV}` },
-    { name: '--eventpath', value: '/tmp/inputs.json' },
+    { name: "--eventpath", value: "/tmp/inputs.json" },
   ];
   if (reuse === true) {
-    actArgments.push({ name: '--reuse', value: '' });
+    actArgments.push({ name: "--reuse", value: "" });
   }
 
-  if (event === 'push') {
+  if (event === "push") {
     const eventFile = await fs.readFile(
       `${LOCALHOST_SRC}/.github/mocking/push.json`,
-      'utf8'
+      "utf8"
     );
 
     // this push has 3 properties: ref, before, after
     // add these properties to the /tmp/inputs.json file
 
     const currentInputs = JSON.parse(
-      fs.readFileSync('/tmp/inputs.json', 'utf8')
+      fs.readFileSync("/tmp/inputs.json", "utf8")
     );
     const eventFileJson = JSON.parse(eventFile);
 
-    fs.writeJsonSync('/tmp/inputs.json', {
+    fs.writeJsonSync("/tmp/inputs.json", {
       ...eventFileJson,
       ...currentInputs,
     });
   }
   if (!secure) {
-    actArgments.push({ name: '--insecure-secrets', value: '' });
+    actArgments.push({ name: "--insecure-secrets", value: "" });
   }
   await actionRunLocal(target, actArgments, event);
 }
@@ -216,17 +216,27 @@ export async function actionSecretsSet() {
   await $`run vault kv export`;
 
   const envContents = await $`grep -v '^#' .env | xargs`;
-  const envContentsArray = `${envContents}`.split(' ');
+  const envContentsArray = `${envContents}`.split(" ");
 
   const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
 
-  const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
+  const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, "");
 
   for (let secret of envContentsArray) {
-    const secretArray = secret.split('=');
+    const secretArray = secret.split("=");
     const secretName = secretArray[0];
     const secretValueRaw = secretArray[1];
-    const secretValue = secretValueRaw.replace(/(\r\n|\n|\r)/gm, '');
+
+    let secretValue = "";
+
+    if (
+      secretName === "GOOGLE_CLOUD_PRIVATE_KEY" ||
+      secretName === "TF_VAR_GOOGLE_CLOUD_PRIVATE_KEY"
+    ) {
+      secretValue = secretValueRaw;
+    } else {
+      secretValue = secretValueRaw.replace(/(\r\n|\n|\r)/gm, "");
+    }
 
     core.setSecret(secretValue);
     core.setOutput(secretName, secretValue);
@@ -246,10 +256,10 @@ export async function actionEnvSet() {
 
   const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
 
-  const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
+  const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, "");
 
   core.setSecret(environement);
-  core.setOutput('ENV', environement);
+  core.setOutput("ENV", environement);
 
   await $`echo ENV=${environement} >> ${gitEnvPath}`;
 }
@@ -259,40 +269,40 @@ export async function actionEnvSet() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function act(program) {
-  const act = program.command('action');
-  act.description('run a github action');
+  const act = program.command("action");
+  act.description("run a github action");
 
-  const actLocal = act.command('local');
-  const actRemote = act.command('remote');
-  const actSecrets = act.command('secrets');
-  const actEnv = act.command('env');
+  const actLocal = act.command("local");
+  const actRemote = act.command("remote");
+  const actSecrets = act.command("secrets");
+  const actEnv = act.command("env");
 
   actLocal
-    .description('run local action with at')
-    .argument('[target]', 'workflow or job name')
-    .option('--live', 'run live version on run')
-    .option('--push', 'simulate push event')
-    .option('--no-reuse', 'do not reuse container state')
-    .option('--no-secure', "show secrets in logs (don't use in production)")
-    .option('-i, --input [inputs...]', 'action inputs')
+    .description("run local action with at")
+    .argument("[target]", "workflow or job name")
+    .option("--live", "run live version on run")
+    .option("--push", "simulate push event")
+    .option("--no-reuse", "do not reuse container state")
+    .option("--no-secure", "show secrets in logs (don't use in production)")
+    .option("-i, --input [inputs...]", "action inputs")
     .option('--event <string>", " trigger event (ex: workflow_run')
     .action(actionRunLocalEntry);
 
   actRemote
-    .description('run local action with at')
-    .argument('[workflow]', 'workflow name')
-    .option('--watch', 'watch for changes')
-    .option('-i, --input [inputs...]', 'action inputs')
-    .option('--branch <ref>', 'branch to run workflow on')
+    .description("run local action with at")
+    .argument("[workflow]", "workflow name")
+    .option("--watch", "watch for changes")
+    .option("-i, --input [inputs...]", "action inputs")
+    .option("--branch <ref>", "branch to run workflow on")
     .action(actionRunRemote);
 
   actSecrets
-    .command('set')
+    .command("set")
     .action(actionSecretsSet)
-    .description('set secrets for all the next action steps');
+    .description("set secrets for all the next action steps");
 
   actEnv
-    .command('set')
+    .command("set")
     .action(actionEnvSet)
-    .description('set environment variables for all the next action steps');
+    .description("set environment variables for all the next action steps");
 }
