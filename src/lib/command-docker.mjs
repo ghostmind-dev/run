@@ -14,33 +14,12 @@ import _ from 'lodash';
 $.verbose = false;
 
 ////////////////////////////////////////////////////////////////////////////////
-// TERRAFORM DEFAULT CONFIG
-////////////////////////////////////////////////////////////////////////////////
-
-const terraformConfigDefault = {
-  root: 'gcp',
-  docker_build: true,
-};
-
-////////////////////////////////////////////////////////////////////////////////
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
 let currentPath = await detectScriptsDirectory(process.cwd());
 
 cd(currentPath);
-
-////////////////////////////////////////////////////////////////////////////////
-// CURRENT METADATA
-////////////////////////////////////////////////////////////////////////////////
-
-let metaConfig = await verifyIfMetaJsonExists(currentPath);
-
-////////////////////////////////////////////////////////////////////////////////
-// CONSTANTS
-////////////////////////////////////////////////////////////////////////////////
-
-const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 
 ////////////////////////////////////////////////////////////////////////////////
 // GET DOCKERFILE NAME AND IMAGE NAME
@@ -53,26 +32,43 @@ export async function getDockerfileAndImageName() {
 
   let { type, scope, docker } = await verifyIfMetaJsonExists(currentPath);
   let { root } = docker;
+
   let dockerFileName;
   let dockerfile;
   let dockerContext;
-  if (scope === 'global') {
-    dockerFileName = `Dockerfile`;
-  } else {
-    if (ENV === 'prod' || ENV === 'preview') {
+
+  if (type === 'container') {
+    let { context_dockerfile } = docker;
+
+    if (scope === 'global') {
+      dockerFileName = `Dockerfile`;
+    } else if (context_dockerfile === false) {
+      dockerFileName = `Dockerfile`;
+    } else if (ENV === 'prod' || ENV === 'preview') {
       dockerFileName = `Dockerfile.prod`;
     } else {
       dockerFileName = `Dockerfile.dev`;
     }
-  }
 
-  if (type === 'container') {
     dockerfile = `${currentPath}/${dockerFileName}`;
     dockerContext = `${currentPath}`;
   } else if (root !== undefined) {
-    dockerfile = `${currentPath}/${root}/${dockerFileName}`;
     dockerContext = `${currentPath}/${root}`;
+
     metaConfig = await verifyIfMetaJsonExists(dockerContext);
+
+    let { context_dockerfile } = metaConfig.docker;
+
+    if (scope === 'global') {
+      dockerFileName = `Dockerfile`;
+    } else if (context_dockerfile === false) {
+      dockerFileName = `Dockerfile`;
+    } else if (ENV === 'prod' || ENV === 'preview') {
+      dockerFileName = `Dockerfile.prod`;
+    } else {
+      dockerFileName = `Dockerfile.dev`;
+    }
+    dockerfile = `${currentPath}/${root}/${dockerFileName}`;
     cd(dockerContext);
   }
 
@@ -216,7 +212,9 @@ export async function dockerBuildUnit() {
   const { dockerfile, dockerContext, image } =
     await getDockerfileAndImageName();
 
-  await $`docker build -t ${image} -f ${dockerfile} ${dockerContext}`;
+  console.log(dockerfile);
+
+  // await $`docker build -t ${image} -f ${dockerfile} ${dockerContext}`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
