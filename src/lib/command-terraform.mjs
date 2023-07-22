@@ -447,6 +447,71 @@ export async function terraformOutput(component) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// TERRAFORM VARIABLES
+////////////////////////////////////////////////////////////////////////////////
+
+export async function terraformVariables(env_file = '.env') {
+  // Read the .env file
+  const content = fs.readFileSync(env_file, 'utf-8');
+
+  // Extract all variable names that don't start with TF_VAR
+  const nonTfVarNames = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
+
+  // Generate the prefixed variable declarations for non-TF_VAR variables
+  const prefixedVars = nonTfVarNames
+    .map((varName) => {
+      const value = content.match(new RegExp(`^${varName}=(.*)$`, 'm'))[1];
+      return `TF_VAR_${varName}=${value}`;
+    })
+    .join('\n');
+
+  // Write the prefixed variable declarations to the output.txt file
+  fs.writeFileSync('output.txt', prefixedVars);
+
+  console.log('Output written to output.txt');
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// TERRAFORM ENV
+////////////////////////////////////////////////////////////////////////////////
+
+export async function terraformEnv() {
+  // Read the .env file
+  const content = fs.readFileSync('.env', 'utf-8');
+
+  // Extract all variable names that start with TF_VAR
+  const variableNames = content.match(/^TF_VAR_[A-Z_]+(?==)/gm);
+
+  // Generate the env declarations
+  const envDeclarations = variableNames
+    .map((varName) => {
+      // Remove the "TF_VAR_" prefix for Terraform declarations
+      const tfName = varName.replace(/^TF_VAR_/, '');
+      return `
+        env {
+          name  = "${tfName}"
+          value = var.${tfName}
+        }
+  `;
+    })
+    .join('\n');
+
+  // Generate the variable declarations
+  const varDeclarations = variableNames
+    .map((varName) => {
+      const tfName = varName.replace(/^TF_VAR_/, '');
+      return `variable "${tfName}" {}`;
+    })
+    .join('\n');
+
+  // Write to the .txt file
+  const output = `${envDeclarations}\n\n${varDeclarations}`;
+  fs.writeFileSync('output.txt', output);
+
+  console.log('Output written to output.txt');
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -459,6 +524,16 @@ export default async function commandTerraform(program) {
   const tfImport = terraform.command('import');
   const tfState = terraform.command('state');
   const tfOutput = terraform.command('output');
+  const tfVariables = terraform.command('variables');
+  const tfEnv = terraform.command('env');
+
+  tfEnv.description('generate terraform env declaration').action(terraformEnv);
+
+  tfVariables
+    .description('manage terraform variables')
+    .action(terraformVariables)
+    .argument('[env]', 'name of the env file');
+
   tfApply
     .description('apply the infrastructure')
     .argument('[component]', 'component to deploy')
