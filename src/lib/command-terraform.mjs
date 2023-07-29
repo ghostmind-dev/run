@@ -405,23 +405,42 @@ export async function terraformApplyUnit(component, options) {
       metaConfig = await verifyIfMetaJsonExists(pathResources);
     }
 
-    if (type !== 'component' && component === undefined) {
-      console.log(`
-      # from parent directory
-      $ run terraform apply component
-
-      # from component directory
-      $ run terraform apply
-    `);
-      return;
+    if (type === 'component' && component === undefined) {
+      let { terraform } = metaConfig;
+      let { root } = terraform;
+      pathResources = `${currentPath}/${root}`;
+      cd(`${pathResources}/`);
+      metaConfig = await verifyIfMetaJsonExists(pathResources);
     }
+
+    if (type === 'container' && component === undefined) {
+      let { terraform } = metaConfig;
+      let { root } = terraform;
+      pathResources = `${currentPath}/${root}`;
+      cd(`${pathResources}/`);
+      metaConfig = await verifyIfMetaJsonExists(pathResources);
+    }
+
+    // if (type !== 'component' && component === undefined) {
+    //   console.log(`
+    //   # from parent directory
+    //   $ run terraform apply component
+
+    //   # from component directory
+    //   $ run terraform apply
+    // `);
+    //   return;
+    // }
 
     let { id, scope } = metaConfig;
 
     const { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
-    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
-    await $`terraform plan`;
-    await $`terraform apply -auto-approve`;
+
+    console.log(bcBucket, bcPrefix);
+
+    // await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
+    // await $`terraform plan`;
+    // await $`terraform apply -auto-approve`;
     // await $`terraform 0.13upgrade`;
   } catch (error) {
     console.error(error.message);
