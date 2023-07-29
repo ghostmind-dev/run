@@ -436,12 +436,10 @@ export async function terraformApplyUnit(component, options) {
 
     const { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
 
-    console.log(bcBucket, bcPrefix);
-
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform plan`;
     await $`terraform apply -auto-approve`;
-    await $`terraform 0.13upgrade`;
+    // await $`terraform 0.13upgrade`;
   } catch (error) {
     console.error(error.message);
   }
