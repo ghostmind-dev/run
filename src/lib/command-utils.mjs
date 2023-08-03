@@ -1,15 +1,15 @@
-import { $, cd, sleep } from 'zx';
+import { $, cd, sleep } from "zx";
 import {
   withMetaMatching,
   verifyIfMetaJsonExists,
   detectScriptsDirectory,
   setSecretsUptoProject,
   recursiveDirectoriesDiscovery,
-} from '../utils/divers.mjs';
-import { nanoid } from 'nanoid/async';
-import jsonfile from 'jsonfile';
-import * as inquirer from 'inquirer';
-import path from 'path';
+} from "../utils/divers.mjs";
+import { nanoid } from "nanoid/async";
+import jsonfile from "jsonfile";
+import * as inquirer from "inquirer";
+import path from "path";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -46,7 +46,7 @@ export async function quickAmend() {
         git push origin main -f
     `;
   } catch (e) {
-    console.error('git amend failed');
+    console.error("git amend failed");
     return;
   }
 }
@@ -65,7 +65,7 @@ export async function quickCommit() {
         git push origin main -f
     `;
   } catch (e) {
-    console.error('git commit failed');
+    console.error("git commit failed");
     return;
   }
 }
@@ -75,7 +75,7 @@ export async function quickCommit() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function devInstallDependencies() {
-  const directories = await withMetaMatching({ property: 'development.init' });
+  const directories = await withMetaMatching({ property: "development.init" });
 
   for (const directoryDetails of directories) {
     const { directory, config } = directoryDetails;
@@ -85,7 +85,7 @@ export async function devInstallDependencies() {
     $.verbose = true;
 
     for (let script of init) {
-      const scriptArray = script.split(' ');
+      const scriptArray = script.split(" ");
 
       cd(directory);
 
@@ -113,12 +113,12 @@ export async function envDevcontainer() {
   const currentBranch = currentBranchRaw.stdout.trim();
 
   let environemnt;
-  if (currentBranch === 'main') {
-    environemnt = 'prod';
-  } else if (currentBranch === 'preview') {
-    environemnt = 'preview';
+  if (currentBranch === "main") {
+    environemnt = "prod";
+  } else if (currentBranch === "preview") {
+    environemnt = "preview";
   } else {
-    environemnt = 'dev';
+    environemnt = "dev";
   }
 
   $.verbose = true;
@@ -158,19 +158,19 @@ export async function createMetaFile() {
   const prompt = inquirer.createPromptModule();
 
   const { name } = await prompt({
-    type: 'input',
-    name: 'name',
-    message: 'What is the name of this object?',
+    type: "input",
+    name: "name",
+    message: "What is the name of this object?",
   });
   const { type } = await prompt({
-    type: 'input',
-    name: 'type',
-    message: 'What is the type of this object?',
+    type: "input",
+    name: "type",
+    message: "What is the type of this object?",
   });
   const { scope } = await prompt({
-    type: 'input',
-    name: 'scope',
-    message: 'What is the scope of this object?',
+    type: "input",
+    name: "scope",
+    message: "What is the scope of this object?",
   });
   const meta = {
     name,
@@ -179,7 +179,7 @@ export async function createMetaFile() {
     id,
   };
 
-  await jsonfile.writeFile('meta.json', meta, { spaces: 2 });
+  await jsonfile.writeFile("meta.json", meta, { spaces: 2 });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -201,16 +201,16 @@ export async function initDevcontainer() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function changeAllIds() {
-  const SRC = process.env.SRC;
+  const SRC = process.env.SRC || currentPath;
 
   // ask the user if they want to change all ids
 
   const prompt = inquirer.createPromptModule();
 
   const { changeAllIds } = await prompt({
-    type: 'confirm',
-    name: 'changeAllIds',
-    message: 'Do you want to change all ids?',
+    type: "confirm",
+    name: "changeAllIds",
+    message: "Do you want to change all ids?",
   });
 
   if (!changeAllIds) {
@@ -231,7 +231,7 @@ export async function changeAllIds() {
     if (metaConfig) {
       metaConfig.id = await nanoid(12);
 
-      await jsonfile.writeFile(path.join(directory, 'meta.json'), metaConfig, {
+      await jsonfile.writeFile(path.join(directory, "meta.json"), metaConfig, {
         spaces: 2,
       });
     }
@@ -241,7 +241,7 @@ export async function changeAllIds() {
 
   metaConfig.id = await nanoid(12);
 
-  await jsonfile.writeFile(path.join(currentPath, 'meta.json'), metaConfig, {
+  await jsonfile.writeFile(path.join(currentPath, "meta.json"), metaConfig, {
     spaces: 2,
   });
 }
@@ -269,59 +269,59 @@ export async function installDependencies() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function utils(program) {
-  const utils = program.command('utils');
-  utils.description('collection of utils');
-  const git = utils.command('git');
-  git.description('git utils');
-  const dev = utils.command('dev');
-  dev.description('devcontainer utils');
-  const nanoid = utils.command('nanoid');
-  dev.description('devcontainer utils');
-  const meta = utils.command('meta');
-  meta.description('meta utils');
-  const commit = utils.command('commit');
-  const dependencies = utils.command('dependencies');
-  dependencies.description('dependencies install');
+  const utils = program.command("utils");
+  utils.description("collection of utils");
+  const git = utils.command("git");
+  git.description("git utils");
+  const dev = utils.command("dev");
+  dev.description("devcontainer utils");
+  const nanoid = utils.command("nanoid");
+  dev.description("devcontainer utils");
+  const meta = utils.command("meta");
+  meta.description("meta utils");
+  const commit = utils.command("commit");
+  const dependencies = utils.command("dependencies");
+  dependencies.description("dependencies install");
 
-  const gitAmend = git.command('amend');
-  gitAmend.description('amend the last commit');
+  const gitAmend = git.command("amend");
+  gitAmend.description("amend the last commit");
   gitAmend.action(quickAmend);
 
-  const gitCommit = git.command('commit');
-  gitCommit.description('quick commit');
+  const gitCommit = git.command("commit");
+  gitCommit.description("quick commit");
   gitCommit.action(quickCommit);
 
-  const devInstall = dev.command('install');
-  devInstall.description('install app dependencies');
+  const devInstall = dev.command("install");
+  devInstall.description("install app dependencies");
   devInstall.action(devInstallDependencies);
 
-  const devInit = dev.command('init');
-  devInit.description('devcontainer post create command');
+  const devInit = dev.command("init");
+  devInit.description("devcontainer post create command");
   devInit.action(initDevcontainer);
 
-  const devEnv = dev.command('env');
-  devEnv.description('change environement');
+  const devEnv = dev.command("env");
+  devEnv.description("change environement");
   devEnv.action(envDevcontainer);
 
-  const id = nanoid.command('id');
-  id.description('generate a nanoid');
-  id.option('p, --print', 'print the id');
+  const id = nanoid.command("id");
+  id.description("generate a nanoid");
+  id.option("p, --print", "print the id");
   id.action(createShortUUID);
 
-  const metaCreate = meta.command('create');
-  metaCreate.description('create a meta.json file');
+  const metaCreate = meta.command("create");
+  metaCreate.description("create a meta.json file");
   metaCreate.action(createMetaFile);
 
-  const devMetaChangeId = meta.command('ids');
-  devMetaChangeId.description('change all ids in a meta.json file');
+  const devMetaChangeId = meta.command("ids");
+  devMetaChangeId.description("change all ids in a meta.json file");
   devMetaChangeId.action(changeAllIds);
 
-  const commitChanges = commit.command('changes');
-  commitChanges.description('return an array of changed files');
-  commitChanges.argument('[commit]', 'commit to compare to]');
+  const commitChanges = commit.command("changes");
+  commitChanges.description("return an array of changed files");
+  commitChanges.argument("[commit]", "commit to compare to]");
   commitChanges.action(commitChangesReturn);
 
-  const dependenciesInstall = dependencies.command('install');
-  dependenciesInstall.description('install dependencies');
+  const dependenciesInstall = dependencies.command("install");
+  dependenciesInstall.description("install dependencies");
   dependenciesInstall.action(installDependencies);
 }

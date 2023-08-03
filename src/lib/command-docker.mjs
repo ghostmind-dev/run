@@ -221,6 +221,7 @@ export async function dockerBuildUnit() {
 
 export default async function commandDocker(program) {
   const docker = program.command("docker");
+  docker.description("docker commands");
 
   const dockerBuild = docker.command("build");
   dockerBuild.description("Build docker image");
