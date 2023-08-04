@@ -116,6 +116,10 @@ export async function machineInit() {
   await $`run utils meta ids`;
 
   await $`run vault kv import`;
+
+  await $`rm -rf .git`;
+
+  await $`git init`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
