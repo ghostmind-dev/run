@@ -17,6 +17,7 @@ import commandDocker from "../lib/command-docker.mjs";
 import commandVercel from "../lib/command-vercel.mjs";
 import commandLib from "../lib/command-lib.mjs";
 import commandMachine from "../lib/command-machine.mjs";
+import commandApp from "../lib/command-app.mjs";
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONST
@@ -53,6 +54,8 @@ program.name("run");
 // GIT COMMAND
 ////////////////////////////////////////////////////////////////////////////////
 
+await commandMachine(program);
+await commandApp(program);
 await commandTerraform(program);
 await commandCustom(program);
 await commandVault(program);
@@ -66,7 +69,6 @@ await commandUtils(program);
 await commandDocker(program);
 await commandVercel(program);
 await commandLib(program);
-await commandMachine(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // GIT COMMAND
