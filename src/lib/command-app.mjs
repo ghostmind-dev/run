@@ -127,7 +127,7 @@ async function generateApp() {
   const executor = await initializeAgentExecutorWithOptions(
     [new TemplateTool(), new InstallDependenciesTool()],
     // new ChatOpenAI({ modelName: "gpt-4-0613", temperature: 0.4 }),
-    new ChatOpenAI({ modelName: "gpt-3.5-turbo-16k", temperature: 0.4 }),
+    new ChatOpenAI({ modelName: "gpt-4-0613", temperature: 0.4 }),
     {
       agentType: "openai-functions",
       verbose: true,
