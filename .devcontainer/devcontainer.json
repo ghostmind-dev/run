@@ -3,13 +3,7 @@
 {
   "name": "Node.js",
   "build": {
-    "dockerfile": "Dockerfile",
-    // Update 'VARIANT' to pick a Node version: 16, 14, 12.
-    // Append -bullseye or -buster to pin to an OS version.
-    // Use -bullseye variants on local arm64/Apple Silicon.
-    "args": {
-      "VARIANT": "16-bullseye"
-    }
+    "dockerfile": "Dockerfile"
   },
   // Configure tool-specific properties.
   "customizations": {
@@ -44,9 +38,6 @@
     }
   },
   "postCreateCommand": "/bin/sh  /tmp/library-scripts/post-create.sh",
-  "runArgs": [
-    "--env-file",
-    ".env"
-  ],
+  "runArgs": ["--env-file", ".env"],
   "remoteUser": "node"
 }
