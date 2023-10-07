@@ -6,7 +6,7 @@ import {
   setSecretsUptoProject,
   recursiveDirectoriesDiscovery,
 } from "../utils/divers.mjs";
-import { nanoid } from "nanoid/async";
+import { nanoid } from "nanoid";
 import jsonfile from "jsonfile";
 import * as inquirer from "inquirer";
 import path from "path";
@@ -138,7 +138,7 @@ export async function envDevcontainer() {
 
 export async function createShortUUID(options = { print: false }) {
   const { print } = options;
-  const id = await nanoid(12);
+  const id = nanoid(12);
 
   if (print) {
     console.log(id);
@@ -229,7 +229,7 @@ export async function changeAllIds() {
     }
 
     if (metaConfig) {
-      metaConfig.id = await nanoid(12);
+      metaConfig.id = nanoid(12);
 
       await jsonfile.writeFile(path.join(directory, "meta.json"), metaConfig, {
         spaces: 2,
@@ -239,7 +239,7 @@ export async function changeAllIds() {
 
   let metaConfig = await verifyIfMetaJsonExists(SRC);
 
-  metaConfig.id = await nanoid(12);
+  metaConfig.id = nanoid(12);
 
   await jsonfile.writeFile(path.join(currentPath, "meta.json"), metaConfig, {
     spaces: 2,
