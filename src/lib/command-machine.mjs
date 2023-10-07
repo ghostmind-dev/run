@@ -67,6 +67,14 @@ export async function machineInit() {
   devcontainer.remoteEnv.LOCALHOST_SRC =
     "${env:HOME}${env:USERPROFILE}/" + pathFromHome + "/" + projectName;
   devcontainer.mounts[2] = `source=ghostmind-${projectName}-history,target=/commandhistory,type=volume`;
+  devcontainer.mounts[2] = `source=ghostmind-${projectName}-history,target=/commandhistory,type=volume`;
+  devcontainer.mounts[3] =
+    "source=${env:HOME}${env:USERPROFILE}/" +
+    pathFromHome +
+    "/" +
+    projectName +
+    "," +
+    `target=${process.env.HOME}/${pathFromHome}/${projectName},type=bind`;
 
   devcontainer.runArgs[2] = `devcontainer-${projectName}`;
 
