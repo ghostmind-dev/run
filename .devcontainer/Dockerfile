@@ -1,5 +1,4 @@
-ARG VARIANT=16-bullseye
-FROM mcr.microsoft.com/vscode/devcontainers/javascript-node:0-${VARIANT}
+FROM mcr.microsoft.com/vscode/devcontainers/javascript-node:20-bullseye
 
 ARG USERNAME=vscode
 ARG USER_UID=1000
@@ -19,3 +18,8 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
     -p https://github.com/zsh-users/zsh-completions
 
 COPY library-scripts/post-create.sh /tmp/library-scripts/
+
+
+############################################################################
+# THE END
+############################################################################
