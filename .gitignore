@@ -4,3 +4,4 @@ node_modules
 
 **/live-command
 .env
+.env.backup
