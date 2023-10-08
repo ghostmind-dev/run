@@ -218,7 +218,7 @@ export async function dockerBuildUnit(options) {
     }
 
     // Use buildx for building amd64 image or if the host machine is ARM64
-    await $`docker buildx build --platform linux/amd64 -t ${image} -f ${dockerfile} ${dockerContext}`;
+    await $`docker buildx build --load --platform linux/amd64 -t ${image} -f ${dockerfile} ${dockerContext}`;
   } else {
     await $`docker build -t ${image} -f ${dockerfile} ${dockerContext}`;
   }
