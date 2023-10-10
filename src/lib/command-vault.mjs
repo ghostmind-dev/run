@@ -90,15 +90,19 @@ export async function vaultKvCertsToLocal(data) {
 
   const randomFilename = Math.floor(Math.random() * 1000000);
 
-  await $`vault kv get -format=json kv/${secretPath}  > /tmp/env.${randomFilename}.json`;
+  try {
+    await $`vault kv get -format=json kv/${secretPath}  > /tmp/env.${randomFilename}.json`;
 
-  $.verbose = true;
+    $.verbose = true;
 
-  const credsValue = fs.readJSONSync(`/tmp/env.${randomFilename}.json`);
+    const credsValue = fs.readJSONSync(`/tmp/env.${randomFilename}.json`);
 
-  const { CREDS } = credsValue.data;
+    const { CREDS } = credsValue.data;
 
-  return CREDS;
+    return CREDS;
+  } catch (e) {
+    return '';
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -204,24 +204,20 @@ export async function importCerts() {
 
     const certificateName = `certificat-${app}-${name}`;
 
-    if (tls === true) {
+    const certsRaw = await vaultKvCertsToLocal();
+
+    if (tls === true && certsRaw !== '') {
       const certsRaw = await vaultKvCertsToLocal();
-
       const certsUnfiltered = JSON.parse(certsRaw);
-
       // remove a property metadata.creationTimestamp
       const certs = _.omit(certsUnfiltered, [
         'metadata.creationTimestamp',
         'metadata.resourceVersion',
         'metadata.uid',
       ]);
-
       const randomFilename = Math.floor(Math.random() * 1000000);
-
       await fs.writeJSONSync(`/tmp/certificat.${randomFilename}.json`, certs);
-
       $.verbose = true;
-
       try {
         await $`kubectl get secret ${certificateName}`;
         await $`kubectl delete secret ${certificateName}`;
@@ -230,7 +226,6 @@ export async function importCerts() {
           return;
         }
       }
-
       await $`kubectl apply -f /tmp/certificat.${randomFilename}.json`;
     }
   }
