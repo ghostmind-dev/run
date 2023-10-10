@@ -57,6 +57,9 @@ const actArgmentsDefault = [
   { name: '--bind', value: `` },
   { name: '--use-gitignore', value: '' },
   {
+    name: "--workflows", value : `${LOCALHOST_SRC}/.github/workflows`
+  }
+  {
     name: '--secret',
     value: `VAULT_ROOT_TOKEN=${process.env.VAULT_ROOT_TOKEN}`,
   },
