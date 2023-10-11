@@ -7,6 +7,7 @@ import {
 
 import { envDevcontainer } from "../main.mjs";
 import path from "path";
+import yaml from "js-yaml";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -50,16 +51,17 @@ const actionConfigDefault = {};
 const actArgmentsDefault = [
   {
     name: "--platform",
-    value: `ubuntu-latest=catthehacker/ubuntu:act-latest`,
+    value: `ubuntu-latest=ghcr.io/ghostmind-dev/act-base:prod`,
   },
   { name: "--defaultbranch", value: "main" },
   { name: "--directory", value: LOCALHOST_SRC },
   { name: "--bind", value: `` },
   { name: "--use-gitignore", value: "" },
-  {
-    name: "--workflows",
-    value: `${LOCALHOST_SRC}/.github/workflows`,
-  },
+
+  // {
+  //   name: '--workflows',
+  //   value: `${LOCALHOST_SRC}/.github/workflows`,
+  // },
   {
     name: "--secret",
     value: `VAULT_ROOT_TOKEN=${process.env.VAULT_ROOT_TOKEN}`,
@@ -99,6 +101,9 @@ export async function actionRunRemote(workflow, options) {
 
   let inputsArguments = [];
 
+  inputsArguments.push("--workflows");
+  inputsArguments.push(`${LOCALHOST_SRC}/.github/workflows`);
+
   if (input !== undefined) {
     for (let inputArg in input) {
       inputsArguments.push("-f");
@@ -130,33 +135,78 @@ export async function actionRunRemote(workflow, options) {
 // RUN ACTION LOCALLY WITH ACT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function actionRunLocal(target, actArguments, event) {
+export async function actionRunLocal(target, actArguments, event, custom) {
   const actArgmentsCombined = [...actArgmentsDefault, ...actArguments];
 
   const actArgmentsArray = await actArgmentsToOneDimensionArray(
     actArgmentsCombined
   );
 
+  //  read all files in /github/workflows
+
+  // remove /tmo/.github if it exists
+
+  console.log(2378328);
+
+  let workflowsPath = LOCALHOST_SRC + "/.github/workflows";
+
+  if (custom) {
+    await $`rm -rf /tmp/.github`;
+
+    await $`cp -r .github/ /tmp/.github`;
+
+    const workflowsDir = "/tmp/.github/workflows";
+    const workflowFiles = await fs.readdir(workflowsDir);
+
+    for (const file of workflowFiles) {
+      const filePath = path.join(workflowsDir, file);
+      // Check if it's a .yml or .yaml file before processing
+      if (path.extname(file) === ".yml" || path.extname(file) === ".yaml") {
+        const content = await fs.readFile(filePath, "utf8");
+        const parsedYaml = yaml.load(content);
+
+        // Modify each job in the workflow
+        for (const jobKey in parsedYaml.jobs) {
+          if (parsedYaml.jobs[jobKey].container) {
+            delete parsedYaml.jobs[jobKey].container;
+          }
+        }
+
+        // Write the modified content back to /tmp/.github/workflows/
+        const modifiedContent = yaml.dump(parsedYaml);
+        await fs.writeFile(filePath, modifiedContent);
+      }
+    }
+
+    $.verbose = true;
+
+    workflowsPath = "/tmp/.github/workflows";
+  }
+
   $.verbose = true;
+
+  actArgmentsArray.push("--workflows");
+  actArgmentsArray.push(workflowsPath);
 
   if (event === undefined) {
     actArgmentsArray.push("--job");
     actArgmentsArray.push(target);
+
     await $`act ${actArgmentsArray}`;
   } else {
-    // actArgmentsArray.push('--workflows');
-    // actArgmentsArray.push(`./.github/workflows/${target}.yaml`);
+    actArgmentsArray.push("--workflows");
+    actArgmentsArray.push(`${workflowsPath}/${target}.yaml`);
 
-    // if(event === "push") {
-    //   actArgmentsArray.push('--eventpath');
-    // }
+    if (event === "push") {
+      actArgmentsArray.push("--eventpath");
+    }
     await $`act ${event} ${actArgmentsArray}`;
   }
 }
 
 export async function actionRunLocalEntry(target, options) {
   const ENV = process.env.ENV;
-  const { live, input, reuse, secure, event, push } = options;
+  const { live, input, reuse, secure, event, push, custom } = options;
 
   let inputsArguments = {};
 
@@ -206,7 +256,7 @@ export async function actionRunLocalEntry(target, options) {
   if (!secure) {
     actArgments.push({ name: "--insecure-secrets", value: "" });
   }
-  await actionRunLocal(target, actArgments, event);
+  await actionRunLocal(target, actArgments, event, custom);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -282,6 +332,7 @@ export default async function act(program) {
     .option("--push", "simulate push event")
     .option("--no-reuse", "do not reuse container state")
     .option("--no-secure", "show secrets in logs (don't use in production)")
+    .option("--no-custom", "do not use custom act container")
     .option("-i, --input [inputs...]", "action inputs")
     .option('--event <string>", " trigger event (ex: workflow_run')
     .action(actionRunLocalEntry);
