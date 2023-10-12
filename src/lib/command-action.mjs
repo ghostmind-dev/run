@@ -146,11 +146,9 @@ export async function actionRunLocal(target, actArguments, event, custom) {
 
   // remove /tmo/.github if it exists
 
-  console.log(2378328);
-
   let workflowsPath = LOCALHOST_SRC + "/.github/workflows";
 
-  if (custom) {
+  if (custom == true) {
     await $`rm -rf /tmp/.github`;
 
     await $`cp -r .github/ /tmp/.github`;
@@ -332,7 +330,7 @@ export default async function act(program) {
     .option("--push", "simulate push event")
     .option("--no-reuse", "do not reuse container state")
     .option("--no-secure", "show secrets in logs (don't use in production)")
-    .option("--no-custom", "do not use custom act container")
+    .option("--custom", "custom act container")
     .option("-i, --input [inputs...]", "action inputs")
     .option('--event <string>", " trigger event (ex: workflow_run')
     .action(actionRunLocalEntry);
