@@ -190,8 +190,6 @@ export async function actionRunLocal(target, actArguments, event, custom) {
   actArgmentsArray.push('--workflows');
   actArgmentsArray.push(workflowsPath);
 
-  console.log(actArgmentsArray);
-
   if (event === undefined) {
     actArgmentsArray.push('--job');
     actArgmentsArray.push(target);
@@ -303,8 +301,6 @@ export async function actionSecretsSet() {
 
 export async function actionEnvSet() {
   const environement = await envDevcontainer();
-
-  console.log(environement);
 
   const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
 
