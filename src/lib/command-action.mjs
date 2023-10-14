@@ -105,9 +105,6 @@ export async function actionRunRemote(workflow, options) {
 
   let inputsArguments = [];
 
-  inputsArguments.push('--workflows');
-  inputsArguments.push(`${LOCALHOST_SRC}/.github/workflows`);
-
   if (input !== undefined) {
     for (let inputArg in input) {
       inputsArguments.push('-f');
