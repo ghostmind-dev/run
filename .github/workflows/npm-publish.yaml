@@ -13,8 +13,6 @@ jobs:
         with:
           node-version: "20.x"
           registry-url: "https://registry.npmjs.org"
-      - run: npm version patch -m "Bump version to %s"
-      - run: git push origin HEAD:main
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
