@@ -51,7 +51,7 @@ const actionConfigDefault = {};
 const actArgmentsDefault = [
   {
     name: '--platform',
-    value: `ubuntu-latest=ghcr.io/ghostmind-dev/act-base:latest`,
+    value: `ubuntu-latest=catthehacker/ubuntu:act-latest`,
   },
   { name: '--defaultbranch', value: 'main' },
   { name: '--directory', value: LOCALHOST_SRC },
@@ -73,7 +73,7 @@ const actArgmentsDefault = [
   },
   {
     name: '--secret',
-    value: `github_token=${process.env.GITHUB_TOKEN}`,
+    value: `actions_token=${process.env.GH_TOKEN}`,
   },
 ];
 
@@ -150,6 +150,9 @@ export async function actionRunLocal(target, actArguments, event, custom) {
   let workflowsPath = LOCALHOST_SRC + '/.github/workflows';
 
   if (custom == true) {
+    actArgmentsArray[0] = '--platform';
+    actArgmentsArray[1] = `ubuntu-latest=ghcr.io/ghostmind-dev/act-base:latest`;
+
     await $`rm -rf /tmp/.github`;
 
     await $`cp -r .github/ /tmp/.github`;
@@ -187,11 +190,13 @@ export async function actionRunLocal(target, actArguments, event, custom) {
   actArgmentsArray.push('--workflows');
   actArgmentsArray.push(workflowsPath);
 
+  console.log(actArgmentsArray);
+
   if (event === undefined) {
     actArgmentsArray.push('--job');
     actArgmentsArray.push(target);
 
-    await $`act ${actArgmentsArray}`;
+    // await $`act ${actArgmentsArray}`;
   } else {
     actArgmentsArray.push('--workflows');
     actArgmentsArray.push(`${workflowsPath}/${target}.yaml`);
@@ -199,7 +204,7 @@ export async function actionRunLocal(target, actArguments, event, custom) {
     if (event === 'push') {
       actArgmentsArray.push('--eventpath');
     }
-    await $`act ${event} ${actArgmentsArray}`;
+    // await $`act ${event} ${actArgmentsArray}`;
   }
 }
 
