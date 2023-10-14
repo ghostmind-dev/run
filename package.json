@@ -8,8 +8,8 @@
   },
   "scripts": {
     "publish_patch": "npm version patch && git push origin main",
-    "publish_minor": "npm version minor && npm publish --access public",
-    "publish_major": "npm version major && npm publish --access public",
+    "publish_minor": "npm version minor && git push origin main",
+    "publish_major": "npm version major && git push origin main",
     "test": "node test/utils-test.mjs",
     "live": "node src/bin/cmd.mjs"
   },
