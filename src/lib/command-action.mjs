@@ -196,7 +196,7 @@ export async function actionRunLocal(target, actArguments, event, custom) {
     actArgmentsArray.push('--job');
     actArgmentsArray.push(target);
 
-    // await $`act ${actArgmentsArray}`;
+    await $`act ${actArgmentsArray}`;
   } else {
     actArgmentsArray.push('--workflows');
     actArgmentsArray.push(`${workflowsPath}/${target}.yaml`);
@@ -204,7 +204,7 @@ export async function actionRunLocal(target, actArguments, event, custom) {
     if (event === 'push') {
       actArgmentsArray.push('--eventpath');
     }
-    // await $`act ${event} ${actArgmentsArray}`;
+    await $`act ${event} ${actArgmentsArray}`;
   }
 }
 
