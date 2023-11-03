@@ -7,7 +7,7 @@
     "run": "src/bin/cmd.mjs"
   },
   "scripts": {
-    "publish_patch": "npm version patch && git push origin main",
+    "publish_patch": "npm version patch && git push origin main --tags",
     "publish_minor": "npm version minor && git push origin main",
     "publish_major": "npm version major && git push origin main",
     "test": "node test/utils-test.mjs",
