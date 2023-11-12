@@ -1,8 +1,10 @@
 {
   "type": "npm_package",
-  "names": [
-    "@angular/core",
-    "@angular/common"
-  ],
+  "names": ["@angular/core", "@angular/common"],
+  "repo": {
+    "folders": ["src"],
+    "files": ["package.json", "README.md"],
+    "ignore_extensions": []
+  },
   "id": "ic9ETB7juz3g"
 }

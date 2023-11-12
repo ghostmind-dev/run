@@ -1,4 +1,4 @@
-import { $, cd, sleep } from "zx";
+import { $, cd, fs, sleep } from "zx";
 import {
   withMetaMatching,
   verifyIfMetaJsonExists,
@@ -265,6 +265,64 @@ export async function installDependencies() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// REPO
+////////////////////////////////////////////////////////////////////////////////
+
+export async function repoConvert(arg) {
+  const { repo } = metaConfig;
+
+  // we need to create a single json  file  with the content of the repo object
+  // {
+  //   "type": "npm_package",
+  //   "names": ["@angular/core", "@angular/common"],
+  //   "repo": {
+  //     "folders": ["src"],
+  //     "files": ["package.json", "README.md"],
+  //     "ignore_extensions": []
+  //   },
+  //   "id": "ic9ETB7juz3g"
+  // }
+  // Final out put should be:
+  // { "src/main.mjs": "// main.mjs content", "src/other.mjs": "// other.mjs content", etc... }
+
+  const { folders, files, ignore_extensions } = repo;
+
+  let filesContent = {};
+
+  for (const folder of folders) {
+    let folderList = await recursiveDirectoriesDiscovery(folder);
+
+    for (const folder of folderList) {
+      const filesInFolder = await fs.readdir(folder, {
+        withFileTypes: true,
+      });
+
+      for (const file of filesInFolder) {
+        if (file.isDirectory()) {
+          continue;
+        }
+
+        filesContent[`${folder}/${file.name}`] = await fs.readFile(
+          `${folder}/${file.name}`,
+          "utf8"
+        );
+      }
+
+      // let fileContent = await fs.readFile(file, "utf8");
+      // console.log(fileContent);
+    }
+  }
+
+  // create a single json file with the content of the repo object
+
+  await fs.writeFile(
+    `${currentPath}/repo.json`,
+    JSON.stringify(filesContent, null, 2),
+    "utf8"
+  );
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -282,6 +340,12 @@ export default async function utils(program) {
   const commit = utils.command("commit");
   const dependencies = utils.command("dependencies");
   dependencies.description("dependencies install");
+
+  const repo = utils.command("repo");
+
+  repo.description("repo utils");
+  repo.action(repoConvert);
+  repo.argument("[repo]", "repo to convert");
 
   const gitAmend = git.command("amend");
   gitAmend.description("amend the last commit");
