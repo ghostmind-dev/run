@@ -3,6 +3,7 @@ import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.mjs';
+import { config } from 'dotenv';
 
 //////////////////////////////////////////////////////////////////////////////
 // CLEANING MIGRATIONS
@@ -45,17 +46,27 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 // RUN ACTION LOCALLY WITH ACT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function hasuraOpenConsole() {
+export async function hasuraOpenConsole(options) {
   const metaConfig = await fs.readJsonSync('meta.json');
 
   const { hasura: hasuraConfig } = metaConfig;
+
+  const { local } = options;
 
   const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
 
   cd(`${currentPath}/${state}`);
 
   $.verbose = true;
-  await $`hasura console --no-browser --skip-update-check`;
+
+  const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
+
+  if (local) {
+    await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --address 0.0.0.0 --console-port 8085 --console-hge-endpoint http://0.0.0.0:8081`;
+    return;
+  }
+
+  await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --skip-update-check`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -107,7 +118,9 @@ export async function hasuraMigrateApply(version) {
   cd(`${currentPath}/${state}`);
 
   $.verbose = true;
-  await $`hasura migrate apply --version ${version} --skip-execution --database-name default`;
+  const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
+
+  await $`hasura migrate apply --endpoint ${HASURA_GRAPHQL_ENDPOINT} --database-name default`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -152,10 +165,31 @@ export async function hasuraSchemaExportToLocal() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// METADATA APPLY
+////////////////////////////////////////////////////////////////////////////////
+
+export async function metaDataApply() {
+  const metaConfig = await fs.readJsonSync('meta.json');
+
+  const { hasura: hasuraConfig } = metaConfig;
+
+  const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
+
+  cd(`${currentPath}/${state}`);
+
+  $.verbose = true;
+  const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
+
+  await $`hasura metadata apply --endpoint ${HASURA_GRAPHQL_ENDPOINT}`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function hasura(program) {
+  // config({ path: `${currentPath}/${envFilename}`, override: true });
+
   const hasura = program.command('hasura');
   hasura.description('perform hasura maintenances');
 
@@ -172,6 +206,7 @@ export default async function hasura(program) {
 
   hasuraConsole
     .description('open hasura console locally ')
+    .option('--local', 'use local hasura')
     .action(hasuraOpenConsole);
 
   const migrateSquash = hasuraMigrate.command('squash');
@@ -183,7 +218,7 @@ export default async function hasura(program) {
   const migrateApply = hasuraMigrate.command('apply');
   migrateApply
     .description('apply all migrations')
-    .argument('<version>', 'version to apply')
+    // .argument('<version>', 'version to apply')
     .action(hasuraMigrateApply);
 
   const migrateCreate = hasuraMigrate.command('create');
@@ -192,24 +227,6 @@ export default async function hasura(program) {
     .argument('<name>', 'name of the migration')
     .action(hasuraMigrateCreate);
 
-  const hasuraSchema = hasura.command('schema');
-
-  // const hasuraSchemaExport = hasuraSchema.command('export');
-  // hasuraSchemaExport
-  //   .description('exporSchemat schema')
-  //   .action(hasuraExportToLocal);
-
   const hasuraMetadataApply = hasuraMetadata.command('apply');
-  hasuraMetadataApply.description('apply metadata').action(async () => {
-    const metaConfig = await fs.readJsonSync('meta.json');
-
-    const { hasura: hasuraConfig } = metaConfig;
-
-    const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
-
-    cd(`${currentPath}/${state}`);
-
-    $.verbose = true;
-    await $`hasura metadata apply --skip-update-check`;
-  });
+  hasuraMetadataApply.description('apply metadata').action(metaDataApply);
 }
