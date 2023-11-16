@@ -1,11 +1,11 @@
-import { $, which, sleep, cd, fs } from "zx";
+import { $, which, sleep, cd, fs } from 'zx';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
   withMetaMatching,
   recursiveDirectoriesDiscovery,
-} from "../utils/divers.mjs";
-import _ from "lodash";
+} from '../utils/divers.mjs';
+import _ from 'lodash';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -37,14 +37,14 @@ export async function getDockerfileAndImageName() {
   let dockerfile;
   let dockerContext;
 
-  if (type === "container") {
+  if (type === 'container') {
     let { context_dockerfile } = docker;
 
-    if (scope === "global") {
+    if (scope === 'global') {
       dockerFileName = `Dockerfile`;
     } else if (context_dockerfile === false) {
       dockerFileName = `Dockerfile`;
-    } else if (ENV === "prod" || ENV === "preview") {
+    } else if (ENV === 'prod' || ENV === 'preview') {
       dockerFileName = `Dockerfile.prod`;
     } else {
       dockerFileName = `Dockerfile.dev`;
@@ -59,11 +59,11 @@ export async function getDockerfileAndImageName() {
 
     let { context_dockerfile } = metaConfig.docker;
 
-    if (scope === "global") {
+    if (scope === 'global') {
       dockerFileName = `Dockerfile`;
     } else if (context_dockerfile === false) {
       dockerFileName = `Dockerfile`;
-    } else if (ENV === "prod" || ENV === "preview") {
+    } else if (ENV === 'prod' || ENV === 'preview') {
       dockerFileName = `Dockerfile.prod`;
     } else {
       dockerFileName = `Dockerfile.dev`;
@@ -74,8 +74,8 @@ export async function getDockerfileAndImageName() {
 
   $.verbose = true;
   let { image, tag } = metaConfig.docker;
-  if (scope === "global") {
-    image = `${image}:${tag || "latest"}`;
+  if (scope === 'global') {
+    image = `${image}:${tag || 'latest'}`;
   } else {
     image = `${image}:${tag || ENV}`;
   }
@@ -87,15 +87,51 @@ export async function getDockerfileAndImageName() {
 // GET LATEST IMAGE DIGEST
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDockerImageDigest() {
+export async function getDockerImageDigest(arch) {
   let { image } = await getDockerfileAndImageName();
 
-  const imageDigestRaw =
-    await $`docker inspect --format='{{index .RepoDigests 0}}' ${image}`;
+  // rempcve the tag from the image name
 
-  //  remove /n from the end of the string
-  const imageDigest = imageDigestRaw.stdout.slice(0, -1);
-  return imageDigest;
+  if (arch === 'amd64') {
+    $.verbose = false;
+
+    const imageDigestRaw = await $`docker manifest inspect ${image}`;
+
+    const jsonManifest = JSON.parse(`${imageDigestRaw}`);
+
+    // find manifest with platform amd64
+
+    const digest = jsonManifest.manifests.map((manifest) => {
+      if (manifest.platform.architecture === 'amd64') {
+        return manifest.digest;
+      }
+    });
+
+    image = image.split(':')[0];
+    return `${image}@${digest[0]}`;
+    // remove undefined from the array
+  } else if (arch === 'arm64') {
+    $.verbose = false;
+
+    const imageDigestRaw = await $`docker manifest inspect ${image}`;
+
+    const jsonManifest = JSON.parse(`${imageDigestRaw}`);
+
+    // find manifest with platform amd64
+
+    const digest = jsonManifest.manifests.map((manifest) => {
+      if (manifest.platform.architecture === 'arm64') {
+        return manifest.digest;
+      }
+    });
+
+    image = image.split(':')[0];
+    return `${image}@${digest[0]}`;
+    // remove undefined from the array
+  } else {
+    const imageDigestRaw =
+      await $`docker inspect --format='{{index .RepoDigests 0}}' ${image}`;
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -117,7 +153,7 @@ export async function dockerPushActionEntry(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerPushAll() {
-  let metaConfig = await fs.readJsonSync("meta.json");
+  let metaConfig = await fs.readJsonSync('meta.json');
 
   let { docker } = metaConfig;
 
@@ -132,7 +168,7 @@ export async function dockerPushAll() {
       for (let directory of allDirectories) {
         let metaConfig = await verifyIfMetaJsonExists(directory);
 
-        if (metaConfig && metaConfig.type === "container") {
+        if (metaConfig && metaConfig.type === 'container') {
           $.verbose = true;
 
           cd(directory);
@@ -142,7 +178,7 @@ export async function dockerPushAll() {
       }
     }
   } else {
-    console.log("No docker configuration found");
+    console.log('No docker configuration found');
   }
 
   cd(currentPath);
@@ -199,11 +235,11 @@ export async function dockerBuildxUnit(options) {
 
     // transfor the instructions into an array
 
-    const instructionsArray = instructions.split(" ");
+    const instructionsArray = instructions.split(' ');
     await $`docker buildx create --use`;
     await $`${instructionsArray}`;
   } else {
-    console.log("Should move from docker build to docker buildx");
+    console.log('Should move from docker build to docker buildx');
   }
 }
 
@@ -212,7 +248,7 @@ export async function dockerBuildxUnit(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerBuildxAll(options) {
-  let metaConfig = await fs.readJsonSync("meta.json");
+  let metaConfig = await fs.readJsonSync('meta.json');
   let { docker } = metaConfig;
   if (docker !== undefined) {
     if (docker.root !== undefined) {
@@ -222,7 +258,7 @@ export async function dockerBuildxAll(options) {
       // remove first element of the array
       for (let directory of allDirectories) {
         let metaConfig = await verifyIfMetaJsonExists(directory);
-        if (metaConfig && metaConfig.type === "container") {
+        if (metaConfig && metaConfig.type === 'container') {
           $.verbose = true;
           cd(directory);
           await dockerBuildxUnit(options);
@@ -230,7 +266,7 @@ export async function dockerBuildxAll(options) {
       }
     }
   } else {
-    console.log("No docker configuration found");
+    console.log('No docker configuration found');
   }
   cd(currentPath);
 }
@@ -254,7 +290,7 @@ export async function dockerBuildActionEntry(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerBuildAll(options) {
-  let metaConfig = await fs.readJsonSync("meta.json");
+  let metaConfig = await fs.readJsonSync('meta.json');
   let { docker } = metaConfig;
   if (docker !== undefined) {
     if (docker.root !== undefined) {
@@ -264,7 +300,7 @@ export async function dockerBuildAll(options) {
       // remove first element of the array
       for (let directory of allDirectories) {
         let metaConfig = await verifyIfMetaJsonExists(directory);
-        if (metaConfig && metaConfig.type === "container") {
+        if (metaConfig && metaConfig.type === 'container') {
           $.verbose = true;
           cd(directory);
           await dockerBuildUnit(options);
@@ -272,7 +308,7 @@ export async function dockerBuildAll(options) {
       }
     }
   } else {
-    console.log("No docker configuration found");
+    console.log('No docker configuration found');
   }
   cd(currentPath);
 }
@@ -281,7 +317,7 @@ export async function dockerBuildAll(options) {
 // DOCKER BUILD UNIT
 ////////////////////////////////////////////////////////////////////////////////
 export async function dockerBuildUnit(options) {
-  const { amd64 } = options;
+  const { amd64, arm64, argument } = options;
 
   const { dockerfile, dockerContext, image } =
     await getDockerfileAndImageName();
@@ -299,10 +335,84 @@ export async function dockerBuildUnit(options) {
       await $`docker buildx inspect mybuilder --bootstrap`;
     }
 
-    // Use buildx for building amd64 image or if the host machine is ARM64
-    await $`docker buildx build --load --platform linux/amd64 -t ${image} -f ${dockerfile} ${dockerContext}`;
+    let baseCommand = [
+      'docker',
+      'buildx',
+      'build',
+      '--platform=linux/amd64',
+      '-t',
+      `${image}`,
+      '--file',
+      dockerfile,
+      '--push',
+      dockerContext,
+    ];
+
+    if (argument) {
+      argument.map((arg) => {
+        baseCommand.push('--build-arg');
+        baseCommand.push(arg);
+      });
+    }
+
+    await $`${baseCommand}`;
+
+    $.verbose = false;
+
+    // verify if image-arm64 exists
+  } else if (arm64) {
+    try {
+      await $`docker buildx use mybuilder`;
+    } catch {
+      // If 'mybuilder' doesn't exist, create and bootstrap it
+      await $`docker buildx create --name mybuilder --use`;
+      await $`docker buildx inspect mybuilder --bootstrap`;
+    }
+
+    let baseCommand = [
+      'docker',
+      'buildx',
+      'build',
+      '--platform',
+      'linux/arm64',
+      '-t',
+      image,
+      '-t',
+      `${image}`,
+      '--file',
+      dockerfile,
+      '--push',
+      dockerContext,
+    ];
+
+    if (argument) {
+      argument.map((arg) => {
+        baseCommand.push('--build-arg');
+        baseCommand.push(arg);
+      });
+    }
+
+    await $`${baseCommand}`;
   } else {
-    await $`docker build -t ${image} -f ${dockerfile} ${dockerContext}`;
+    let baseCommand = [
+      'docker',
+      'build',
+      '-t',
+      image,
+      '--file',
+      dockerfile,
+      '--push',
+      dockerContext,
+    ];
+
+    if (argument) {
+      argument.map((arg) => {
+        baseCommand.push('--build-arg');
+        baseCommand.push(arg);
+      });
+    }
+
+    await $`${baseCommand}`;
   }
 }
 
@@ -311,24 +421,28 @@ export async function dockerBuildUnit(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function commandDocker(program) {
-  const docker = program.command("docker");
-  docker.description("docker commands");
+  const docker = program.command('docker');
+  docker.description('docker commands');
 
-  const dockerBuild = docker.command("build");
-  dockerBuild.description("Build docker image");
-  dockerBuild.option("-a, --all", "Build all docker images");
-  dockerBuild.option("--amd64", "Build amd64 docker image");
-  dockerBuild.option("--arm64", "Build arm64 docker image");
+  const dockerBuild = docker.command('build');
+  dockerBuild.description('Build docker image');
+  dockerBuild.option('-a, --all', 'Build all docker images');
+  dockerBuild.option(
+    '-arg, --argument <arguments...>',
+    'Build docker image with arguments'
+  );
+  dockerBuild.option('--amd64', 'Build amd64 docker image');
+  dockerBuild.option('--arm64', 'Build arm64 docker image');
   dockerBuild.action(dockerBuildActionEntry);
 
-  const dockerBuildx = docker.command("buildx");
-  dockerBuildx.description("Build multiplaform docker image");
-  dockerBuildx.option("-a, --all", "Build all docker images");
-  dockerBuildx.option("--multi", "Build multiplaform docker image");
+  const dockerBuildx = docker.command('buildx');
+  dockerBuildx.description('Build multiplaform docker image');
+  dockerBuildx.option('-a, --all', 'Build all docker images');
+  dockerBuildx.option('--multi', 'Build multiplaform docker image');
   dockerBuildx.action(dockerBuildxActionEntry);
 
-  const dockerPush = docker.command("push");
-  dockerPush.description("Push docker image");
-  dockerPush.option("-a, --all", "Push all docker images");
+  const dockerPush = docker.command('push');
+  dockerPush.description('Push docker image');
+  dockerPush.option('-a, --all', 'Push all docker images');
   dockerPush.action(dockerPushActionEntry);
 }
