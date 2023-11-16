@@ -341,7 +341,7 @@ export async function dockerBuildUnit(options) {
       'build',
       '--platform=linux/amd64',
       '-t',
-      `${image}`,
+      `${image}-amd64`,
       '--file',
       dockerfile,
       '--push',
@@ -360,6 +360,15 @@ export async function dockerBuildUnit(options) {
     $.verbose = false;
 
     // verify if image-arm64 exists
+
+    try {
+      const arm64Exists = await $`docker manifest inspect ${image}-arm64`;
+      await $`docker manifest create ${image} ${image}-amd64 ${image}-arm64`;
+    } catch (e) {
+      $.verbose = true;
+      await $`docker manifest create ${image} ${image}-amd64 --amend`;
+      await $`docker manifest push ${image}`;
+    }
   } else if (arm64) {
     try {
       await $`docker buildx use mybuilder`;
@@ -378,7 +387,7 @@ export async function dockerBuildUnit(options) {
       '-t',
       image,
       '-t',
-      `${image}`,
+      `${image}-arm64`,
       '--file',
       dockerfile,
       '--push',
@@ -393,6 +402,15 @@ export async function dockerBuildUnit(options) {
     }
 
     await $`${baseCommand}`;
+
+    try {
+      $.verbose = false;
+      const arm64Exists = await $`docker manifest inspect ${image}-amd64`;
+      await $`docker manifest create ${image} ${image}-amd64 ${image}-arm64`;
+    } catch (e) {
+      await $`docker manifest create ${image} ${image}-arm64 --amend`;
+      await $`docker manifest push ${image}`;
+    }
   } else {
     let baseCommand = [
       'docker',
