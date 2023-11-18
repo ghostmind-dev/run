@@ -5,6 +5,7 @@ import {
   verifyIfMetaJsonExists,
   setSecretsUptoProject,
 } from '../utils/divers.mjs';
+import _ from 'lodash';
 
 ////////////////////////////////////////////////////////////////////////////////
 //  SETTING UP ZX
@@ -67,6 +68,53 @@ async function runCustomScript(script, argument, options) {
       ? `${SRC}/dev/src/main.mjs`
       : `${SRC}/node_modules/@ghostmind-dev/run/src/main.mjs`;
 
+  ////////////////////////////////////////////////////////////////////////////////
+  // GET INPUT VALUE
+  ////////////////////////////////////////////////////////////////////////////////
+
+  async function extract(inputName) {
+    // return the value of the input
+    // format of each input is: INPUT_NAME=INPUT_VALUE
+    let foundElement = _.find(input, (element) => {
+      // if the element is not a string
+      // return false
+      if (typeof element !== 'string') {
+        return false;
+      }
+
+      // if the element does not contain the inputName
+      // return false
+      if (!element.includes(`${inputName}=`)) {
+        return false;
+      }
+
+      // if the element contains the inputName
+      // return true
+      return true;
+    });
+    // remove inputName=- from the element
+
+    if (foundElement === undefined) {
+      return undefined;
+    }
+
+    foundElement = foundElement.replace(`${inputName}=`, '');
+
+    return foundElement;
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // VERIFY IF VALUE EXISTS
+  ////////////////////////////////////////////////////////////////////////////////
+
+  function detect(value) {
+    return _.some(input, (x) => x === `${value}`);
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // CUSTOM CONFIG
+  ////////////////////////////////////////////////////////////////////////////////
+
   const { root, getSecretsUpToProject } = {
     ...customConfigDefault,
     ...custom_script,
@@ -108,12 +156,15 @@ async function runCustomScript(script, argument, options) {
 
     await custom_function.default(argument, {
       input: input === undefined ? [] : input,
+      extract,
+      detect,
       metaConfig,
       currentPath,
       zx,
       run,
       utils,
       env: process.env,
+      _,
     });
   } catch (e) {
     console.log(e);
