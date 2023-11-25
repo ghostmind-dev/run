@@ -2,6 +2,7 @@
 
 import { $ } from 'zx';
 import { config } from 'dotenv';
+import _ from 'lodash';
 import { Command, Option } from 'commander';
 import commandTerraform from '../lib/command-terraform.mjs';
 import commandCustom from '../lib/command-custom.mjs';
@@ -48,7 +49,19 @@ program.addOption(
 ////////////////////////////////////////////////////////////////////////////////
 
 config({ path: `${SRC}/.env` });
-config({ path: `${currentPath}/.env` });
+
+let initPath = currentPath;
+
+let paths = [];
+
+while (initPath !== SRC) {
+  paths.push(initPath);
+  const pathParts = initPath.split('/');
+  pathParts.pop(); // Remove the last element
+  initPath = pathParts.join('/');
+}
+
+-_.reverse(paths).map((path) => config({ path: `${path}/.env` }));
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
