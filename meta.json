@@ -1,5 +1,20 @@
 {
   "type": "npm_package",
   "names": ["@angular/core", "@angular/common"],
-  "id": "ic9ETB7juz3g"
+  "id": "ic9ETB7juz3g",
+  "repo": {
+    "ignore_folders": [
+      ".devcontainer",
+      ".github",
+      ".vscode"
+    ],
+    "ignore_files": [
+      ".env",
+      ".npmrc",
+      "repo.json",
+      "package-lock.json",
+      ".gitignore"
+    ],
+    "ignore_extensions": []
+  }
 }
