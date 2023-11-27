@@ -40,19 +40,83 @@ export async function verifyIfProjectCore() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// GET FILES IN A DIRECTORY
+////////////////////////////////////////////////////////////////////////////////
+
+export async function getFilesInDirectory(
+  path,
+  igbore_files,
+  ignore_extensions
+) {
+  const filesInFolder = await fs.readdir(path, {
+    withFileTypes: true,
+  });
+
+  igbore_files = igbore_files || [];
+  ignore_extensions = ignore_extensions || [];
+
+  let files = [];
+
+  const defaultFilesToIgnore = [
+    '.DS_Store',
+    '.terraform.lock.hcl',
+    '.env',
+    '.env.local',
+    '.env.development',
+    '.env.test',
+    '.env.production',
+    '.env.backup',
+    '.git',
+    '.terraform',
+  ];
+
+  const defaultExtensionsToIgnore = ['DS_Store'];
+
+  for (const file of filesInFolder) {
+    if (file.isDirectory()) {
+      continue;
+    }
+
+    if (igbore_files.includes(file.name)) {
+      continue;
+    }
+
+    if (defaultFilesToIgnore.includes(file.name)) {
+      continue;
+    }
+
+    if (ignore_extensions.includes(file.name.split('.').pop())) {
+      continue;
+    }
+
+    if (defaultExtensionsToIgnore.includes(file.name.split('.').pop())) {
+      continue;
+    }
+
+    files.push(file.name);
+  }
+
+  return files;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // RETURN ALL THE DIRECTORIES IN A PATH
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDirectories(path) {
+export async function getDirectories(path, ignore_folders) {
   const directoriesWithFiles = await fs.readdir(`${path}`, {
     withFileTypes: true,
   });
+
+  ignope_folders = ignore_folders || [];
 
   const directories = directoriesWithFiles
     .filter((dirent) => dirent.isDirectory())
     .filter((dirent) => dirent.name !== 'node_modules')
     .filter((dirent) => dirent.name !== '.git')
-    .filter((dirent) => dirent.name !== 'migrations')
+    .filter((dirent) => dirent.name !== '.terraform')
+    // ignore_folders is an array of folders to ignore
+    .filter((dirent) => !ignore_folders.includes(dirent.name))
     .map((dirent) => dirent.name);
 
   return directories;
@@ -62,15 +126,18 @@ export async function getDirectories(path) {
 // DISCOVER ALL THE DIRECTORIES PATH  IN THE PROJECT (RECURSIVE)
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function recursiveDirectoriesDiscovery(path) {
-  const directories = await getDirectories(path);
+export async function recursiveDirectoriesDiscovery(path, ignore_folders) {
+  const directories = await getDirectories(path, ignore_folders);
 
   let directoriesPath = [];
 
   for (let directory of directories) {
     directoriesPath.push(`${path}/${directory}`);
     directoriesPath = directoriesPath.concat(
-      await recursiveDirectoriesDiscovery(`${path}/${directory}`)
+      await recursiveDirectoriesDiscovery(
+        `${path}/${directory}`,
+        ignore_folders
+      )
     );
   }
 
