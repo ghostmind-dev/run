@@ -108,7 +108,7 @@ export async function getDirectories(path, ignore_folders) {
     withFileTypes: true,
   });
 
-  ignope_folders = ignore_folders || [];
+  ignore_folders = ignore_folders || [];
 
   const directories = directoriesWithFiles
     .filter((dirent) => dirent.isDirectory())
