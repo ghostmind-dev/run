@@ -286,9 +286,9 @@ export async function repoConvert(arg) {
   // Final out put should be:
   // { "src/main.mjs": "// main.mjs content", "src/other.mjs": "// other.mjs content", etc... }
 
-  const { ignore_extensions, ignore_files, ignore_folders } = repo;
+  const { ignore_extensions, ignore_files, ignore_folders, description } = repo;
 
-  let filesContent = {};
+  let filesContent = [];
 
   let folderList = await recursiveDirectoriesDiscovery(
     currentPath,
@@ -307,14 +307,27 @@ export async function repoConvert(arg) {
     for (const file of files) {
       const filePath = path.join(folder, file);
 
-      filesContent[filePath] = await fs.readFile(filePath, 'utf8');
+      const fileContent = await fs.readFile(filePath, 'utf8');
+
+      // remove the currentPath from the filePath
+
+      const filePathWithoutCurrentPath = filePath.replace(currentPath, '');
+
+      filesContent.push({
+        path: filePathWithoutCurrentPath.slice(1),
+        content: fileContent,
+      });
     }
   }
 
+  // invert the filesContent array
+
+  filesContent = filesContent.reverse();
   // create a single json file with the content of the repo object
-  await fs.writeFile(
+
+  fs.writeFile(
     `${currentPath}/repo.json`,
-    JSON.stringify(filesContent, null, 2),
+    JSON.stringify({ files: filesContent }, null, 4),
     'utf8'
   );
 }
