@@ -82,7 +82,7 @@ export async function hasuraOpenConsole(options) {
 // SQUASH MIGRATIONS
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function hasuraMigrateSquash(version) {
+export async function hasuraMigrateSquash(version, options) {
   const metaConfig = await fs.readJsonSync('meta.json');
 
   const { hasura: hasuraConfig } = metaConfig;
@@ -91,8 +91,13 @@ export async function hasuraMigrateSquash(version) {
 
   cd(`${currentPath}/${state}`);
 
+  const { local } = options;
+  const HASURA_GRAPHQL_ENDPOINT = local
+    ? process.env.HASURA_GRAPHQL_ENDPOINT_LOCAL
+    : process.env.HASURA_GRAPHQL_ENDPOINT;
+
   $.verbose = true;
-  await $`hasura migrate squash --from ${version} --database-name default`;
+  await $`hasura migrate squash --endpoint ${HASURA_GRAPHQL_ENDPOINT} --from ${version} --database-name default`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -190,11 +195,12 @@ export default async function hasura(program) {
     .option('--local', 'use local hasura')
     .action(hasuraOpenConsole);
 
-  // const migrateSquash = hasuraMigrate.command('squash');
-  // migrateSquash
-  //   .description('squash all migrations')
-  //   .argument('<version>', 'version to squash to')
-  //   .action(hasuraMigrateSquash);
+  const migrateSquash = hasuraMigrate.command('squash');
+  migrateSquash
+    .description('squash all migrations')
+    .argument('<version>', 'version to squash to')
+    .option('--local', 'use local hasura')
+    .action(hasuraMigrateSquash);
 
   const migrateApply = hasuraMigrate.command('apply');
   migrateApply
