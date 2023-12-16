@@ -5,15 +5,6 @@ import {
 } from "../utils/divers.mjs";
 import { config } from "dotenv";
 
-//////////////////////////////////////////////////////////////////////////////
-// CLEANING MIGRATIONS
-//////////////////////////////////////////////////////////////////////////////
-
-// https://hasura.io/docs/latest/migrations-metadata-seeds/resetting-migrations-metadata
-// live hasura cmd migrate delete --all --database-name default
-// live hasura migrate create init
-// live hasura cmd metadata export
-
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
@@ -91,10 +82,7 @@ export async function hasuraMigrateSquash(version, options) {
 
   cd(`${currentPath}/${state}`);
 
-  const { local } = options;
-  const HASURA_GRAPHQL_ENDPOINT = local
-    ? process.env.HASURA_GRAPHQL_ENDPOINT_LOCAL
-    : process.env.HASURA_GRAPHQL_ENDPOINT;
+  const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
 
   $.verbose = true;
   await $`hasura migrate squash --endpoint ${HASURA_GRAPHQL_ENDPOINT} --from ${version} --database-name default`;
@@ -133,10 +121,7 @@ export async function hasuraMigrateApply(options) {
 
   $.verbose = true;
 
-  const { local } = options;
-  const HASURA_GRAPHQL_ENDPOINT = local
-    ? process.env.HASURA_GRAPHQL_ENDPOINT_LOCAL
-    : process.env.HASURA_GRAPHQL_ENDPOINT;
+  const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
 
   await $`hasura migrate apply --endpoint ${HASURA_GRAPHQL_ENDPOINT} --database-name default`;
 }
@@ -168,10 +153,7 @@ export async function metaDataApply(options) {
 
   $.verbose = true;
 
-  const { local } = options;
-  const HASURA_GRAPHQL_ENDPOINT = local
-    ? process.env.HASURA_GRAPHQL_ENDPOINT_LOCAL
-    : process.env.HASURA_GRAPHQL_ENDPOINT;
+  const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
 
   await $`hasura metadata apply --endpoint ${HASURA_GRAPHQL_ENDPOINT}`;
 }
@@ -181,8 +163,6 @@ export async function metaDataApply(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function hasura(program) {
-  // config({ path: `${currentPath}/${envFilename}`, override: true });
-
   const hasura = program.command("hasura");
   hasura.description("perform hasura maintenances");
 
@@ -207,12 +187,6 @@ export default async function hasura(program) {
     .description("apply all migrations")
     .option("--local", "use local hasura")
     .action(hasuraMigrateApply);
-
-  // const migrateCreate = hasuraMigrate.command('create');
-  // migrateCreate
-  //   .description('create a new migration from current schema')
-  //   .argument('<name>', 'name of the migration')
-  //   .action(hasuraMigrateCreate);
 
   const hasuraMetadataApply = hasuraMetadata.command("apply");
   hasuraMetadataApply
