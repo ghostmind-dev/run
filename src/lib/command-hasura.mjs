@@ -62,7 +62,7 @@ export async function hasuraOpenConsole(options) {
     console.log(HASURA_GRAPHQL_HGE_ENPOINT);
     console.log(HASURA_GRAPHQL_ENDPOINT);
 
-    await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --address 0.0.0.0 --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --console-hge-endpoint ${HASURA_GRAPHQL_HGE_ENPOINT_LOCAL} --skip-update-check`;
+    await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --address 0.0.0.0 --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --console-hge-endpoint ${HASURA_GRAPHQL_HGE_ENPOINT} --skip-update-check`;
     return;
   }
 
