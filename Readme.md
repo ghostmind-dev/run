@@ -1,6 +1,6 @@
 # run
 
-global command line interface for development
+opiniated global command line interface for development
 
 ## install
 
