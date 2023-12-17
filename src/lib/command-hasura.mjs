@@ -59,23 +59,19 @@ export async function hasuraOpenConsole(options) {
 
   $.verbose = true;
 
-  let HASURA_GRAPHQL_ENDPOINT = '';
-
-  let HASURA_GRAPHQL_HGE_ENPOINT_LOCAL =
-    process.env.HASURA_GRAPHQL_HGE_ENPOINT_LOCAL || 'http://0.0.0.0:8081';
-
-  let HASURA_GRAPHQL_CONSOLE_PORT =
-    process.env.HASURA_GRAPHQL_CONSOLE_PORT || 8085;
-
   if (local) {
-    HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT_LOCAL;
-    await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --address 0.0.0.0 --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --console-hge-endpoint ${HASURA_GRAPHQL_HGE_ENPOINT_LOCAL} --skip-update-check`;
-    return;
+    const HASURA_GRAPHQL_CONSOLE_PORT =
+      process.env.HASURA_GRAPHQL_CONSOLE_PORT || 8085;
+    const HASURA_GRAPHQL_HGE_ENDPOINT =
+      process.env.HASURA_GRAPHQL_HGE_ENDPOINT || 'http://0.0.0.0:8081';
+    const HASURA_GRAPHQL_ENDPOINT =
+      process.env.HASURA_GRAPHQL_ENDPOINT || 'http://host.docker.internal:8081';
+    await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --address 0.0.0.0 --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --console-hge-endpoint ${HASURA_GRAPHQL_HGE_ENDPOINT} --skip-update-check`;
+  } else {
+    const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
+    const HASURA_GRAPHQL_CONSOLE_PORT = HASURA_GRAPHQL_CONSOLE_PORT || 9695;
+    await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --skip-update-check`;
   }
-
-  HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
-
-  await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --skip-update-check`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
