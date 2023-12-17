@@ -163,7 +163,7 @@ export async function vaultKvVaultToLocalEntry(options) {
   if (all) {
     await vaultKvVaultToLocalAll();
   } else {
-    await vaultKvVaultToLocalUnit();
+    await vaultKvVaultToLocalUnit({ options });
   }
 }
 
@@ -186,7 +186,7 @@ export async function vaultKvVaultToLocalAll() {
       metaConfig = meta;
       currentPath = directory;
       sleep(2000);
-      await vaultKvVaultToLocalUnit(currentPath);
+      await vaultKvVaultToLocalUnit({ currentPathNew: currentPath });
     }
   }
 }
@@ -195,7 +195,7 @@ export async function vaultKvVaultToLocalAll() {
 // Export remote vault credentials to .env file
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function vaultKvVaultToLocalUnit(currentPathNew) {
+export async function vaultKvVaultToLocalUnit({ currentPathNew, options }) {
   let currentPath = await detectScriptsDirectory(process.cwd());
 
   if (currentPathNew !== undefined) {
@@ -220,9 +220,15 @@ export async function vaultKvVaultToLocalUnit(currentPathNew) {
     }
   }
 
-  let secretPath = await defineSecretNamespace();
+  const { target, envfile } = options;
 
-  secretPath = `${secretPath}/secrets`;
+  let secretPath;
+
+  if (target === undefined) {
+    secretPath = await defineSecretNamespace();
+  } else {
+    secretPath = await defineSecretNamespace(target);
+  }
 
   // generate a random integer number
 
@@ -235,11 +241,15 @@ export async function vaultKvVaultToLocalUnit(currentPathNew) {
   const { CREDS } = credsValue.data;
 
   // if .env file exists, create a backup
-  if (await fs.existsSync('.env')) {
-    await fs.copyFileSync('.env', '.env.backup');
-  }
 
-  await fs.writeFileSync('.env', CREDS, 'utf8');
+  if (envfile) {
+    fs.writeFileSync(envfile, CREDS, 'utf8');
+  } else {
+    fs.writeFileSync('.env', CREDS, 'utf8');
+    if (fs.existsSync('.env.backup')) {
+      fs.unlinkSync('.env.backup');
+    }
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -268,5 +278,7 @@ export default async function vault(program) {
   vaultKvExport
     .description('from remote vault to .env')
     .option('--all', 'export all project secrets')
+    .option('--envfile <path>', 'path to .env file')
+    .option('--target <environment>', 'environment target')
     .action(vaultKvVaultToLocalEntry);
 }
