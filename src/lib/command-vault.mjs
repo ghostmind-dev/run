@@ -234,6 +234,8 @@ export async function vaultKvVaultToLocalUnit({ currentPathNew, options }) {
 
   const randomFilename = Math.floor(Math.random() * 1000000);
 
+  secretPath = `${secretPath}/secrets`;
+
   await $`vault kv get -format=json kv/${secretPath}  > /tmp/env.${randomFilename}.json`;
 
   const credsValue = await fs.readJSONSync(`/tmp/env.${randomFilename}.json`);
