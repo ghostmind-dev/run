@@ -1,6 +1,6 @@
 # run
 
-opiniated global command line interface for development
+opiniated collection of utilities for development
 
 ## install
 
