@@ -51,7 +51,9 @@ async function getBucketConfig(id, scope) {
   if (scope === 'global') {
     bucketDirectory = `${id}/global/terraform`;
   } else {
-    let environment = ENV === 'prod' ? 'prod' : 'dev';
+    // environement can be dev, preview or prod
+
+    let environment = ENV;
     bucketDirectory = `${id}/${environment}/terraform`;
   }
 
