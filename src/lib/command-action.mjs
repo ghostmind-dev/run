@@ -51,7 +51,7 @@ const actionConfigDefault = {};
 const actArgmentsDefault = [
   {
     name: '--platform',
-    value: `ubuntu-latest=catthehacker/ubuntu:act-latest`,
+    value: 'ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest',
   },
   { name: '--defaultbranch', value: 'main' },
   { name: '--directory', value: LOCALHOST_SRC },
