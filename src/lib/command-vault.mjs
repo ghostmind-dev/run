@@ -1,10 +1,10 @@
-import { $, which, sleep, cd, fs } from 'zx';
+import { $, which, sleep, cd, fs } from "zx";
 import {
   detectScriptsDirectory,
   recursiveDirectoriesDiscovery,
   verifyIfMetaJsonExists,
   environmentSafeguard,
-} from '../utils/divers.mjs';
+} from "../utils/divers.mjs";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -40,21 +40,21 @@ async function defineSecretNamespace(target) {
   const ENV = process.env.ENV;
   let currentPath = await detectScriptsDirectory(process.cwd());
   cd(currentPath);
-  let metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await fs.readJsonSync("meta.json");
   let { id, scope } = metaConfig;
   let secretNamespace;
   if (target) {
     secretNamespace = `${id}/${target}`;
-  } else if (scope === 'global') {
+  } else if (scope === "global") {
     secretNamespace = `${id}/global`;
   } else {
     let environment;
-    if (ENV === 'prod') {
-      environment = 'prod';
-    } else if (ENV === 'preview') {
-      environment = 'preview';
+    if (ENV === "prod") {
+      environment = "prod";
+    } else if (ENV === "preview") {
+      environment = "preview";
     } else {
-      environment = 'dev';
+      environment = "dev";
     }
 
     secretNamespace = `${id}/${environment}`;
@@ -101,7 +101,7 @@ export async function vaultKvCertsToLocal(data) {
 
     return CREDS;
   } catch (e) {
-    return '';
+    return "";
   }
 }
 
@@ -112,15 +112,15 @@ export async function vaultKvCertsToLocal(data) {
 export async function vaultKvLocalToVault(options) {
   const { target, envfile } = options;
 
-  let envfilePath = '';
+  let envfilePath = "";
 
   if (envfile) {
     envfilePath = envfile;
   } else {
-    envfilePath = '.env';
+    envfilePath = ".env";
   }
 
-  const envFileRaw = await fs.readFileSync(envfilePath, 'utf8');
+  const envFileRaw = await fs.readFileSync(envfilePath, "utf8");
 
   let secretPath = await defineSecretNamespace(target);
 
@@ -172,7 +172,7 @@ export async function vaultKvVaultToLocalEntry(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function vaultKvVaultToLocalAll() {
-  let metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await fs.readJsonSync("meta.json");
   let allDirectories = await recursiveDirectoriesDiscovery(
     `${process.env.SRC}`
   );
@@ -204,7 +204,7 @@ export async function vaultKvVaultToLocalUnit({ currentPathNew, options }) {
 
   cd(currentPath);
 
-  let metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await fs.readJsonSync("meta.json");
 
   let { vault } = metaConfig;
 
@@ -240,16 +240,16 @@ export async function vaultKvVaultToLocalUnit({ currentPathNew, options }) {
 
   const credsValue = await fs.readJSONSync(`/tmp/env.${randomFilename}.json`);
 
-  const { CREDS } = credsValue.data;
+  const { CREDS } = credsValue.data.data;
 
   // if .env file exists, create a backup
 
   if (envfile) {
-    fs.writeFileSync(envfile, CREDS, 'utf8');
+    fs.writeFileSync(envfile, CREDS, "utf8");
   } else {
-    fs.writeFileSync('.env', CREDS, 'utf8');
-    if (fs.existsSync('.env.backup')) {
-      fs.unlinkSync('.env.backup');
+    fs.writeFileSync(".env", CREDS, "utf8");
+    if (fs.existsSync(".env.backup")) {
+      fs.unlinkSync(".env.backup");
     }
   }
 }
@@ -263,24 +263,24 @@ export async function vaultKvVaultToLocalUnit({ currentPathNew, options }) {
 // actions
 
 export default async function vault(program) {
-  const vault = program.command('vault');
-  vault.description('manage project secrets');
-  const vaultKv = vault.command('kv');
-  vaultKv.description('manage key-value pairs');
+  const vault = program.command("vault");
+  vault.description("manage project secrets");
+  const vaultKv = vault.command("kv");
+  vaultKv.description("manage key-value pairs");
 
-  const vaultKvImport = vaultKv.command('import');
-  const vaultKvExport = vaultKv.command('export');
+  const vaultKvImport = vaultKv.command("import");
+  const vaultKvExport = vaultKv.command("export");
 
   vaultKvImport
-    .description('from .env to remote vault')
+    .description("from .env to remote vault")
     .action(vaultKvLocalToVault)
-    .option('--envfile <path>', 'path to .env file')
-    .option('--target <environment>', 'environment target');
+    .option("--envfile <path>", "path to .env file")
+    .option("--target <environment>", "environment target");
 
   vaultKvExport
-    .description('from remote vault to .env')
-    .option('--all', 'export all project secrets')
-    .option('--envfile <path>', 'path to .env file')
-    .option('--target <environment>', 'environment target')
+    .description("from remote vault to .env")
+    .option("--all", "export all project secrets")
+    .option("--envfile <path>", "path to .env file")
+    .option("--target <environment>", "environment target")
     .action(vaultKvVaultToLocalEntry);
 }
