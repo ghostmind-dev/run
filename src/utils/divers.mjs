@@ -1,5 +1,5 @@
-import { $, sleep, cd, fs, echo } from 'zx';
-import { config } from 'dotenv';
+import { $, sleep, cd, fs, echo } from "zx";
+import { config } from "dotenv";
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONSTANTS
@@ -12,9 +12,9 @@ import { config } from 'dotenv';
 export async function detectScriptsDirectory(currentPath) {
   // verify if the current path ends with scripts
 
-  if (currentPath.includes('scripts')) {
+  if (currentPath.includes("scripts")) {
     // remove /scripts from the path
-    currentPath = currentPath.replace('/scripts', '');
+    currentPath = currentPath.replace("/scripts", "");
     return currentPath;
   }
 
@@ -28,11 +28,11 @@ export async function detectScriptsDirectory(currentPath) {
 export async function verifyIfProjectCore() {
   cd(process.env.SRC);
 
-  const metaConfig = await fs.readJsonSync('meta.json');
+  const metaConfig = await fs.readJsonSync("meta.json");
   const { type, name } = metaConfig;
 
-  if (type === 'project') {
-    if (name === 'core') {
+  if (type === "project") {
+    if (name === "core") {
       return true;
     }
   }
@@ -58,19 +58,19 @@ export async function getFilesInDirectory(
   let files = [];
 
   const defaultFilesToIgnore = [
-    '.DS_Store',
-    '.terraform.lock.hcl',
-    '.env',
-    '.env.local',
-    '.env.development',
-    '.env.test',
-    '.env.production',
-    '.env.backup',
-    '.git',
-    '.terraform',
+    ".DS_Store",
+    ".terraform.lock.hcl",
+    ".env",
+    ".env.local",
+    ".env.development",
+    ".env.test",
+    ".env.production",
+    ".env.backup",
+    ".git",
+    ".terraform",
   ];
 
-  const defaultExtensionsToIgnore = ['DS_Store'];
+  const defaultExtensionsToIgnore = ["DS_Store"];
 
   for (const file of filesInFolder) {
     if (file.isDirectory()) {
@@ -85,11 +85,11 @@ export async function getFilesInDirectory(
       continue;
     }
 
-    if (ignore_extensions.includes(file.name.split('.').pop())) {
+    if (ignore_extensions.includes(file.name.split(".").pop())) {
       continue;
     }
 
-    if (defaultExtensionsToIgnore.includes(file.name.split('.').pop())) {
+    if (defaultExtensionsToIgnore.includes(file.name.split(".").pop())) {
       continue;
     }
 
@@ -112,9 +112,9 @@ export async function getDirectories(path, ignore_folders) {
 
   const directories = directoriesWithFiles
     .filter((dirent) => dirent.isDirectory())
-    .filter((dirent) => dirent.name !== 'node_modules')
-    .filter((dirent) => dirent.name !== '.git')
-    .filter((dirent) => dirent.name !== '.terraform')
+    .filter((dirent) => dirent.name !== "node_modules")
+    .filter((dirent) => dirent.name !== ".git")
+    .filter((dirent) => dirent.name !== ".terraform")
     // ignore_folders is an array of folders to ignore
     .filter((dirent) => !ignore_folders.includes(dirent.name))
     .map((dirent) => dirent.name);
@@ -181,8 +181,8 @@ export async function withMetaMatching({ property, value, path }) {
     if (metaConfig) {
       let metaConfigProperty;
 
-      if (property.includes('.')) {
-        const propertyArray = property.split('.');
+      if (property.includes(".")) {
+        const propertyArray = property.split(".");
 
         metaConfigProperty = metaConfig;
 
@@ -223,11 +223,11 @@ export async function setSecretsUptoProject(path) {
   // print: /home
   // print: /
 
-  const directories = path.split('/');
+  const directories = path.split("/");
   let directoriesPath = [];
 
   for (let i = directories.length; i > 0; i--) {
-    directoriesPath.push(directories.slice(0, i).join('/'));
+    directoriesPath.push(directories.slice(0, i).join("/"));
   }
 
   for (let directory of directoriesPath) {
@@ -237,7 +237,7 @@ export async function setSecretsUptoProject(path) {
       if (metaConfig.secrets) {
         config({ path: `${directory}/.env` });
       }
-      if (metaConfig.type === 'project') {
+      if (metaConfig.type === "project") {
         return;
       }
     }
@@ -266,13 +266,13 @@ export async function environmentSafeguard(currentPath) {
     const prompt = inquirer.createPromptModule();
 
     const answer = await prompt({
-      type: 'confirm',
-      name: 'answer',
+      type: "confirm",
+      name: "answer",
       message:
-        '\n' +
+        "\n" +
         `Some directories are bind to a different environment than ${process.env.ENV}` +
         `\n` +
-        `\n${directoryNoMatchEnv.join('\n')}` +
+        `\n${directoryNoMatchEnv.join("\n")}` +
         `\n` +
         `\nDo you want to continue?`,
     });
