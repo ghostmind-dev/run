@@ -114,7 +114,6 @@ export async function getDirectories(path, ignore_folders) {
     .filter((dirent) => dirent.isDirectory())
     .filter((dirent) => dirent.name !== "node_modules")
     .filter((dirent) => dirent.name !== ".git")
-    .filter((dirent) => dirent.name !== ".terraform")
     // ignore_folders is an array of folders to ignore
     .filter((dirent) => !ignore_folders.includes(dirent.name))
     .map((dirent) => dirent.name);
