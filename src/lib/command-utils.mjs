@@ -201,8 +201,10 @@ export async function initDevcontainer() {
 // CHANGE ALL IDS IN A META.JSON FILE
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function changeAllIds() {
-  const SRC = process.env.SRC || currentPath;
+export async function changeAllIds(options) {
+  const startingPath = options.current
+    ? currentPath
+    : process.env.SRC || currentPath;
 
   // ask the user if they want to change all ids
 
@@ -218,14 +220,14 @@ export async function changeAllIds() {
     return;
   }
 
-  const directories = await recursiveDirectoriesDiscovery(SRC);
+  const directories = await recursiveDirectoriesDiscovery(startingPath);
 
   for (const directory of directories) {
     const metaConfig = await verifyIfMetaJsonExists(directory);
 
     // if directory matches ${SRC}/dev/** continue to next iteration
 
-    if (directory.includes(`${SRC}/dev`)) {
+    if (directory.includes(`${startingPath}/dev`)) {
       continue;
     }
 
@@ -238,11 +240,11 @@ export async function changeAllIds() {
     }
   }
 
-  let metaConfig = await verifyIfMetaJsonExists(SRC);
+  let metaConfig = await verifyIfMetaJsonExists(startingPath);
 
   metaConfig.id = nanoid(12);
 
-  await jsonfile.writeFile(path.join(currentPath, 'meta.json'), metaConfig, {
+  await jsonfile.writeFile(path.join(startingPath, 'meta.json'), metaConfig, {
     spaces: 2,
   });
 }
@@ -388,6 +390,7 @@ export default async function utils(program) {
 
   const devMetaChangeId = meta.command('ids');
   devMetaChangeId.description('change all ids in a meta.json file');
+  devMetaChangeId.option('--current', 'start from currentPath');
   devMetaChangeId.action(changeAllIds);
 
   const commitChanges = commit.command('changes');
