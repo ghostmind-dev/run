@@ -227,7 +227,7 @@ export async function vaultKvVaultToLocalUnit({
 
   let secretPath;
 
-  if (target !== undefined) {
+  if (target === undefined) {
     secretPath = await defineSecretNamespace();
   } else {
     secretPath = await defineSecretNamespace(target);
