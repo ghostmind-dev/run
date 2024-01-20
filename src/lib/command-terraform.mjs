@@ -3,6 +3,7 @@ import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
   withMetaMatching,
+  recursiveDirectoriesDiscovery,
 } from '../utils/divers.mjs';
 import _ from 'lodash';
 
@@ -530,6 +531,23 @@ export async function terraformEnv() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// CLEAN TERRAFORM STATE
+////////////////////////////////////////////////////////////////////////////////
+
+export async function cleanDotTerraformFolders() {
+  const folders = await recursiveDirectoriesDiscovery(currentPath);
+
+  console.log(folders);
+
+  for (let folder of folders) {
+    // if path finish with .terraform
+    if (folder.match(/\.terraform$/)) {
+      await $`rm -rf ${folder}`;
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -537,29 +555,36 @@ export default async function commandTerraform(program) {
   const terraform = program.command('terraform');
   terraform.description('infrastructure definition');
 
-  const tfApply = terraform.command('apply');
-  const tfDestroy = terraform.command('destroy');
-  const tfEnv = terraform.command('env');
+  const environementTF = terraform
+    .command('env')
+    .description('env management for .env and .tf');
 
-  const tfToEnv = tfEnv
+  terraform
+    .command('clean')
+    .description('delete all .tfstate files')
+    .action(cleanDotTerraformFolders);
+
+  environementTF
     .command('to_env')
     .description('generate TF_VAR from .env')
     .action(terraformVariables)
     .argument('[env]', 'name of the env file');
 
-  const tfToTf = tfEnv
+  environementTF
     .command('to_tf')
     .description('generate .tf config from .env')
     .action(terraformEnv);
 
-  tfApply
+  terraform
+    .command('apply')
     .description('apply the infrastructure')
     .argument('[component]', 'component to deploy')
     .option('--local', 'use local state')
     .option('--all', 'deploy all components')
     .action(terraformApplyEntry);
 
-  tfDestroy
+  terraform
+    .command('destroy')
     .description('terminate the infrastructure')
     .argument('[component]', 'component to destroy')
     .action(terraformDestroyEntry);
