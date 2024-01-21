@@ -57,11 +57,6 @@ const actArgmentsDefault = [
   { name: '--directory', value: LOCALHOST_SRC },
   { name: '--bind', value: `` },
   { name: '--use-gitignore', value: '' },
-
-  // {
-  //   name: '--workflows',
-  //   value: `${LOCALHOST_SRC}/.github/workflows`,
-  // },
   {
     name: '--secret',
     value: `VAULT_ROOT_TOKEN=${process.env.VAULT_ROOT_TOKEN}`,
@@ -73,7 +68,19 @@ const actArgmentsDefault = [
   },
   {
     name: '--secret',
-    value: `actions_token=${process.env.GH_TOKEN}`,
+    value: `GCP_SERVICE_ACCOUNT_ADMIN=${process.env.GCP_SERVICE_ACCOUNT_ADMIN}`,
+  },
+  {
+    name: '--secret',
+    value: `GH_TOKEN=${process.env.GH_TOKEN}`,
+  },
+  {
+    name: '--secret',
+    value: `GITHUB_TOKEN=${process.env.GITHUB_TOKEN}`,
+  },
+  {
+    name: '--secret',
+    value: `TERRAFORM_BUCKET_NAME=${process.env.TERRAFORM_BUCKET_NAME}`,
   },
 ];
 
