@@ -537,8 +537,6 @@ export async function terraformEnv() {
 export async function cleanDotTerraformFolders() {
   const folders = await recursiveDirectoriesDiscovery(currentPath);
 
-  console.log(folders);
-
   for (let folder of folders) {
     // if path finish with .terraform
     if (folder.match(/\.terraform$/)) {
