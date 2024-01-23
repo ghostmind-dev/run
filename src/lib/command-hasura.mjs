@@ -5,15 +5,6 @@ import {
 } from '../utils/divers.mjs';
 import { config } from 'dotenv';
 
-//////////////////////////////////////////////////////////////////////////////
-// CLEANING MIGRATIONS
-//////////////////////////////////////////////////////////////////////////////
-
-// https://hasura.io/docs/latest/migrations-metadata-seeds/resetting-migrations-metadata
-// live hasura cmd migrate delete --all --database-name default
-// live hasura migrate create init
-// live hasura cmd metadata export
-
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
@@ -69,7 +60,8 @@ export async function hasuraOpenConsole(options) {
     await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --address 0.0.0.0 --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --console-hge-endpoint ${HASURA_GRAPHQL_HGE_ENDPOINT} --skip-update-check`;
   } else {
     const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
-    const HASURA_GRAPHQL_CONSOLE_PORT = HASURA_GRAPHQL_CONSOLE_PORT || 9695;
+    const HASURA_GRAPHQL_CONSOLE_PORT =
+      process.env.HASURA_GRAPHQL_CONSOLE_PORT || 9695;
     await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --skip-update-check`;
   }
 }
@@ -88,9 +80,7 @@ export async function hasuraMigrateSquash(version, options) {
   cd(`${currentPath}/${state}`);
 
   const { local } = options;
-  const HASURA_GRAPHQL_ENDPOINT = local
-    ? process.env.HASURA_GRAPHQL_ENDPOINT_LOCAL
-    : process.env.HASURA_GRAPHQL_ENDPOINT;
+  const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
 
   $.verbose = true;
   await $`hasura migrate squash --endpoint ${HASURA_GRAPHQL_ENDPOINT} --from ${version} --database-name default`;
@@ -130,9 +120,7 @@ export async function hasuraMigrateApply(options) {
   $.verbose = true;
 
   const { local } = options;
-  const HASURA_GRAPHQL_ENDPOINT = local
-    ? process.env.HASURA_GRAPHQL_ENDPOINT_LOCAL
-    : process.env.HASURA_GRAPHQL_ENDPOINT;
+  const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
 
   await $`hasura migrate apply --endpoint ${HASURA_GRAPHQL_ENDPOINT} --database-name default`;
 }
@@ -165,9 +153,7 @@ export async function metaDataApply(options) {
   $.verbose = true;
 
   const { local } = options;
-  const HASURA_GRAPHQL_ENDPOINT = local
-    ? process.env.HASURA_GRAPHQL_ENDPOINT_LOCAL
-    : process.env.HASURA_GRAPHQL_ENDPOINT;
+  const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
 
   await $`hasura metadata apply --endpoint ${HASURA_GRAPHQL_ENDPOINT}`;
 }
