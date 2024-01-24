@@ -6,6 +6,7 @@ import {
   recursiveDirectoriesDiscovery,
 } from '../utils/divers.mjs';
 import _ from 'lodash';
+import { Storage } from '@google-cloud/storage';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -546,6 +547,35 @@ export async function cleanDotTerraformFolders() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// UNLOCK TERRAFORM
+////////////////////////////////////////////////////////////////////////////////
+
+export async function terraformUnlock(arg) {
+  const storage = new Storage({});
+
+  // read the meta.json file
+
+  let { id } = await verifyIfMetaJsonExists(currentPath);
+
+  const env = `${process.env.ENV}`;
+
+  const filename = `${id}/${env}/terraform/default.tflock`;
+
+  const bucketName = process.env.TERRAFORM_BUCKET_NAME;
+
+  const bucket = storage.bucket(bucketName);
+  const file = bucket.file(filename);
+
+  const [exists] = await file.exists();
+  if (!exists) {
+    console.log(`File ${filename} does not exist.`);
+    return;
+  }
+
+  await file.delete();
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -586,6 +616,11 @@ export default async function commandTerraform(program) {
     .description('terminate the infrastructure')
     .argument('[component]', 'component to destroy')
     .action(terraformDestroyEntry);
+
+  terraform
+    .command('unlock')
+    .description('delete the lock file')
+    .action(terraformUnlock);
 
   // const tfImport = terraform.command('import');
 
