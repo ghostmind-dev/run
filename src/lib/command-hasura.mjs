@@ -42,11 +42,15 @@ export async function hasuraOpenConsole(options) {
 
   const { hasura: hasuraConfig } = metaConfig;
 
-  const { local } = options;
+  const { local, wait } = options;
 
   const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
 
   cd(`${currentPath}/${state}`);
+
+  if (wait) {
+    await sleep(JSON.parse(wait) * 1000);
+  }
 
   $.verbose = true;
 
@@ -175,6 +179,7 @@ export default async function hasura(program) {
   hasuraConsole
     .description('open hasura console locally ')
     .option('--local', 'use local hasura')
+    .option('--wait < seconds >', 'wait for seconds before opening console')
     .action(hasuraOpenConsole);
 
   const migrateSquash = hasuraMigrate.command('squash');

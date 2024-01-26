@@ -103,6 +103,7 @@ try {
   const { exitCode, name, code, message } = err;
 
   if (!message.includes('outputHelp')) {
+    console.log(message);
     console.error('something went wrong');
   }
 }

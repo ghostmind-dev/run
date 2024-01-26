@@ -276,7 +276,7 @@ export async function dockerBuildxAll(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerBuildActionEntry(options) {
-  const { all, amd64 } = options;
+  const { all } = options;
 
   if (all) {
     await dockerBuildAll(options);
@@ -435,6 +435,58 @@ export async function dockerBuildUnit(options) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// DOCKER COMPOSE UP
+////////////////////////////////////////////////////////////////////////////////
+
+export async function dockerComposeUp(options) {
+  let { file, forceRecreate, envFile } = options;
+
+  if (file === undefined) {
+    file = 'compose.yaml';
+  }
+  const baseCommand = ['docker', 'compose', '-f', file, 'up'];
+  if (forceRecreate) {
+    baseCommand.push('--force-recreate');
+  }
+
+  if (envFile === undefined) {
+    // write .env file tp /tmp/.env.${name}
+    await fs.writeFile(`../.env.compose`, await fs.readFile(`../.env`, 'utf8'));
+  } else {
+    await fs.writeFile(
+      `../.env.compose`,
+      await fs.readFile(`../${envFile}`, 'utf8')
+    );
+  }
+
+  $.verbose = true;
+
+  await $`${baseCommand}`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// DOCKER COMPOSE BUILD
+////////////////////////////////////////////////////////////////////////////////
+
+export async function dockerComposeBuild(options) {
+  let { file, cache } = options;
+
+  if (file === undefined) {
+    file = 'compose.yaml';
+  }
+
+  const baseCommand = ['docker', 'compose', '-f', file, 'build'];
+
+  if (cache === undefined) {
+    baseCommand.push('--no-cache');
+  }
+
+  $.verbose = true;
+
+  await $`${baseCommand}`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -463,4 +515,22 @@ export default async function commandDocker(program) {
   dockerPush.description('Push docker image');
   dockerPush.option('-a, --all', 'Push all docker images');
   dockerPush.action(dockerPushActionEntry);
+
+  const dockerCompose = docker.command('compose');
+  dockerCompose.description('docker compose commands');
+
+  dockerCompose
+    .command('up')
+    .description('docker compose up')
+    .action(dockerComposeUp)
+    .option('-f, --file <file>', 'docker compose file')
+    .option('--force-recreate', 'force recreate')
+    .option('--env-file <file>', 'env file');
+
+  dockerCompose
+    .command('build')
+    .description('docker compose build')
+    .action(dockerComposeBuild)
+    .option('-f, --file <file>', 'docker compose file')
+    .option('--cache', 'enable cache');
 }
