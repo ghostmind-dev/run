@@ -406,14 +406,18 @@ export async function cleanDotTerraformFolders() {
 // UNLOCK TERRAFORM
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformUnlock(arg) {
+export async function terraformUnlock(options) {
+  let { env } = options;
+
   const storage = new Storage({});
 
   // read the meta.json file
 
   let { id } = await verifyIfMetaJsonExists(currentPath);
 
-  const env = `${process.env.ENV}`;
+  if (env === undefined) {
+    env = process.env.ENV;
+  }
 
   const filename = `${id}/${env}/terraform/default.tflock`;
 
@@ -469,5 +473,6 @@ export default async function commandTerraform(program) {
   terraform
     .command('unlock')
     .description('delete the lock file')
-    .action(terraformUnlock);
+    .action(terraformUnlock)
+    .option('--env <env>', 'environment');
 }
