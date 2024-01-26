@@ -88,176 +88,6 @@ async function getTerraformConfig() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// RUN TERRAFORM STATE MV
-////////////////////////////////////////////////////////////////////////////////
-
-export async function terraformStateMv(
-  source_component,
-  target_component,
-  current_name,
-  new_name
-) {
-  try {
-    let metaConfig = await verifyIfMetaJsonExists(currentPath);
-    let { type } = metaConfig;
-
-    let pathResources;
-
-    if (type === 'component') {
-      console.log(
-        `Need to be in a the parent of the root directory of the component you want to move`
-      );
-      return;
-    }
-
-    let { terraform } = metaConfig;
-
-    let { root } = terraform;
-
-    let targetResources = `${currentPath}/${root}/${target_component}`;
-
-    cd(`${targetResources}/`);
-
-    let targetMeta = await verifyIfMetaJsonExists(targetResources);
-
-    let { id: targetId, scope: targetScope } = targetMeta;
-
-    let { bcBucket: targetBcBucket, bcPrefix: targetBcPrefix } =
-      await getBucketConfig(targetId, targetScope);
-
-    await $`terraform init -backend-config=${targetBcBucket} -backend-config=${targetBcPrefix} --lock=false`;
-    await $`terraform state pull > terraform.tfstate`;
-
-    let pathTargetStateFile = `../${target_component}/terraform.tfstate`;
-
-    if (new_name === undefined) {
-      new_name = current_name;
-    }
-
-    let sourceResources = `${currentPath}/${root}/${source_component}`;
-
-    cd(`${sourceResources}/`);
-
-    let sourceMeta = await verifyIfMetaJsonExists(sourceResources);
-
-    let { id: sourceId, scope: sourceScope } = targetMeta;
-
-    let { bcBucket: sourceBcBucket, bcPrefix: sourceBcPrefix } =
-      await getBucketConfig(sourceId, sourceScope);
-
-    $.verbose = true;
-    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
-    await $`terraform state mv -state-out=${pathTargetStateFile} ${current_name} ${new_name}`;
-  } catch (error) {
-    console.error(error.message);
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// TERRAFORM STATE PULL
-////////////////////////////////////////////////////////////////////////////////
-
-export async function terraformStatePull(component) {
-  try {
-    let metaConfig = await verifyIfMetaJsonExists(currentPath);
-    let { type } = metaConfig;
-
-    let pathResources;
-
-    if (component !== undefined) {
-      let { terraform } = metaConfig;
-      let { root } = terraform;
-      pathResources = `${currentPath}/${root}/${component}`;
-      cd(`${pathResources}/`);
-      metaConfig = await verifyIfMetaJsonExists(pathResources);
-    }
-
-    if (type !== 'component' && component === undefined) {
-      console.log(`something is wrong`);
-      return;
-    }
-
-    let { id, scope } = metaConfig;
-
-    const { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
-
-    $.verbose = true;
-    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
-    await $`terraform state pull > terraform.tfstate`;
-  } catch (error) {
-    console.error(error.message);
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// TERRAFORM STATE PUSH
-////////////////////////////////////////////////////////////////////////////////
-
-export async function terraformStatePush(component) {
-  try {
-    let metaConfig = await verifyIfMetaJsonExists(currentPath);
-    let { type } = metaConfig;
-
-    let pathResources;
-
-    if (component !== undefined) {
-      let { terraform } = metaConfig;
-      let { root } = terraform;
-      pathResources = `${currentPath}/${root}/${component}`;
-      cd(`${pathResources}/`);
-    }
-
-    if (type !== 'component' && component === undefined) {
-      console.log(`something is wrong`);
-      return;
-    }
-
-    await $`terraform state push terraform.tfstate`;
-  } catch (error) {
-    console.error(error.message);
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// TERRAFORM IMPORT
-////////////////////////////////////////////////////////////////////////////////
-
-export async function terraformImport(
-  component,
-  local_resouces_path,
-  remote_resources_path
-) {
-  try {
-    let metaConfig = await verifyIfMetaJsonExists(currentPath);
-    let { type } = metaConfig;
-
-    let pathResources;
-
-    if (component !== undefined) {
-      let { terraform } = metaConfig;
-      let { root } = terraform;
-      pathResources = `${currentPath}/${root}/${component}`;
-      cd(`${pathResources}/`);
-      metaConfig = await verifyIfMetaJsonExists(pathResources);
-    }
-
-    if (type !== 'component' && component === undefined) {
-      console.log(`something is wrong`);
-      return;
-    }
-
-    let { id, scope } = metaConfig;
-
-    const { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
-
-    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
-    await $`terraform import ${local_resouces_path} ${remote_resources_path}`;
-  } catch (error) {
-    console.error(error.message);
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // TERRAFORM DESTROY ENTRYPOINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -449,29 +279,11 @@ export async function terraformApplyUnit(component, options) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// TERRAFORM APPLY
-////////////////////////////////////////////////////////////////////////////////
-
-export async function terraformOutput(component) {
-  try {
-    let { root } = await getTerraformConfig(component);
-
-    let pathResources = `${currentPath}/${root}/${component}`;
-
-    cd(`${pathResources}/`);
-
-    $.verbose = true;
-
-    await $`terraform output -json`;
-  } catch (error) {}
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // TERRAFORM VARIABLES
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function terraformVariables(component, options) {
-  const { envfile } = options;
+  const { envfile, tf } = options;
 
   // if envfile is not defined, set it to .env
 
@@ -522,58 +334,57 @@ export async function terraformVariables(component, options) {
 
   // // Read the .env file
   const envContent = fs.readFileSync(env_file, 'utf-8');
-  // Extract all variable names that start with TF_VAR
-  const tfVarNames = envContent.match(/^TF_VAR_[A-Z_]+(?==)/gm);
-  if (!tfVarNames) {
-    console.log('No TF_VAR_ variables found.');
-    return;
+
+  if (tf) {
+    // Extract all variable names that start with TF_VAR
+    const tfVarNames = envContent.match(/^TF_VAR_[A-Z_]+(?==)/gm);
+    if (!tfVarNames) {
+      console.log('No TF_VAR_ variables found.');
+      return;
+    }
+    // Generate the env declarations for main.tf
+    const envDeclarations = tfVarNames
+      .map((varName) => {
+        const tfName = varName.replace(/^TF_VAR_/, '');
+        return `        env {\n          name  = "${tfName}"\n          value = var.${tfName}\n        }`;
+      })
+      .join('\n\n');
+    // Generate the variable declarations for variables.tf
+    const varDeclarations = tfVarNames
+      .map((varName) => {
+        const tfName = varName.replace(/^TF_VAR_/, '');
+        return `variable "${tfName}" {}`;
+      })
+      .join('\n');
+    // Function to replace content between start and end comments
+    const startMainComment = `        ##########################################\n        # START ENV\n        ##########################################\n`;
+    const endMainComment = `        ##########################################\n        # END ENV\n        ##########################################\n`;
+    const mainTfPath = component
+      ? `${currentPath}/${root}/${component}/main.tf`
+      : `${currentPath}/${root}/main.tf`;
+    const mainTfContent = fs.readFileSync(mainTfPath, 'utf-8');
+    const updatedMainTfContent = replaceContentBetweenComments(
+      mainTfContent,
+      startMainComment,
+      endMainComment,
+      envDeclarations
+    );
+    fs.writeFileSync(mainTfPath, updatedMainTfContent);
+    // Update variables.tf
+    const startVariablesComment = `##########################################\n# START ENV\n##########################################\n`;
+    const endVariablesComment = `##########################################\n# END ENV\n##########################################\n`;
+    const variablesTfPath = component
+      ? `${currentPath}/${root}/${component}/variables.tf`
+      : `${currentPath}/${root}/variables.tf`;
+    const variablesTfContent = fs.readFileSync(variablesTfPath, 'utf-8');
+    const updatedVariablesTfContent = replaceContentBetweenComments(
+      variablesTfContent,
+      startVariablesComment,
+      endVariablesComment,
+      varDeclarations
+    );
+    fs.writeFileSync(variablesTfPath, updatedVariablesTfContent);
   }
-  // Generate the env declarations for main.tf
-  const envDeclarations = tfVarNames
-    .map((varName) => {
-      const tfName = varName.replace(/^TF_VAR_/, '');
-      return `        env {\n          name  = "${tfName}"\n          value = var.${tfName}\n        }`;
-    })
-    .join('\n\n');
-  // Generate the variable declarations for variables.tf
-  const varDeclarations = tfVarNames
-    .map((varName) => {
-      const tfName = varName.replace(/^TF_VAR_/, '');
-      return `variable "${tfName}" {}`;
-    })
-    .join('\n');
-  // Function to replace content between start and end comments
-
-  const startMainComment = `        ##########################################\n        # START ENV\n        ##########################################\n`;
-  const endMainComment = `        ##########################################\n        # END ENV\n        ##########################################\n`;
-
-  const mainTfPath = component
-    ? `${currentPath}/${root}/${component}/main.tf`
-    : `${currentPath}/${root}/main.tf`;
-  const mainTfContent = fs.readFileSync(mainTfPath, 'utf-8');
-  const updatedMainTfContent = replaceContentBetweenComments(
-    mainTfContent,
-    startMainComment,
-    endMainComment,
-    envDeclarations
-  );
-  fs.writeFileSync(mainTfPath, updatedMainTfContent);
-  // Update variables.tf
-
-  const startVariablesComment = `##########################################\n# START ENV\n##########################################\n`;
-  const endVariablesComment = `##########################################\n# END ENV\n##########################################\n`;
-
-  const variablesTfPath = component
-    ? `${currentPath}/${root}/${component}/variables.tf`
-    : `${currentPath}/${root}/variables.tf`;
-  const variablesTfContent = fs.readFileSync(variablesTfPath, 'utf-8');
-  const updatedVariablesTfContent = replaceContentBetweenComments(
-    variablesTfContent,
-    startVariablesComment,
-    endVariablesComment,
-    varDeclarations
-  );
-  fs.writeFileSync(variablesTfPath, updatedVariablesTfContent);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -638,7 +449,8 @@ export default async function commandTerraform(program) {
     .description('generate varialbes for .env and .tf')
     .action(terraformVariables)
     .argument('[component]', 'component to deploy')
-    .option('--envfile <path>', 'path to .env file');
+    .option('--envfile <path>', 'path to .env file')
+    .option('--no-tf', 'do not generate variables for .tf files');
 
   terraform
     .command('apply')
@@ -658,36 +470,4 @@ export default async function commandTerraform(program) {
     .command('unlock')
     .description('delete the lock file')
     .action(terraformUnlock);
-
-  // const tfImport = terraform.command('import');
-
-  // tfImport
-  //   .description('import the infrastructure')
-  //   .argument('[component]', 'component source')
-  //   .argument('[local]', 'local resource path')
-  //   .argument('[remote]', 'remote resource path')
-  //   .action(terraformImport);
-
-  // const tfOutput = terraform.command('output');
-
-  // tfOutput
-  //   .description('output terraform process as json')
-  //   .argument('[component]', 'component to output')
-  //   .action(terraformOutput);
-
-  // const tfState = terraform.command('state');
-
-  // tfState.description('manage the local and remorte state');
-  // const tfStatePull = tfState.command('pull');
-  // tfStatePull.argument('[component]', 'component to pull');
-  // tfStatePull.action(terraformStatePull);
-  // const tfStatePush = tfState.command('push');
-  // tfStatePush.argument('[component]', 'component to push');
-  // tfStatePush.action(terraformStatePush);
-  // const tfStateMv = tfState.command('mv');
-  // tfStateMv.argument('[source_component]', 'component source');
-  // tfStateMv.argument('[target_component]', 'component target');
-  // tfStateMv.argument('[current_name]', 'current name of part to move');
-  // tfStateMv.argument('[new_name]', 'new name after move');
-  // tfStateMv.action(terraformStateMv);
 }
