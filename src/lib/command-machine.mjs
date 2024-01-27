@@ -112,11 +112,7 @@ export async function machineInit() {
   );
   $.verbose = true;
 
-  await $`run vault kv export`;
-
   await $`run utils meta ids`;
-
-  await $`run vault kv import`;
 
   await $`rm -rf .git`;
 
