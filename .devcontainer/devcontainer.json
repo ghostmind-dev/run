@@ -1,43 +1,93 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
-// https://github.com/microsoft/vscode-dev-containers/tree/v0.195.0/containers/javascript-node
 {
-  "name": "Node.js",
+  "name": "run-devcontainer",
   "build": {
-    "dockerfile": "Dockerfile"
+    "dockerfile": "Dockerfile",
+    "args": {
+      "PROJECT_DIR": "${env:HOME}${env:USERPROFILE}/projects/container/run"
+    }
   },
-  // Configure tool-specific properties.
+  "overrideCommand": false,
+  "containerUser": "vscode",
+  "postCreateCommand": "/usr/local/share/post-create.mjs",
+  "remoteUser": "vscode",
+  "remoteEnv": {
+    "SYNC_LOCALHOST_KUBECONFIG": "true",
+    "USE_GKE_GCLOUD_AUTH_PLUGIN": "true",
+    "NODE_OPTION": "--openssl-legacy-provider",
+    "PATH": "${containerEnv:PATH}:/home/vscode/.npm-global/bin",
+    "SRC": "${containerWorkspaceFolder}",
+    "LOCALHOST_SRC": "${env:HOME}${env:USERPROFILE}/projects/container/action",
+    "GOOGLE_APPLICATION_CREDENTIALS": "/tmp/gsa_key.json",
+    "GCP_PROJECT_NAME": "ghostmind-core",
+    "GCP_SERVICE_ACCOUNT_ADMIN": "${localEnv:GCP_SERVICE_ACCOUNT_ADMIN}",
+    "GH_TOKEN": "${localEnv:GH_TOKEN}",
+    "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
+    "TERRAFORM_BUCKET_NAME": "${localEnv:TERRAFORM_BUCKET_NAME}",
+    "NPM_TOKEN": "${localEnv:NPM_TOKEN}",
+    "VAULT_ROOT_TOKEN": "${localEnv:VAULT_ROOT_TOKEN}",
+    "VAULT_ADDR": "${localEnv:VAULT_ADDR}",
+    "BUILDX_NO_DEFAULT_ATTESTATIONS": "1"
+  },
+  "containerEnv": {
+    "INIT_EXPORT_ENV_PROJECT": "false",
+    "INIT_EXPORT_ENV_ALL": "false",
+    "INIT_DEV_INSTALL_DEPENDENCIES": "false",
+    "INIT_DEV_RESET_LIVE": "false",
+    "INIT_LOGIN_NPM": "true",
+    "INIT_LOGIN_GCP": "true",
+    "INIT_LOGIN_GAM": "false",
+    "INIT_LOGIN_VAULT": "true"
+  },
+  "appPort": ["5050"],
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind",
+    "source=${env:HOME}${env:USERPROFILE}/.kube,target=/usr/local/share/kube-localhost,type=bind",
+    "source=ghostmind-run-zsh-history,target=/commandhistory,type=volume",
+    "source=${env:HOME}${env:USERPROFILE}/projects/container/run,target=/Users/francoisseguin/projects/run/action,type=bind"
+  ],
+  "runArgs": ["--cap-add=CAP_IPC_LOCK", "--name", "run"],
   "customizations": {
-    // Configure properties specific to VS Code.
     "vscode": {
-      // Set *default* container specific settings.json values on container create.
-      "settings": {},
-      // Add the IDs of extensions you want installed when the container is created.
+      "settings": {
+        "prettier.singleQuote": true,
+        "vs-kubernetes": {
+          "disable-linters": ["resource-limits"]
+        },
+        "shellformat.path": "/home/vscode/go/bin/shfmt"
+      },
       "extensions": [
+        "ms-azuretools.vscode-docker",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
         "esbenp.prettier-vscode",
         "humao.rest-client",
         "sdras.inbedby7pm",
+        "william-voyek.vscode-nginx",
         "foxundermoon.shell-format",
+        "hashicorp.terraform",
         "mikestead.dotenv",
+        "hashicorp.hcl",
+        "equinusocio.vsc-material-theme",
         "wesbos.theme-cobalt2",
-        "github.github-vscode-theme",
+        "sumneko.lua",
+        "ghostmind.hide-unhide",
+        "tinkertrain.theme-panda",
+        "golang.go",
+        "yinfei.luahelper",
+        "graphql.vscode-graphql",
+        "graphql.vscode-graphql-syntax",
+        "jdinhlife.gruvbox",
+        "styled-components.vscode-styled-components",
+        "be5invis.vscode-icontheme-nomo-dark",
+        "pkief.material-icon-theme",
+        "mtxr.sqltools",
+        "ghostmind.mode-context",
+        "github.copilot-chat",
         "github.copilot-nightly",
-        "github.copilot-chat"
+        "ms-python.python",
+        "prisma.prisma",
+        "bradlc.vscode-tailwindcss",
+        "mariorodeghiero.vue-theme"
       ]
     }
-  },
-  "containerEnv": {
-    "SRC": "${containerWorkspaceFolder}"
-  },
-  // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  // "forwardPorts": [3000],
-  // Use 'portsAttributes' to set default properties for specific forwarded ports. More info: https://code.visualstudio.com/docs/remote/devcontainerjson-reference.
-  "portsAttributes": {
-    "3000": {
-      "label": "Hello Remote World",
-      "onAutoForward": "notify"
-    }
-  },
-  "postCreateCommand": "/bin/sh  /tmp/library-scripts/post-create.sh",
-  "runArgs": ["--env-file", ".env"],
-  "remoteUser": "node"
+  }
 }

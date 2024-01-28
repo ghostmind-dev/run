@@ -1,24 +1,22 @@
-FROM mcr.microsoft.com/vscode/devcontainers/javascript-node:20-bullseye
+FROM ghcr.io/ghostmind-dev/dvc:latest
+
+############################################################################
+# CONFIG
+############################################################################
 
 ARG USERNAME=vscode
-ARG USER_UID=1000
-ARG USER_GID=$USER_UID
 
 ############################################################################
-# ZSH
+# CONFIG
 ############################################################################
 
-RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v1.1.2/zsh-in-docker.sh)" -- \
-    -t https://github.com/denysdovhan/spaceship-prompt \
-    -a 'SPACESHIP_PROMPT_ADD_NEWLINE="false"' \
-    -a 'SPACESHIP_PROMPT_SEPARATE_LINE="false"' \
-    -p git \
-    -p ssh-agent \
-    -p https://github.com/zsh-users/zsh-autosuggestions \
-    -p https://github.com/zsh-users/zsh-completions
+USER root
 
-COPY library-scripts/post-create.sh /tmp/library-scripts/
+############################################################################
+# COPY POST CREATE SCRIPT
+############################################################################
 
+COPY library-scripts/post-create.mjs /usr/local/share/
 
 ############################################################################
 # THE END
