@@ -1,6 +1,6 @@
 # run
 
-opiniated collection of utilities for development
+opiniated collection of utilities for dev
 
 ## install
 
