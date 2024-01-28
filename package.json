@@ -2,9 +2,9 @@
   "name": "@ghostmind-dev/run",
   "version": "0.4.88",
   "description": "A global command interface for devcontainer development",
-  "main": "dist/main.js/index.js",
+  "main": "dist/main.js/index.mjs",
   "bin": {
-    "run": "dist/bin/cmd.js/index.js"
+    "run": "dist/bin/cmd.js/index.mjs"
   },
   "scripts": {
     "publish_patch": "npm version patch && git push origin main --tags",
