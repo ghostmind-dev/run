@@ -14,7 +14,6 @@
     "**/node_modules": false,
     "**/__pycache__": false,
     "**/.next": false,
-    "**/dist": false,
     "**/.terraform.lock.hcl": false,
     "**/backend.tf": false,
     "**/versions.tf": false,

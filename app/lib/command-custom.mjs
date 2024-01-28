@@ -60,13 +60,13 @@ async function runCustomScript(script, argument, options) {
 
   const run =
     dev === true
-      ? `${SRC}/dev/src/bin/cmd.mjs`
-      : `${SRC}/node_modules/@ghostmind-dev/run/src/bin/cmd.mjs`;
+      ? `${SRC}/dev/app/bin/cmd.mjs`
+      : `${SRC}/node_modules/@ghostmind-dev/run/dist/bin/cmd.js/index.js`;
 
   const utils =
     dev === true
-      ? `${SRC}/dev/src/main.mjs`
-      : `${SRC}/node_modules/@ghostmind-dev/run/src/main.mjs`;
+      ? `${SRC}/dev/app/main.mjs`
+      : `${SRC}/node_modules/@ghostmind-dev/run/dist/main.js/index.js`;
 
   ////////////////////////////////////////////////////////////////////////////////
   // GET INPUT VALUE
