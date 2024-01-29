@@ -11,7 +11,7 @@ await $`npm install -g @ghostmind-dev/post-create`;
 const NODE_PATH = "/home/vscode/.npm-global/lib/node_modules";
 
 const { default: postCreate } = await import(
-  `${NODE_PATH}/@ghostmind-dev/post-create/dist/index.mjs`
+  `${NODE_PATH}/@ghostmind-dev/post-create/app/main.mjs`
 );
 
 await postCreate();
