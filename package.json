@@ -2,16 +2,15 @@
   "name": "@ghostmind-dev/run",
   "version": "0.4.90",
   "description": "A global command interface for devcontainer development",
-  "main": "dist/index.mjs",
+  "main": "app/bin/cmd.mjs",
   "bin": {
-    "run": "dist/bin/index.mjs"
+    "run": "app/main.mjs"
   },
   "scripts": {
     "publish_patch": "npm version patch && git push origin main --tags",
     "publish_minor": "npm version minor && git push origin main",
     "publish_major": "npm version major && git push origin main",
-    "live": "node app/bin/cmd.mjs",
-    "build": "ncc build app/main.mjs -o dist/ && ncc build app/bin/cmd.mjs -o dist/bin/"
+    "live": "node app/bin/cmd.mjs"
   },
   "author": "",
   "license": "ISC",
