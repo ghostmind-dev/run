@@ -58,7 +58,8 @@ async function runCustomScript(script, argument, options) {
 
   const SRC = process.env.SRC;
 
-  const NODE_PATH = '/home/vscode/.npm-global/lib/node_modules';
+  let NODE_PATH = await $`npm root -g`;
+  NODE_PATH = NODE_PATH.stdout.trim();
 
   const run =
     dev === true
