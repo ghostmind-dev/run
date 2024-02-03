@@ -1,11 +1,11 @@
-import * as zx from "zx";
-import { createRequire } from "module";
+import * as zx from 'zx';
+import { createRequire } from 'module';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
   setSecretsUptoProject,
-} from "../utils/divers.mjs";
-import _ from "lodash";
+} from '../utils/divers.mjs';
+import _ from 'lodash';
 
 ////////////////////////////////////////////////////////////////////////////////
 //  SETTING UP ZX
@@ -24,7 +24,7 @@ $.verbose = false;
 ////////////////////////////////////////////////////////////////////////////////
 
 const require = createRequire(import.meta.url);
-const pathZx = require.resolve("zx");
+const pathZx = require.resolve('zx');
 
 process.env.ZX = pathZx;
 
@@ -33,7 +33,7 @@ process.env.ZX = pathZx;
 ////////////////////////////////////////////////////////////////////////////////
 
 const customConfigDefault = {
-  root: "scripts",
+  root: 'scripts',
   getSecretsUpToProject: true,
 };
 
@@ -42,7 +42,7 @@ const customConfigDefault = {
 ////////////////////////////////////////////////////////////////////////////////
 
 async function runCustomScript(script, argument, options) {
-  let { custom_script } = await fs.readJsonSync("meta.json");
+  let { custom_script } = await fs.readJsonSync('meta.json');
 
   let currentPath = process.cwd();
 
@@ -54,19 +54,21 @@ async function runCustomScript(script, argument, options) {
 
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
-  let testMode = test === undefined ? {} : { root: "test" };
+  let testMode = test === undefined ? {} : { root: 'test' };
 
   const SRC = process.env.SRC;
+
+  const NODE_PATH = '/home/vscode/.npm-global/lib/node_modules';
 
   const run =
     dev === true
       ? `${SRC}/dev/app/bin/cmd.mjs`
-      : `${SRC}/node_modules/@ghostmind-dev/run/app/bin/cmd.mjs`;
+      : `${NODE_PATH}/@ghostmind-dev/run/app/bin/cmd.mjs`;
 
   const utils =
     dev === true
       ? `${SRC}/dev/app/main.mjs`
-      : `${SRC}/node_modules/@ghostmind-dev/run/app/main.mjs`;
+      : `${NODE_PATH}/@ghostmind-dev/run/app/main.mjs`;
 
   ////////////////////////////////////////////////////////////////////////////////
   // GET INPUT VALUE
@@ -78,7 +80,7 @@ async function runCustomScript(script, argument, options) {
     let foundElement = _.find(input, (element) => {
       // if the element is not a string
       // return false
-      if (typeof element !== "string") {
+      if (typeof element !== 'string') {
         return false;
       }
 
@@ -98,7 +100,7 @@ async function runCustomScript(script, argument, options) {
       return undefined;
     }
 
-    foundElement = foundElement.replace(`${inputName}=`, "");
+    foundElement = foundElement.replace(`${inputName}=`, '');
 
     return foundElement;
   }
@@ -132,16 +134,16 @@ async function runCustomScript(script, argument, options) {
     try {
       const { stdout: scripts } = await $`ls *.mjs`;
       // remove \n from apps
-      let scriptsArray = scripts.split("\n");
+      let scriptsArray = scripts.split('\n');
       // removing empty element from scriptsArray
       scriptsArray.pop();
-      console.log("Available scripts:");
+      console.log('Available scripts:');
       for (let scriptAvailable of scriptsArray) {
-        scriptAvailable = scriptAvailable.replace(".mjs", "");
+        scriptAvailable = scriptAvailable.replace('.mjs', '');
         console.log(`- ${scriptAvailable}`);
       }
     } catch (error) {
-      console.log("no custom script found");
+      console.log('no custom script found');
     }
     return;
   }
@@ -168,7 +170,7 @@ async function runCustomScript(script, argument, options) {
     });
   } catch (e) {
     console.log(e);
-    console.log("something went wrong");
+    console.log('something went wrong');
   }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -176,13 +178,13 @@ async function runCustomScript(script, argument, options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function commandCustom(program) {
-  const custom = program.command("custom");
+  const custom = program.command('custom');
   custom
-    .description("run custom script")
-    .argument("[script]", "script to perform")
-    .argument("[argument]", "single argument for the script")
-    .option("-i, --input <items...>", "multiple arguments for the script")
-    .option("--dev", "run in dev mode")
-    .option("--test", "run in test mode")
+    .description('run custom script')
+    .argument('[script]', 'script to perform')
+    .argument('[argument]', 'single argument for the script')
+    .option('-i, --input <items...>', 'multiple arguments for the script')
+    .option('--dev', 'run in dev mode')
+    .option('--test', 'run in test mode')
     .action(runCustomScript);
 }
