@@ -48,24 +48,55 @@ export async function hasuraOpenConsole(options) {
 
   cd(`${currentPath}/${state}`);
 
-  if (wait) {
-    await sleep(JSON.parse(wait) * 1000);
+  async function isHasuraReady() {
+    try {
+      let HASURA_GRAPHQL_ENDPOINT =
+        process.env.HASURA_GRAPHQL_ENDPOINT ||
+        'http://host.docker.internal:8081';
+
+      console.log(HASURA_GRAPHQL_ENDPOINT);
+      const response = await fetch(`${HASURA_GRAPHQL_ENDPOINT}/healthz`);
+      return response.ok; // Returns true if the status code is 2xx
+    } catch (error) {
+      console.error('Hasura health check failed:', error.message);
+      return false;
+    }
+  }
+
+  // Polling function to wait for Hasura to be ready
+  async function waitForHasura() {
+    let ready = await isHasuraReady();
+    while (!ready) {
+      console.log('Waiting for Hasura to be ready...');
+      await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait for 5 seconds before retrying
+      ready = await isHasuraReady();
+    }
   }
 
   $.verbose = true;
 
   if (local) {
-    const HASURA_GRAPHQL_CONSOLE_PORT =
+    let HASURA_GRAPHQL_CONSOLE_PORT =
       process.env.HASURA_GRAPHQL_CONSOLE_PORT || 8085;
-    const HASURA_GRAPHQL_HGE_ENDPOINT =
+    let HASURA_GRAPHQL_HGE_ENDPOINT =
       process.env.HASURA_GRAPHQL_HGE_ENDPOINT || 'http://0.0.0.0:8081';
-    const HASURA_GRAPHQL_ENDPOINT =
+    let HASURA_GRAPHQL_ENDPOINT =
       process.env.HASURA_GRAPHQL_ENDPOINT || 'http://host.docker.internal:8081';
+
+    if (wait) {
+      await waitForHasura();
+      console.log('Hasura is ready');
+    }
+
     await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --address 0.0.0.0 --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --console-hge-endpoint ${HASURA_GRAPHQL_HGE_ENDPOINT} --skip-update-check`;
   } else {
-    const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
-    const HASURA_GRAPHQL_CONSOLE_PORT =
+    let HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
+    let HASURA_GRAPHQL_CONSOLE_PORT =
       process.env.HASURA_GRAPHQL_CONSOLE_PORT || 9695;
+    if (wait) {
+      await waitForHasura();
+      console.log('Hasura is ready');
+    }
     await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --skip-update-check`;
   }
 }
@@ -88,24 +119,6 @@ export async function hasuraMigrateSquash(version, options) {
 
   $.verbose = true;
   await $`hasura migrate squash --endpoint ${HASURA_GRAPHQL_ENDPOINT} --from ${version} --database-name default`;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// CREATE MIGRATIONS
-////////////////////////////////////////////////////////////////////////////////
-
-export async function hasuraMigrateCreate(name) {
-  const metaConfig = await fs.readJsonSync('meta.json');
-
-  const { hasura: hasuraConfig } = metaConfig;
-
-  const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
-
-  cd(`${currentPath}/${state}`);
-
-  $.verbose = true;
-
-  await $`hasura migrate create "${name}" --from-server --database-name default`;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -179,7 +192,7 @@ export default async function hasura(program) {
   hasuraConsole
     .description('open hasura console locally ')
     .option('--local', 'use local hasura')
-    .option('--wait < seconds >', 'wait for seconds before opening console')
+    .option('--wait', 'wait for the hasura to be ready')
     .action(hasuraOpenConsole);
 
   const migrateSquash = hasuraMigrate.command('squash');
@@ -194,12 +207,6 @@ export default async function hasura(program) {
     .description('apply all migrations')
     .option('--local', 'use local hasura')
     .action(hasuraMigrateApply);
-
-  // const migrateCreate = hasuraMigrate.command('create');
-  // migrateCreate
-  //   .description('create a new migration from current schema')
-  //   .argument('<name>', 'name of the migration')
-  //   .action(hasuraMigrateCreate);
 
   const hasuraMetadataApply = hasuraMetadata.command('apply');
   hasuraMetadataApply
