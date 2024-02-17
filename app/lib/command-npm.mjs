@@ -44,6 +44,28 @@ export default async function npm(program) {
     .argument('<script>', 'script to run')
     .action(async (script) => {
       $.verbose = true;
+
+      if (!fs.existsSync('package.json')) {
+        const { npm_scripts } = metaConfig;
+        if (npm_scripts && npm_scripts[script]) {
+          // create a tmp package.json with the scripts
+          const packageJson = {
+            name: 'tmp',
+            version: '1.0.0',
+            scripts: { ...npm_scripts },
+          };
+
+          fs.writeFileSync(
+            '/tmp/package.json',
+            JSON.stringify(packageJson, null, 2)
+          );
+
+          await $`cd /tmp && npm run ${script}`;
+        }
+
+        return;
+      }
+
       await $`npm run ${script}`;
     });
 }
