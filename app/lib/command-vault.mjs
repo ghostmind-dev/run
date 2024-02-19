@@ -114,15 +114,17 @@ export async function vaultKvLocalToVault(options) {
 
   let envfilePath = '';
 
+  const targetSet = target !== undefined ? target : 'local';
+
   if (envfile) {
     envfilePath = envfile;
   } else {
-    envfilePath = '.env';
+    envfilePath = `.env.${targetSet}`;
   }
 
   const envFileRaw = await fs.readFileSync(envfilePath, 'utf8');
 
-  let secretPath = await defineSecretNamespace(target);
+  let secretPath = await defineSecretNamespace(targetSet);
 
   secretPath = `${secretPath}/secrets`;
 

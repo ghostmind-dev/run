@@ -3,7 +3,6 @@ import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.mjs';
-import { config } from 'dotenv';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT

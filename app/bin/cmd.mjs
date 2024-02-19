@@ -47,24 +47,7 @@ program.addOption(
 // DOTENV
 ////////////////////////////////////////////////////////////////////////////////
 
-config({ path: `${SRC}/.env` });
-
-let initPath = currentPath;
-
-let paths = [];
-
-if (SRC !== undefined) {
-  while (initPath !== SRC) {
-    paths.push(initPath);
-    const pathParts = initPath.split('/');
-    pathParts.pop(); // Remove the last element
-    initPath = pathParts.join('/');
-  }
-
-  -_.reverse(paths).map((path) => config({ path: `${path}/.env` }));
-} else {
-  config({ path: `${currentPath}/.env` });
-}
+config({ path: `${currentPath}/.env.local` });
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT

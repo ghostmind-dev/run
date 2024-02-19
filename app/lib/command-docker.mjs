@@ -440,7 +440,7 @@ export async function dockerBuildUnit(options) {
 
 export async function dockerComposeUp(options) {
   console.log(options);
-  let { file, forceRecreate, envTarget } = options;
+  let { file, forceRecreate, envfile } = options;
 
   if (file === undefined) {
     file = 'compose.yaml';
@@ -450,13 +450,16 @@ export async function dockerComposeUp(options) {
     baseCommand.push('--force-recreate');
   }
 
-  if (envTarget === undefined) {
+  if (envfile === undefined) {
     // write .env file tp /tmp/.env.${name}
-    await fs.writeFile(`../.env.compose`, await fs.readFile(`../.env`, 'utf8'));
+    await fs.writeFile(
+      `../.env.compose`,
+      await fs.readFile(`../.env.local`, 'utf8')
+    );
   } else {
     await fs.writeFile(
       `../.env.compose`,
-      await fs.readFile(`../${envTarget}`, 'utf8')
+      await fs.readFile(`../${envfile}`, 'utf8')
     );
   }
 
@@ -526,7 +529,7 @@ export default async function commandDocker(program) {
     .action(dockerComposeUp)
     .option('-f, --file <file>', 'docker compose file')
     .option('--force-recreate', 'force recreate')
-    .option('-e, --env-target <file>', 'env filename');
+    .option('-e, --envfile <file>', 'env filename');
 
   dockerCompose
     .command('build')
