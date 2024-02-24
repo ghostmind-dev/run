@@ -49,6 +49,10 @@ export default async function act(program) {
 
     const tunnelTemporaryName = nanoid(20);
 
+    $.verbose = false;
+
+    await $`cloudflared tunnel route dns ${process.env.CLOUDFLARED_TUNNEL_NAME} ${process.env.CLOUDFLARED_TUNNEL_ROUTE} > /dev/null 2>&1`;
+
     $.verbose = true;
 
     await $`rm -f /home/vscode/.cloudflared/${tunnelTemporaryName}.yaml`;
