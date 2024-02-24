@@ -18,6 +18,7 @@ import commandLib from '../lib/command-lib.mjs';
 import commandMachine from '../lib/command-machine.mjs';
 import commandGhost from '../lib/command-ghost.mjs';
 import commandNpm from '../lib/command-npm.mjs';
+import commandTunnel from '../lib/command-tunnel.mjs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONST
@@ -75,6 +76,7 @@ await commandDocker(program);
 await commandLib(program);
 await commandGhost(program);
 await commandNpm(program);
+await commandTunnel(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // PARSING ARGUMENTS
