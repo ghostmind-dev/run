@@ -157,10 +157,29 @@ async function runCustomScript(script, argument, options) {
 
     $.verbose = true;
 
+    if (argument.length === 1) {
+      argument = argument[0];
+    }
+
+    function has(argument) {
+      return function (arg) {
+        if (argument === undefined) {
+          return false;
+        }
+        if (typeof argument === 'string') {
+          return argument === arg;
+        }
+        if (Array.isArray(argument)) {
+          return argument.includes(arg);
+        }
+      };
+    }
+
     await custom_function.default(argument, {
       input: input === undefined ? [] : input,
       extract,
       detect,
+      has: has(argument),
       metaConfig,
       currentPath,
       zx,
@@ -183,7 +202,7 @@ export default async function commandCustom(program) {
   custom
     .description('run custom script')
     .argument('[script]', 'script to perform')
-    .argument('[argument]', 'single argument for the script')
+    .argument('[argument...]', 'single argument for the script')
     .option('-i, --input <items...>', 'multiple arguments for the script')
     .option('--dev', 'run in dev mode')
     .option('--test', 'run in test mode')
