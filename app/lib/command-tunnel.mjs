@@ -60,6 +60,6 @@ export default async function act(program) {
     // create the tunnel.yaml file
 
     await $`envsubst '$CLOUDFLARED_TUNNEL_ROUTE' < tunnel.yaml > /home/vscode/.cloudflared/${tunnelTemporaryName}.yaml`;
-    await $`cloudflared tunnel --config /home/vscode/.cloudflared/${tunnelTemporaryName}.yaml run --token ${process.env.CLOUDFLARED_TUNNEL_TOKEN} ${process.env.CLOUDFLARED_TUNNEL_NAME}`;
+    await $`cloudflared tunnel --config /home/vscode/.cloudflared/${tunnelTemporaryName}.yaml --protocol http2 run --token ${process.env.CLOUDFLARED_TUNNEL_TOKEN} ${process.env.CLOUDFLARED_TUNNEL_NAME}`;
   });
 }
