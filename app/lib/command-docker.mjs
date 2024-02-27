@@ -6,6 +6,7 @@ import {
   recursiveDirectoriesDiscovery,
 } from '../utils/divers.mjs';
 import _ from 'lodash';
+import path from 'path';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -457,10 +458,9 @@ export async function dockerComposeUp(options) {
       await fs.readFile(`../.env.local`, 'utf8')
     );
   } else {
-    await fs.writeFile(
-      `../.env.compose`,
-      await fs.readFile(`../${envfile}`, 'utf8')
-    );
+    const pathToEnv = path.resolve(currentPath, envfile);
+
+    await fs.writeFile(`../.env.compose`, await fs.readFile(pathToEnv, 'utf8'));
   }
 
   $.verbose = true;
