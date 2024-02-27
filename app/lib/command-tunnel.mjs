@@ -46,19 +46,20 @@ export default async function act(program) {
   run.description('Run a cloudflared tunnel to a local service');
   run.action(async () => {
     // print a UUI for the tunnel name
-
     const tunnelTemporaryName = nanoid(20);
-
+    // run the cloudflared tunnel
     $.verbose = false;
 
     await $`cloudflared tunnel route dns ${process.env.CLOUDFLARED_TUNNEL_NAME} ${process.env.CLOUDFLARED_TUNNEL_ROUTE} > /dev/null 2>&1`;
-
     $.verbose = true;
+
+    // create the tunnel.yaml file
 
     await $`rm -f /home/vscode/.cloudflared/${tunnelTemporaryName}.yaml`;
 
-    await $`envsubst '$CLOUDFLARED_TUNNEL_ROUTE' < tunnel.yaml > /home/vscode/.cloudflared/${tunnelTemporaryName}.yaml`;
+    // create the tunnel.yaml file
 
+    await $`envsubst '$CLOUDFLARED_TUNNEL_ROUTE' < tunnel.yaml > /home/vscode/.cloudflared/${tunnelTemporaryName}.yaml`;
     await $`cloudflared tunnel --config /home/vscode/.cloudflared/${tunnelTemporaryName}.yaml run --token ${process.env.CLOUDFLARED_TUNNEL_TOKEN} ${process.env.CLOUDFLARED_TUNNEL_NAME}`;
   });
 }

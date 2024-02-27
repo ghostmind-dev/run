@@ -14,7 +14,6 @@ config({ override: true });
 export * from './lib/command-cluster.mjs';
 export * from './lib/command-action.mjs';
 export * from './lib/command-custom.mjs';
-export * from './lib/command-github.mjs';
 export * from './lib/command-docker.mjs';
 export * from './lib/command-utils.mjs';
 export * from './utils/divers.mjs';
