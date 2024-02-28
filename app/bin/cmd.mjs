@@ -9,9 +9,7 @@ import commandTerraform from '../lib/command-terraform.mjs';
 import commandCustom from '../lib/command-custom.mjs';
 import commandVault from '../lib/command-vault.mjs';
 import commandAction from '../lib/command-action.mjs';
-import commandSkaffold from '../lib/command-skaffold.mjs';
 import commandHasura from '../lib/command-hasura.mjs';
-import commandCluster from '../lib/command-cluster.mjs';
 import commandUtils from '../lib/command-utils.mjs';
 import commandDocker from '../lib/command-docker.mjs';
 import commandMachine from '../lib/command-machine.mjs';
@@ -58,6 +56,14 @@ program
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
+program.command('shorcuts').action(() => {
+  console.log('shorcuts');
+});
+
+////////////////////////////////////////////////////////////////////////////////
+// MAIN ENTRY POINT
+////////////////////////////////////////////////////////////////////////////////
+
 program.exitOverride();
 
 program.name('run');
@@ -71,9 +77,7 @@ await commandTerraform(program);
 await commandCustom(program);
 await commandVault(program);
 await commandAction(program);
-await commandSkaffold(program);
 await commandHasura(program);
-await commandCluster(program);
 await commandUtils(program);
 await commandDocker(program);
 await commandNpm(program);
