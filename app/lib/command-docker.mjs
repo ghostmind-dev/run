@@ -451,13 +451,7 @@ export async function dockerComposeUp(options) {
     baseCommand.push('--force-recreate');
   }
 
-  if (envfile === undefined) {
-    // write .env file tp /tmp/.env.${name}
-    await fs.writeFile(
-      `../.env.compose`,
-      await fs.readFile(`../.env.local`, 'utf8')
-    );
-  } else {
+  if (envfile) {
     const pathToEnv = path.resolve(currentPath, envfile);
 
     await fs.writeFile(`../.env.compose`, await fs.readFile(pathToEnv, 'utf8'));
