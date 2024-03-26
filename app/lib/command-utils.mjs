@@ -362,6 +362,11 @@ export async function templateExport(arg) {
     return;
   }
 
+  if (arg === 'oas.json') {
+    await $`curl -o ${currentPath}/oas.json https://gist.githubusercontent.com/komondor/e4e16ad2a2046afe4aaa613a5b0a6748/raw/2c3383a4ae8c343c7def376a198811d2319bab5c/oas.json`;
+    return;
+  }
+
   console.error('template not found');
 }
 
