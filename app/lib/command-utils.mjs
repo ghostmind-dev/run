@@ -335,6 +335,37 @@ export async function repoConvert(arg) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// TEMPLATE EXPORT
+////////////////////////////////////////////////////////////////////////////////
+
+export async function templateExport(arg) {
+  //
+  // return the content of this url (raw .tf)
+  // create a file in the current directory with the content of the url
+
+  cd(currentPath);
+
+  $.verbose = true;
+
+  if (arg === 'main.tf') {
+    await $`curl -o ${currentPath}/main.tf https://gist.githubusercontent.com/komondor/8c8d892393a233aeb80ede067f6ddd50/raw/7bf0025923fb9964c25333ad887de6da71b54fdd/main.tf`;
+    return;
+  }
+
+  if (arg === 'variables.tf') {
+    await $`curl -o ${currentPath}/variables.tf https://gist.githubusercontent.com/komondor/fc5f8340c7a4f05d14f6b3b715c7a6b6/raw/6e91993eb7cb6c50800f7ee8c77e5ea35ff72333/variables.tf`;
+    return;
+  }
+
+  if (arg === '.env.example') {
+    await $`curl -o ${currentPath}/.env.example https://gist.githubusercontent.com/komondor/24b631dc1d18b6b20cb9ca2d8b31bfce/raw/bb99c34141c27bb0d93e0bcd9ce837e6547fb843/.env.example`;
+    return;
+  }
+
+  console.error('template not found');
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -352,6 +383,11 @@ export default async function utils(program) {
   const commit = utils.command('commit');
   const dependencies = utils.command('dependencies');
   dependencies.description('dependencies install');
+
+  const template = utils.command('template');
+  template.description('template utils');
+  template.argument('[template]', 'template to export');
+  template.action(templateExport);
 
   const repo = utils.command('repo');
 
