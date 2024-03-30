@@ -46,25 +46,20 @@ const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 // GET BACKEND BUCKET NAME AND DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
-async function getBucketConfig(id, scope) {
+async function getBucketConfig(id, global) {
   const ENV = `${process.env.ENV}`;
   let bucketDirectory;
 
-  if (scope === 'global') {
+  if (global === true) {
     bucketDirectory = `${id}/global/terraform`;
   } else {
-    // environement can be dev, preview or prod
-
-    let environment = ENV;
-    bucketDirectory = `${id}/${environment}/terraform`;
+    bucketDirectory = `${id}/${ENV}/terraform`;
   }
 
   $.verbose = true;
 
   const bcBucket = `bucket=${process.env.TERRAFORM_BUCKET_NAME}`;
   const bcPrefix = `prefix=${bucketDirectory}`;
-
-  console.log(bcBucket);
 
   return { bcBucket, bcPrefix };
 }
@@ -180,7 +175,7 @@ export async function terraformDestroyUnit(component, options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function terraformApplyEntry(component, options) {
-  const { all, local } = options;
+  const { all } = options;
 
   if (all) {
     await terraformApplyAll(options);
@@ -229,50 +224,17 @@ export async function terraformApplyAll(options) {
 export async function terraformApplyUnit(component, options) {
   try {
     let metaConfig = await verifyIfMetaJsonExists(currentPath);
-    let { type } = metaConfig;
+    let { terraform } = metaConfig;
 
-    let pathResources;
+    let { id, path, global } = terraform[component];
 
-    if (component !== undefined) {
-      let { terraform } = metaConfig;
-      let { root } = terraform;
-      pathResources = `${currentPath}/${root}/${component}`;
-      cd(`${pathResources}/`);
-      metaConfig = await verifyIfMetaJsonExists(pathResources);
-    }
+    const { bcBucket, bcPrefix } = await getBucketConfig(id, global);
 
-    if (type === 'component' && component === undefined) {
-      let { terraform } = metaConfig;
-      let { root } = terraform;
-      pathResources = `${currentPath}/${root}`;
-      cd(`${pathResources}/`);
-      metaConfig = await verifyIfMetaJsonExists(pathResources);
-    }
-
-    if (type === 'container' && component === undefined) {
-      let { terraform } = metaConfig;
-      let { root } = terraform;
-      pathResources = `${currentPath}/${root}`;
-      cd(`${pathResources}/`);
-      metaConfig = await verifyIfMetaJsonExists(pathResources);
-    }
-
-    if (type === 'app' && component === undefined) {
-      let { terraform } = metaConfig;
-      let { root } = terraform;
-      pathResources = `${currentPath}/${root}`;
-      cd(`${pathResources}/`);
-      metaConfig = await verifyIfMetaJsonExists(pathResources);
-    }
-
-    let { id, scope } = metaConfig;
-
-    const { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
+    cd(`${currentPath}/${path}`);
 
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform plan`;
     await $`terraform apply -auto-approve`;
-    // await $`terraform 0.13upgrade`;
   } catch (error) {
     console.error(error.message);
   }

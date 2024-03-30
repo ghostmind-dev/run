@@ -39,6 +39,7 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function act(program) {
+  const pipeline = program.command('pipeline');
   const tunnel = program.command('tunnel');
   tunnel.description('Run a cloudflared tunnel to a local service');
 

@@ -27,59 +27,29 @@ cd(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function getDockerfileAndImageName() {
+  $.verbose = true;
   const ENV = `${process.env.ENV}`;
   let currentPath = await detectScriptsDirectory(process.cwd());
-  let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
-  let { type, scope, docker } = await verifyIfMetaJsonExists(currentPath);
-  let { root } = docker;
+  let { docker } = await verifyIfMetaJsonExists(currentPath);
+  let { root, image, context_dockerfile } = docker;
 
   let dockerFileName;
   let dockerfile;
   let dockerContext;
 
-  if (type === 'container') {
-    let { context_dockerfile } = docker;
-
-    if (scope === 'global') {
-      dockerFileName = `Dockerfile`;
-    } else if (context_dockerfile === false) {
-      dockerFileName = `Dockerfile`;
-    } else if (ENV === 'prod' || ENV === 'preview') {
-      dockerFileName = `Dockerfile.prod`;
-    } else {
-      dockerFileName = `Dockerfile.dev`;
-    }
-
-    dockerfile = `${currentPath}/${dockerFileName}`;
-    dockerContext = `${currentPath}`;
-  } else if (root !== undefined) {
-    dockerContext = `${currentPath}/${root}`;
-
-    metaConfig = await verifyIfMetaJsonExists(dockerContext);
-
-    let { context_dockerfile } = metaConfig.docker;
-
-    if (scope === 'global') {
-      dockerFileName = `Dockerfile`;
-    } else if (context_dockerfile === false) {
-      dockerFileName = `Dockerfile`;
-    } else if (ENV === 'prod' || ENV === 'preview') {
-      dockerFileName = `Dockerfile.prod`;
-    } else {
-      dockerFileName = `Dockerfile.dev`;
-    }
-    dockerfile = `${currentPath}/${root}/${dockerFileName}`;
-    cd(dockerContext);
-  }
-
-  $.verbose = true;
-  let { image, tag } = metaConfig.docker;
-  if (scope === 'global') {
-    image = `${image}:${tag || 'latest'}`;
+  if (context_dockerfile === false) {
+    dockerFileName = `Dockerfile`;
   } else {
-    image = `${image}:${tag || ENV}`;
+    dockerFileName = `Dockerfile.${ENV}`;
   }
+
+  dockerfile = `${currentPath}/${root}/${dockerFileName}`;
+  dockerContext = `${currentPath}/${root}`;
+
+  // $.verbose = true;
+
+  image = `${image}:${ENV}`;
 
   return { dockerfile, dockerContext, image };
 }
@@ -94,7 +64,7 @@ export async function getDockerImageDigest(arch) {
   // rempcve the tag from the image name
 
   if (arch === 'amd64') {
-    $.verbose = false;
+    $.verbose = true;
 
     const imageDigestRaw = await $`docker manifest inspect ${image}`;
 
@@ -440,7 +410,6 @@ export async function dockerBuildUnit(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerComposeUp(options) {
-  console.log(options);
   let { file, forceRecreate, envfile } = options;
 
   if (file === undefined) {
