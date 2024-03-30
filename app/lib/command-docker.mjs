@@ -410,20 +410,21 @@ export async function dockerBuildUnit(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerComposeUp(options) {
-  let { file, forceRecreate, envfile } = options;
+  let { file, forceRecreate } = options;
 
   if (file === undefined) {
     file = 'compose.yaml';
   }
-  const baseCommand = ['docker', 'compose', '-f', file, 'up'];
+
+  let metaConfig = await fs.readJsonSync('meta.json');
+
+  let { docker } = metaConfig;
+
+  let { root } = docker;
+
+  const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'up'];
   if (forceRecreate) {
     baseCommand.push('--force-recreate');
-  }
-
-  if (envfile) {
-    const pathToEnv = path.resolve(currentPath, envfile);
-
-    await fs.writeFile(`../.env.compose`, await fs.readFile(pathToEnv, 'utf8'));
   }
 
   $.verbose = true;
@@ -442,7 +443,13 @@ export async function dockerComposeBuild(options) {
     file = 'compose.yaml';
   }
 
-  const baseCommand = ['docker', 'compose', '-f', file, 'build'];
+  let metaConfig = await fs.readJsonSync('meta.json');
+
+  let { docker } = metaConfig;
+
+  let { root } = docker;
+
+  const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'build'];
 
   if (cache === undefined) {
     baseCommand.push('--no-cache');

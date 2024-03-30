@@ -51,9 +51,9 @@ async function getBucketConfig(id, global, component) {
   let bucketDirectory;
 
   if (global === true) {
-    bucketDirectory = `${id}/global/terraform`;
+    bucketDirectory = `${id}/global/terraform/${component}`;
   } else {
-    bucketDirectory = `${id}/${ENV}/terraform`;
+    bucketDirectory = `${id}/${ENV}/terraform/${component}`;
   }
 
   $.verbose = true;
@@ -224,9 +224,9 @@ export async function terraformApplyAll(options) {
 export async function terraformApplyUnit(component, options) {
   try {
     let metaConfig = await verifyIfMetaJsonExists(currentPath);
-    let { terraform } = metaConfig;
+    let { terraform, id } = metaConfig;
 
-    let { id, path, global } = terraform[component];
+    let { path, global } = terraform[component];
 
     const { bcBucket, bcPrefix } = await getBucketConfig(id, global, component);
 
