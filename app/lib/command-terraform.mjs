@@ -46,7 +46,7 @@ const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
 // GET BACKEND BUCKET NAME AND DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
-async function getBucketConfig(id, global) {
+async function getBucketConfig(id, global, component) {
   const ENV = `${process.env.ENV}`;
   let bucketDirectory;
 
@@ -228,7 +228,7 @@ export async function terraformApplyUnit(component, options) {
 
     let { id, path, global } = terraform[component];
 
-    const { bcBucket, bcPrefix } = await getBucketConfig(id, global);
+    const { bcBucket, bcPrefix } = await getBucketConfig(id, global, component);
 
     cd(`${currentPath}/${path}`);
 
@@ -255,7 +255,7 @@ export async function terraformVariables(component, options) {
 
   const { terraform } = await verifyIfMetaJsonExists(currentPath);
 
-  const { root } = terraform;
+  const { path } = terraform[component];
 
   const replaceContentBetweenComments = (
     fileContent,
@@ -321,9 +321,8 @@ export async function terraformVariables(component, options) {
     // Function to replace content between start and end comments
     const startMainComment = `        ##########################################\n        # START ENV\n        ##########################################\n`;
     const endMainComment = `        ##########################################\n        # END ENV\n        ##########################################\n`;
-    const mainTfPath = component
-      ? `${currentPath}/${root}/${component}/main.tf`
-      : `${currentPath}/${root}/main.tf`;
+    const mainTfPath = `${currentPath}/${path}/main.tf`;
+
     const mainTfContent = fs.readFileSync(mainTfPath, 'utf-8');
     const updatedMainTfContent = replaceContentBetweenComments(
       mainTfContent,
@@ -335,9 +334,7 @@ export async function terraformVariables(component, options) {
     // Update variables.tf
     const startVariablesComment = `##########################################\n# START ENV\n##########################################\n`;
     const endVariablesComment = `##########################################\n# END ENV\n##########################################\n`;
-    const variablesTfPath = component
-      ? `${currentPath}/${root}/${component}/variables.tf`
-      : `${currentPath}/${root}/variables.tf`;
+    const variablesTfPath = `${currentPath}/${path}/variables.tf`;
     const variablesTfContent = fs.readFileSync(variablesTfPath, 'utf-8');
     const updatedVariablesTfContent = replaceContentBetweenComments(
       variablesTfContent,
