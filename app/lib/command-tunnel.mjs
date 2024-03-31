@@ -1,10 +1,10 @@
-import { $, cd } from 'zx';
+import { $, cd, fs } from 'zx';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
+  withMetaMatching,
 } from '../utils/divers.mjs';
-import { nanoid } from 'nanoid';
-
+import * as yaml from 'js-yaml';
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
@@ -45,22 +45,46 @@ export default async function act(program) {
 
   const run = tunnel.command('run');
   run.description('Run a cloudflared tunnel to a local service');
-  run.action(async () => {
-    // print a UUI for the tunnel name
-    const tunnelTemporaryName = nanoid(20);
-    // run the cloudflared tunnel
-    $.verbose = false;
+  run.option('--all', 'Run all the services');
+  run.option('--tunnel <tunnel>', 'Set the tunnel name');
+  run.action(async (options) => {
+    const CLOUDFLARED_TUNNEL_TOKEN = process.env.CLOUDFLARED_TUNNEL_TOKEN;
+    const CLOUDFLARED_TUNNEL_NAME =
+      options.tunnel || process.env.CLOUDFLARED_TUNNEL_NAME;
 
-    await $`cloudflared tunnel route dns ${process.env.CLOUDFLARED_TUNNEL_NAME} ${process.env.CLOUDFLARED_TUNNEL_ROUTE} > /dev/null 2>&1`;
+    let config = {
+      tunnel: CLOUDFLARED_TUNNEL_NAME,
+    };
+
     $.verbose = true;
 
-    // create the tunnel.yaml file
+    let ingress = [];
 
-    await $`rm -f /home/vscode/.cloudflared/${tunnelTemporaryName}.yaml`;
+    if (options.all) {
+      const services = await withMetaMatching({ property: 'tunnel' });
 
-    // create the tunnel.yaml file
+      for (const service of services) {
+        await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${service.config.tunnel.hostname}`;
+        ingress.push(service.config.tunnel);
+      }
 
-    await $`envsubst '$CLOUDFLARED_TUNNEL_ROUTE' < tunnel.yaml > /home/vscode/.cloudflared/${tunnelTemporaryName}.yaml`;
-    await $`cloudflared tunnel --config /home/vscode/.cloudflared/${tunnelTemporaryName}.yaml --protocol http2 run --token ${process.env.CLOUDFLARED_TUNNEL_TOKEN} ${process.env.CLOUDFLARED_TUNNEL_NAME}`;
+      config.ingress = ingress;
+    } else {
+      let { tunnel } = await verifyIfMetaJsonExists(currentPath);
+      await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${tunnel.hostname}`;
+
+      ingress.push(tunnel);
+      config.ingress = ingress;
+    }
+
+    config.ingress.push({ service: 'http_status:404' });
+
+    await $`rm -f /home/vscode/.cloudflared/config.yaml`;
+
+    const yamlStr = yaml.dump(config);
+
+    await fs.writeFile('/home/vscode/.cloudflared/config.yaml', yamlStr);
+
+    await $`cloudflared tunnel --config /home/vscode/.cloudflared/config.yaml --protocol http2 run --token ${CLOUDFLARED_TUNNEL_TOKEN} ${CLOUDFLARED_TUNNEL_NAME}`;
   });
 }
