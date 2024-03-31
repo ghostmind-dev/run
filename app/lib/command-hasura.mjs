@@ -190,7 +190,6 @@ export default async function hasura(program) {
 
   hasuraConsole
     .description('open hasura console locally ')
-    .argument('[component]', 'component to apply')
     .option('--local', 'use local hasura')
     .option('--wait', 'wait for the hasura to be ready')
     .action(hasuraOpenConsole);
@@ -205,14 +204,12 @@ export default async function hasura(program) {
   const migrateApply = hasuraMigrate.command('apply');
   migrateApply
     .description('apply all migrations')
-    .argument('[component]', 'component to apply')
     .option('--local', 'use local hasura')
     .action(hasuraMigrateApply);
 
   const hasuraMetadataApply = hasuraMetadata.command('apply');
   hasuraMetadataApply
     .description('apply metadata')
-    .argument('[component]', 'component to apply')
     .option('--local', 'use local hasura')
     .action(metaDataApply);
 }
