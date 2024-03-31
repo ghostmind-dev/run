@@ -2,7 +2,6 @@ import { $, which, sleep, cd, fs } from 'zx';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-  withMetaMatching,
   recursiveDirectoriesDiscovery,
 } from '../utils/divers.mjs';
 import _ from 'lodash';
@@ -26,13 +25,16 @@ cd(currentPath);
 // GET DOCKERFILE NAME AND IMAGE NAME
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDockerfileAndImageName() {
+export async function getDockerfileAndImageName(component) {
   $.verbose = true;
   const ENV = `${process.env.ENV}`;
   let currentPath = await detectScriptsDirectory(process.cwd());
 
   let { docker } = await verifyIfMetaJsonExists(currentPath);
-  let { root, image, context_dockerfile } = docker;
+
+  component = component || 'default';
+
+  let { root, image, context_dockerfile } = docker[component];
 
   let dockerFileName;
   let dockerfile;
@@ -58,8 +60,8 @@ export async function getDockerfileAndImageName() {
 // GET LATEST IMAGE DIGEST
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDockerImageDigest(arch) {
-  let { image } = await getDockerfileAndImageName();
+export async function getDockerImageDigest(arch, component) {
+  let { image } = await getDockerfileAndImageName(component);
 
   // rempcve the tag from the image name
 
@@ -120,178 +122,24 @@ export async function dockerPushActionEntry(options) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// DOCKER PUSH ALL
-////////////////////////////////////////////////////////////////////////////////
-
-export async function dockerPushAll() {
-  let metaConfig = await fs.readJsonSync('meta.json');
-
-  let { docker } = metaConfig;
-
-  if (docker !== undefined) {
-    if (docker.root !== undefined) {
-      let allDirectories = await recursiveDirectoriesDiscovery(
-        `${currentPath}/${docker.root}`
-      );
-
-      // remove first element of the array
-
-      for (let directory of allDirectories) {
-        let metaConfig = await verifyIfMetaJsonExists(directory);
-
-        if (metaConfig && metaConfig.type === 'container') {
-          $.verbose = true;
-
-          cd(directory);
-
-          await dockerPushUnit();
-        }
-      }
-    }
-  } else {
-    console.log('No docker configuration found');
-  }
-
-  cd(currentPath);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// DOCKER PUSH UNIT
-////////////////////////////////////////////////////////////////////////////////
-
-export async function dockerPushUnit() {
-  const { image } = await getDockerfileAndImageName();
-
-  await $`docker push ${image}`;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// DOCKER BUILDX
-////////////////////////////////////////////////////////////////////////////////
-
-export async function dockerBuildxActionEntry(options) {
-  const { all, mutli } = options;
-
-  if (all) {
-    await dockerBuildxAll(options);
-  } else {
-    await dockerBuildxUnit(options);
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// DOCKER BUILD UNIT
-////////////////////////////////////////////////////////////////////////////////
-
-export async function dockerBuildxUnit(options) {
-  const { amd64, multi } = options;
-
-  const { dockerfile, dockerContext, image } =
-    await getDockerfileAndImageName();
-
-  // Determine the machine architecture
-  const ARCHITECTURE = process.arch;
-
-  if (multi) {
-    // Ensure a buildx builder instance exists and is bootstrapped
-    try {
-      await $`docker buildx use mybuilder`;
-    } catch {
-      // If 'mybuilder' doesn't exist, create and bootstrap it
-      await $`docker buildx create --name mybuilder --use`;
-      await $`docker buildx inspect mybuilder --bootstrap`;
-    }
-
-    const instructions = `docker buildx build --platform linux/amd64,linux/arm64 -t ${image} --file ${dockerfile} --push ${dockerContext}`;
-
-    // transfor the instructions into an array
-
-    const instructionsArray = instructions.split(' ');
-    await $`docker buildx create --use`;
-    await $`${instructionsArray}`;
-  } else {
-    console.log('Should move from docker build to docker buildx');
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// DOCKER BUILD ALL
-////////////////////////////////////////////////////////////////////////////////
-
-export async function dockerBuildxAll(options) {
-  let metaConfig = await fs.readJsonSync('meta.json');
-  let { docker } = metaConfig;
-  if (docker !== undefined) {
-    if (docker.root !== undefined) {
-      let allDirectories = await recursiveDirectoriesDiscovery(
-        `${currentPath}/${docker.root}`
-      );
-      // remove first element of the array
-      for (let directory of allDirectories) {
-        let metaConfig = await verifyIfMetaJsonExists(directory);
-        if (metaConfig && metaConfig.type === 'container') {
-          $.verbose = true;
-          cd(directory);
-          await dockerBuildxUnit(options);
-        }
-      }
-    }
-  } else {
-    console.log('No docker configuration found');
-  }
-  cd(currentPath);
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // DOCKER BUILD
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerBuildActionEntry(options) {
+export async function dockerBuildActionEntry(component, options) {
   const { all } = options;
 
-  if (all) {
-    await dockerBuildAll(options);
-  } else {
-    await dockerBuildUnit(options);
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// DOCKER BUILD ALL
-////////////////////////////////////////////////////////////////////////////////
-
-export async function dockerBuildAll(options) {
-  let metaConfig = await fs.readJsonSync('meta.json');
-  let { docker } = metaConfig;
-  if (docker !== undefined) {
-    if (docker.root !== undefined) {
-      let allDirectories = await recursiveDirectoriesDiscovery(
-        `${currentPath}/${docker.root}`
-      );
-      // remove first element of the array
-      for (let directory of allDirectories) {
-        let metaConfig = await verifyIfMetaJsonExists(directory);
-        if (metaConfig && metaConfig.type === 'container') {
-          $.verbose = true;
-          cd(directory);
-          await dockerBuildUnit(options);
-        }
-      }
-    }
-  } else {
-    console.log('No docker configuration found');
-  }
-  cd(currentPath);
+  await dockerBuildUnit(component, options);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // DOCKER BUILD UNIT
 ////////////////////////////////////////////////////////////////////////////////
-export async function dockerBuildUnit(options) {
+export async function dockerBuildUnit(component, options) {
   const { amd64, arm64, argument } = options;
 
-  const { dockerfile, dockerContext, image } =
-    await getDockerfileAndImageName();
+  const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(
+    component
+  );
 
   // Determine the machine architecture
   const ARCHITECTURE = process.arch;
@@ -409,7 +257,7 @@ export async function dockerBuildUnit(options) {
 // DOCKER COMPOSE UP
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerComposeUp(options) {
+export async function dockerComposeUp(component, options) {
   let { file, forceRecreate } = options;
 
   if (file === undefined) {
@@ -418,9 +266,11 @@ export async function dockerComposeUp(options) {
 
   let metaConfig = await fs.readJsonSync('meta.json');
 
-  let { docker } = metaConfig;
+  let { compose } = metaConfig;
 
-  let { root } = docker;
+  component = component || 'default';
+
+  let { root } = compose[component];
 
   const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'up'];
   if (forceRecreate) {
@@ -436,7 +286,7 @@ export async function dockerComposeUp(options) {
 // DOCKER COMPOSE BUILD
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerComposeBuild(options) {
+export async function dockerComposeBuild(component, options) {
   let { file, cache } = options;
 
   if (file === undefined) {
@@ -445,9 +295,11 @@ export async function dockerComposeBuild(options) {
 
   let metaConfig = await fs.readJsonSync('meta.json');
 
-  let { docker } = metaConfig;
+  let { compose } = metaConfig;
 
-  let { root } = docker;
+  component = component || 'default';
+
+  let { root } = compose[component];
 
   const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'build'];
 
@@ -477,18 +329,8 @@ export default async function commandDocker(program) {
   );
   dockerBuild.option('--amd64', 'Build amd64 docker image');
   dockerBuild.option('--arm64', 'Build arm64 docker image');
+  dockerBuild.argument('[component]', 'Component to build');
   dockerBuild.action(dockerBuildActionEntry);
-
-  const dockerBuildx = docker.command('buildx');
-  dockerBuildx.description('Build multiplaform docker image');
-  dockerBuildx.option('-a, --all', 'Build all docker images');
-  dockerBuildx.option('--multi', 'Build multiplaform docker image');
-  dockerBuildx.action(dockerBuildxActionEntry);
-
-  const dockerPush = docker.command('push');
-  dockerPush.description('Push docker image');
-  dockerPush.option('-a, --all', 'Push all docker images');
-  dockerPush.action(dockerPushActionEntry);
 
   const dockerCompose = docker.command('compose');
   dockerCompose.description('docker compose commands');
@@ -497,6 +339,7 @@ export default async function commandDocker(program) {
     .command('up')
     .description('docker compose up')
     .action(dockerComposeUp)
+    .argument('[component]', 'Component to build')
     .option('-f, --file <file>', 'docker compose file')
     .option('--force-recreate', 'force recreate')
     .option('-e, --envfile <file>', 'env filename');
@@ -504,6 +347,7 @@ export default async function commandDocker(program) {
   dockerCompose
     .command('build')
     .description('docker compose build')
+    .argument('[component]', 'Component to build')
     .action(dockerComposeBuild)
     .option('-f, --file <file>', 'docker compose file')
     .option('--cache', 'enable cache');
