@@ -1,8 +1,8 @@
-import { $, which, sleep, cd, fs } from 'zx';
+import { $, which, sleep, cd, fs } from "zx";
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-} from '../utils/divers.mjs';
+} from "../utils/divers.mjs";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -15,7 +15,7 @@ $.verbose = false;
 ////////////////////////////////////////////////////////////////////////////////
 
 const hasuraConfigDefault = {
-  state: 'container/state',
+  state: "container/state",
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -37,7 +37,7 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraOpenConsole(options) {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -51,13 +51,13 @@ export async function hasuraOpenConsole(options) {
     try {
       let HASURA_GRAPHQL_ENDPOINT =
         process.env.HASURA_GRAPHQL_ENDPOINT ||
-        'http://host.docker.internal:8081';
+        "http://host.docker.internal:8081";
 
       console.log(HASURA_GRAPHQL_ENDPOINT);
       const response = await fetch(`${HASURA_GRAPHQL_ENDPOINT}/healthz`);
       return response.ok; // Returns true if the status code is 2xx
     } catch (error) {
-      console.error('Hasura health check failed:', error.message);
+      console.error("Hasura health check failed:", error.message);
       return false;
     }
   }
@@ -66,7 +66,7 @@ export async function hasuraOpenConsole(options) {
   async function waitForHasura() {
     let ready = await isHasuraReady();
     while (!ready) {
-      console.log('Waiting for Hasura to be ready...');
+      console.log("Waiting for Hasura to be ready...");
       await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait for 5 seconds before retrying
       ready = await isHasuraReady();
     }
@@ -78,13 +78,13 @@ export async function hasuraOpenConsole(options) {
     let HASURA_GRAPHQL_CONSOLE_PORT =
       process.env.HASURA_GRAPHQL_CONSOLE_PORT || 8085;
     let HASURA_GRAPHQL_HGE_ENDPOINT =
-      process.env.HASURA_GRAPHQL_HGE_ENDPOINT || 'http://0.0.0.0:8081';
+      process.env.HASURA_GRAPHQL_HGE_ENDPOINT || "http://0.0.0.0:8081";
     let HASURA_GRAPHQL_ENDPOINT =
-      process.env.HASURA_GRAPHQL_ENDPOINT || 'http://host.docker.internal:8081';
+      process.env.HASURA_GRAPHQL_ENDPOINT || "http://host.docker.internal:8081";
 
     if (wait) {
       await waitForHasura();
-      console.log('Hasura is ready');
+      console.log("Hasura is ready");
     }
 
     await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --address 0.0.0.0 --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --console-hge-endpoint ${HASURA_GRAPHQL_HGE_ENDPOINT} --skip-update-check`;
@@ -94,7 +94,7 @@ export async function hasuraOpenConsole(options) {
       process.env.HASURA_GRAPHQL_CONSOLE_PORT || 9695;
     if (wait) {
       await waitForHasura();
-      console.log('Hasura is ready');
+      console.log("Hasura is ready");
     }
     await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --skip-update-check`;
   }
@@ -105,7 +105,7 @@ export async function hasuraOpenConsole(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraMigrateSquash(version, options) {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -125,7 +125,7 @@ export async function hasuraMigrateSquash(version, options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraMigrateApply(options) {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -158,7 +158,7 @@ export async function hasuraSchemaExportToLocal() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function metaDataApply(component, options) {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -181,35 +181,35 @@ export async function metaDataApply(component, options) {
 export default async function hasura(program) {
   // config({ path: `${currentPath}/${envFilename}`, override: true });
 
-  const hasura = program.command('hasura');
-  hasura.description('perform hasura maintenances');
+  const hasura = program.command("hasura");
+  hasura.description("perform hasura maintenances");
 
-  const hasuraConsole = hasura.command('console');
-  const hasuraMigrate = hasura.command('migrate');
-  const hasuraMetadata = hasura.command('metadata');
+  const hasuraConsole = hasura.command("console");
+  const hasuraMigrate = hasura.command("migrate");
+  const hasuraMetadata = hasura.command("metadata");
 
   hasuraConsole
-    .description('open hasura console locally ')
-    .option('--local', 'use local hasura')
-    .option('--wait', 'wait for the hasura to be ready')
+    .description("open hasura console locally ")
+    .option("--local", "use local hasura")
+    .option("--wait", "wait for the hasura to be ready")
     .action(hasuraOpenConsole);
 
-  const migrateSquash = hasuraMigrate.command('squash');
+  const migrateSquash = hasuraMigrate.command("squash");
   migrateSquash
-    .description('squash all migrations')
-    .argument('<version>', 'version to squash to')
-    .option('--local', 'use local hasura')
+    .description("squash all migrations")
+    .argument("<version>", "version to squash to")
+    .option("--local", "use local hasura")
     .action(hasuraMigrateSquash);
 
-  const migrateApply = hasuraMigrate.command('apply');
+  const migrateApply = hasuraMigrate.command("apply");
   migrateApply
-    .description('apply all migrations')
-    .option('--local', 'use local hasura')
+    .description("apply all migrations")
+    .option("--local", "use local hasura")
     .action(hasuraMigrateApply);
 
-  const hasuraMetadataApply = hasuraMetadata.command('apply');
+  const hasuraMetadataApply = hasuraMetadata.command("apply");
   hasuraMetadataApply
-    .description('apply metadata')
-    .option('--local', 'use local hasura')
+    .description("apply metadata")
+    .option("--local", "use local hasura")
     .action(metaDataApply);
 }

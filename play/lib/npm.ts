@@ -1,8 +1,8 @@
-import { $, which, sleep, cd, fs } from 'zx';
+import { $, which, sleep, cd, fs } from "zx";
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-} from '../utils/divers.mjs';
+} from "../utils/divers.mjs";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -15,7 +15,7 @@ $.verbose = false;
 ////////////////////////////////////////////////////////////////////////////////
 
 const LOCALHOST_SRC =
-  process.env.CODESPACES === 'true'
+  process.env.CODESPACES === "true"
     ? process.env.SRC
     : process.env.LOCALHOST_SRC;
 
@@ -38,25 +38,25 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function npm(program) {
-  const npm = program.command('npm');
+  const npm = program.command("npm");
   npm
-    .description('run npm scxripts')
-    .argument('<script>', 'script to run')
+    .description("run npm scxripts")
+    .argument("<script>", "script to run")
     .action(async (script) => {
       $.verbose = true;
 
-      if (!fs.existsSync('package.json')) {
+      if (!fs.existsSync("package.json")) {
         const { npm_scripts } = metaConfig;
         if (npm_scripts && npm_scripts[script]) {
           // create a tmp package.json with the scripts
           const packageJson = {
-            name: 'tmp',
-            version: '1.0.0',
+            name: "tmp",
+            version: "1.0.0",
             scripts: { ...npm_scripts },
           };
 
           fs.writeFileSync(
-            '/tmp/package.json',
+            "/tmp/package.json",
             JSON.stringify(packageJson, null, 2)
           );
 

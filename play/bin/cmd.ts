@@ -1,32 +1,20 @@
-#!/usr/bin/env node
+import { $ } from "npm:zx";
+import { config } from "npm:dotenv";
+import _ from "npm:lodash";
+import { Command, Option } from "npm:commander";
+import { resolve } from "https://deno.land/std@0.221.0/path/mod.ts";
 
-import { $ } from 'zx';
-import { config } from 'dotenv';
-import _ from 'lodash';
-import path from 'path';
-import { Command, Option } from 'commander';
-import commandTerraform from '../lib/command-terraform.mjs';
-import commandCustom from '../lib/command-custom.mjs';
-import commandVault from '../lib/command-vault.mjs';
-import commandAction from '../lib/command-action.mjs';
-import commandHasura from '../lib/command-hasura.mjs';
-import commandUtils from '../lib/command-utils.mjs';
-import commandDocker from '../lib/command-docker.mjs';
-import commandMachine from '../lib/command-machine.mjs';
-import commandNpm from '../lib/command-npm.mjs';
-import commandTunnel from '../lib/command-tunnel.mjs';
+////////////////////////////////////////////////////////////////////////////////
+// SRC
+////////////////////////////////////////////////////////////////////////////////
+
+const SRC = Deno.env.get("SRC");
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONST
 ////////////////////////////////////////////////////////////////////////////////
 
-const SRC = process.env.SRC;
-
-////////////////////////////////////////////////////////////////////////////////
-// CONST
-////////////////////////////////////////////////////////////////////////////////
-
-const currentPath = process.cwd();
+const currentPath = Deno.cwd();
 
 ////////////////////////////////////////////////////////////////////////////////
 // STARTING PROGRAM
@@ -37,28 +25,28 @@ $.verbose = false;
 const program = new Command();
 
 ////////////////////////////////////////////////////////////////////////////////
+// COMMAND
+////////////////////////////////////////////////////////////////////////////////
+
+import commandTunnel from "../lib/tunnel.ts";
+import commandCustom from "../lib/custom.ts";
+
+////////////////////////////////////////////////////////////////////////////////
 // DOTENV
 ////////////////////////////////////////////////////////////////////////////////
 
 config({ path: `${currentPath}/.env.local` });
 
 program
-  .option('--envname <env context>', 'name of the env to load')
-  .on('option:envname', function (envname) {
+  .option("--envname <env context>", "name of the env to load")
+  .on("option:envname", function (envname) {
     config({ path: `${currentPath}/${envname}`, override: true });
   })
-  .option('--envpath <filename>', 'path to envfile to load')
-  .on('option:envpath', function (filepath) {
-    config({ path: path.resolve(currentPath, filepath), override: true });
+  .option("--envpath <filename>", "path to envfile to load")
+  .on("option:envpath", function (filepath) {
+    console.log(resolve(currentPath, filepath));
+    config({ path: resolve(currentPath, filepath), override: true });
   });
-
-////////////////////////////////////////////////////////////////////////////////
-// MAIN ENTRY POINT
-////////////////////////////////////////////////////////////////////////////////
-
-program.command('shorcuts').action(() => {
-  console.log('shorcuts');
-});
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
@@ -66,35 +54,27 @@ program.command('shorcuts').action(() => {
 
 program.exitOverride();
 
-program.name('run');
+program.name("run");
 
 ////////////////////////////////////////////////////////////////////////////////
 // GIT COMMAND
 ////////////////////////////////////////////////////////////////////////////////
 
-await commandMachine(program);
-await commandTerraform(program);
-await commandCustom(program);
-await commandVault(program);
-await commandAction(program);
-await commandHasura(program);
-await commandUtils(program);
-await commandDocker(program);
-await commandNpm(program);
 await commandTunnel(program);
+await commandCustom(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // PARSING ARGUMENTS
 ////////////////////////////////////////////////////////////////////////////////
 
 try {
-  program.parse(process.argv);
+  program.parse();
 } catch (err) {
   const { exitCode, name, code, message } = err;
 
-  if (!message.includes('outputHelp')) {
+  if (!message.includes("outputHelp")) {
     console.log(message);
-    console.error('something went wrong');
+    console.error("something went wrong");
   }
 }
 
