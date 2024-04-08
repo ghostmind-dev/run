@@ -1,3 +1,5 @@
+#!/usr/bin/env -S deno run --allow-all
+
 import { $ } from "npm:zx";
 import { config } from "npm:dotenv";
 import _ from "npm:lodash";
