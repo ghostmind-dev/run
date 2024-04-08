@@ -38,7 +38,6 @@ export interface CustomScriptOptions {
   metaConfig?: any;
   currentPath?: string;
   run?: string;
-  utils?: string;
   env?: Record<string, string>;
 }
 
@@ -68,19 +67,13 @@ async function runCustomScript(
   let testMode = test === undefined ? {} : { root: "test" };
 
   const SRC = Deno.env.get("SRC");
+  const HOME = Deno.env.get("HOME");
 
   let NODE_PATH: any = await $`npm root -g`;
   NODE_PATH = NODE_PATH.stdout.trim();
 
   const run =
-    dev === true
-      ? `${SRC}/dev/app/bin/cmd.ts`
-      : `${NODE_PATH}/@ghostmind-dev/run/app/bin/cmd.ts`;
-
-  const utils =
-    dev === true
-      ? `${SRC}/dev/app/main.ts`
-      : `${NODE_PATH}/@ghostmind-dev/run/app/main.ts`;
+    dev === true ? `${SRC}/dev/app/bin/cmd.ts` : `${HOME}/.deno/bin/run`;
 
   ////////////////////////////////////////////////////////////////////////////////
   // GET INPUT VALUE
@@ -192,7 +185,6 @@ async function runCustomScript(
       metaConfig,
       currentPath,
       run,
-      utils,
       env: Deno.env.toObject(),
     });
   } catch (e) {
