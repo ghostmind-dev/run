@@ -1,6 +1,6 @@
-import { $ } from "npm:zx";
+import { $ } from "zx";
 import { actionRunLocal } from "https://raw.githubusercontent.com/ghostmind-dev/run/dev/play/main.ts";
 
 export default async (arg: string, options: any) => {
-  console.log(actionRunLocal);
+  // print Deno equivalent of  console.log(process.arch);
 };

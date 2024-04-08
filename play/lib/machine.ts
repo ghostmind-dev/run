@@ -1,9 +1,9 @@
-import { $, which, sleep, cd, fs } from "zx";
+import { $, which, sleep, cd, fs } from "npm:zx";
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-} from "../utils/divers.mjs";
-import inquirer from "inquirer";
+} from "../utils/divers.ts";
+import inquirer from "npm:inquirer";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -15,7 +15,7 @@ $.verbose = false;
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let currentPath = await detectScriptsDirectory(process.cwd());
+let currentPath = await detectScriptsDirectory(Deno.cwd());
 
 cd(currentPath);
 
@@ -44,7 +44,7 @@ export async function machineInit() {
 
   // remove the user path from currentPath
 
-  const pathFromHome = currentPath.replace(`${process.env.HOME}/`, "");
+  const pathFromHome = currentPath.replace(`${Deno.env.get("ENV")}/`, "");
 
   cd(projectName);
 
@@ -52,7 +52,7 @@ export async function machineInit() {
   // First is the .devcontainer/devcontainer.json file
   // Get the json file and parse it
 
-  let devcontainer = await fs.readFile(
+  let devcontainer: any = await fs.readFile(
     `${currentPath}/${projectName}/.devcontainer/devcontainer.json`,
     "utf8"
   );
@@ -74,7 +74,7 @@ export async function machineInit() {
     "/" +
     projectName +
     "," +
-    `target=${process.env.HOME}/${pathFromHome}/${projectName},type=bind`;
+    `target=${Deno.env.get("HOME")}/${pathFromHome}/${projectName},type=bind`;
 
   devcontainer.runArgs[2] = `devcontainer-${projectName}`;
 
@@ -123,7 +123,7 @@ export async function machineInit() {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function machine(program) {
+export default async function machine(program: any) {
   const machine = program.command("machine");
   machine.description("create a devcontainer for the project");
 

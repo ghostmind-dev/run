@@ -28,6 +28,7 @@
   },
   "terminal.integrated.defaultProfile.linux": "zsh",
   "deno.enable": true,
+  "deno.disablePaths": ["scripts"],
   "deno.unstable": true,
   "deno.lint": true,
   "deno.cacheOnSave": true,

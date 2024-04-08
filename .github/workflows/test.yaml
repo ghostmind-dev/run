@@ -1,0 +1,16 @@
+name: Publish Package to npmjs
+on:
+  push:
+    tags:
+      - "v*.*.*"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Check out repository"
+        uses: actions/checkout@v3
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: canary
+      - run: deno install --allow-all -f --name play_demo https://raw.githubusercontent.com/ghostmind-dev/run/dev/play/bin/cmd.ts
+      - run: play_demo

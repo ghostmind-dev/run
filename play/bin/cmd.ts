@@ -28,8 +28,15 @@ const program = new Command();
 // COMMAND
 ////////////////////////////////////////////////////////////////////////////////
 
-import commandTunnel from "../lib/tunnel.ts";
+import commandAction from "../lib/action.ts";
 import commandCustom from "../lib/custom.ts";
+import commandDocker from "../lib/docker.ts";
+import commandHasura from "../lib/hasura.ts";
+import commandMachine from "../lib/machine.ts";
+import commandTerraform from "../lib/terraform.ts";
+import commandTunnel from "../lib/tunnel.ts";
+import commandUtils from "../lib/utils.ts";
+import commmandVault from "../lib/vault.ts";
 
 ////////////////////////////////////////////////////////////////////////////////
 // DOTENV
@@ -60,8 +67,15 @@ program.name("run");
 // GIT COMMAND
 ////////////////////////////////////////////////////////////////////////////////
 
-await commandTunnel(program);
+await commandAction(program);
 await commandCustom(program);
+await commandDocker(program);
+await commandHasura(program);
+await commandMachine(program);
+await commandTerraform(program);
+await commandTunnel(program);
+await commandUtils(program);
+await commmandVault(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // PARSING ARGUMENTS

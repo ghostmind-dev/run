@@ -1,11 +1,14 @@
-import { $, which, sleep, cd, fs } from "zx";
+import { $, which, sleep, cd, fs } from "npm:zx";
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-  recursiveDirectoriesDiscovery,
-} from "../utils/divers.mjs";
-import _ from "lodash";
-import path from "path";
+} from "../utils/divers.ts";
+import _ from "npm:lodash";
+import {
+  resolve,
+  join,
+  extname,
+} from "https://deno.land/std@0.221.0/path/mod.ts";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -17,7 +20,7 @@ $.verbose = false;
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let currentPath = await detectScriptsDirectory(process.cwd());
+let currentPath = await detectScriptsDirectory(Deno.cwd());
 
 cd(currentPath);
 
@@ -25,10 +28,10 @@ cd(currentPath);
 // GET DOCKERFILE NAME AND IMAGE NAME
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDockerfileAndImageName(component) {
+export async function getDockerfileAndImageName(component: any) {
   $.verbose = true;
-  const ENV = `${process.env.ENV}`;
-  let currentPath = await detectScriptsDirectory(process.cwd());
+  const ENV = `${Deno.env.get("ENV")}`;
+  let currentPath = await detectScriptsDirectory(Deno.cwd());
 
   let { docker } = await verifyIfMetaJsonExists(currentPath);
 
@@ -60,7 +63,7 @@ export async function getDockerfileAndImageName(component) {
 // GET LATEST IMAGE DIGEST
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDockerImageDigest(arch, component) {
+export async function getDockerImageDigest(arch: any, component: any) {
   let { image } = await getDockerfileAndImageName(component);
 
   // rempcve the tag from the image name
@@ -74,7 +77,7 @@ export async function getDockerImageDigest(arch, component) {
 
     // find manifest with platform amd64
 
-    const digest = jsonManifest.manifests.map((manifest) => {
+    const digest = jsonManifest.manifests.map((manifest: any) => {
       if (manifest.platform.architecture === "amd64") {
         return manifest.digest;
       }
@@ -92,7 +95,7 @@ export async function getDockerImageDigest(arch, component) {
 
     // find manifest with platform amd64
 
-    const digest = jsonManifest.manifests.map((manifest) => {
+    const digest = jsonManifest.manifests.map((manifest: any) => {
       if (manifest.platform.architecture === "arm64") {
         return manifest.digest;
       }
@@ -108,24 +111,10 @@ export async function getDockerImageDigest(arch, component) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// DOCKER PUSH ENTRYPOINT
-////////////////////////////////////////////////////////////////////////////////
-
-export async function dockerPushActionEntry(options) {
-  const { all } = options;
-
-  if (all) {
-    await dockerPushAll();
-  } else {
-    await dockerPushUnit();
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // DOCKER BUILD
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerBuildActionEntry(component, options) {
+export async function dockerBuildActionEntry(component: any, options: any) {
   const { all } = options;
 
   await dockerBuildUnit(component, options);
@@ -134,7 +123,7 @@ export async function dockerBuildActionEntry(component, options) {
 ////////////////////////////////////////////////////////////////////////////////
 // DOCKER BUILD UNIT
 ////////////////////////////////////////////////////////////////////////////////
-export async function dockerBuildUnit(component, options) {
+export async function dockerBuildUnit(component: any, options: any) {
   const { amd64, arm64, argument } = options;
 
   const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(
@@ -142,7 +131,6 @@ export async function dockerBuildUnit(component, options) {
   );
 
   // Determine the machine architecture
-  const ARCHITECTURE = process.arch;
 
   if (amd64) {
     // Ensure a buildx builder instance exists and is bootstrapped
@@ -168,7 +156,7 @@ export async function dockerBuildUnit(component, options) {
     ];
 
     if (argument) {
-      argument.map((arg) => {
+      argument.map((arg: any) => {
         baseCommand.push("--build-arg");
         baseCommand.push(arg);
       });
@@ -214,7 +202,7 @@ export async function dockerBuildUnit(component, options) {
     ];
 
     if (argument) {
-      argument.map((arg) => {
+      argument.map((arg: any) => {
         baseCommand.push("--build-arg");
         baseCommand.push(arg);
       });
@@ -243,7 +231,7 @@ export async function dockerBuildUnit(component, options) {
     ];
 
     if (argument) {
-      argument.map((arg) => {
+      argument.map((arg: any) => {
         baseCommand.push("--build-arg");
         baseCommand.push(arg);
       });
@@ -257,7 +245,7 @@ export async function dockerBuildUnit(component, options) {
 // DOCKER COMPOSE UP
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerComposeUp(component, options) {
+export async function dockerComposeUp(component: any, options: any) {
   let { file, forceRecreate } = options;
 
   if (file === undefined) {
@@ -286,7 +274,7 @@ export async function dockerComposeUp(component, options) {
 // DOCKER COMPOSE BUILD
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerComposeBuild(component, options) {
+export async function dockerComposeBuild(component: any, options: any) {
   let { file, cache } = options;
 
   if (file === undefined) {
@@ -316,7 +304,7 @@ export async function dockerComposeBuild(component, options) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function commandDocker(program) {
+export default async function commandDocker(program: any) {
   const docker = program.command("docker");
   docker.description("docker commands");
 

@@ -1,18 +1,23 @@
-import { $, which, sleep, cd, fs } from "zx";
+import { $, cd, fs } from "npm:zx";
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-  withMetaMatching,
   recursiveDirectoriesDiscovery,
-} from "../utils/divers.mjs";
-import _ from "lodash";
-import { Storage } from "@google-cloud/storage";
+} from "../utils/divers.ts";
+import _ from "npm:lodash";
+import { Storage } from "npm:@google-cloud/storage";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
 
 $.verbose = false;
+
+////////////////////////////////////////////////////////////////////////////////
+// TYPE
+////////////////////////////////////////////////////////////////////////////////
+
+const fsZX: any = fs;
 
 ////////////////////////////////////////////////////////////////////////////////
 // TERRAFORM DEFAULT CONFIG
@@ -26,7 +31,7 @@ const terraformConfigDefault = {
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let currentPath = await detectScriptsDirectory(process.cwd());
+let currentPath = await detectScriptsDirectory(Deno.cwd());
 
 cd(currentPath);
 
@@ -40,14 +45,14 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 // CONSTANTS
 ////////////////////////////////////////////////////////////////////////////////
 
-const GCP_PROJECT_NAME = `${process.env.GCP_PROJECT_NAME}`;
+const GCP_PROJECT_NAME = `${Deno.env.get("GCP_PROJECT_NAME")}`;
 
 ////////////////////////////////////////////////////////////////////////////////
 // GET BACKEND BUCKET NAME AND DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
-async function getBucketConfig(id, global, component) {
-  const ENV = `${process.env.ENV}`;
+async function getBucketConfig(id: any, global: any, component: any) {
+  const ENV = `${Deno.env.get("ENV")}`;
   let bucketDirectory;
 
   if (global === true) {
@@ -58,7 +63,7 @@ async function getBucketConfig(id, global, component) {
 
   $.verbose = true;
 
-  const bcBucket = `bucket=${process.env.TERRAFORM_BUCKET_NAME}`;
+  const bcBucket = `bucket=${Deno.env.get("TERRAFORM_BUCKET_NAME")}`;
   const bcPrefix = `prefix=${bucketDirectory}`;
 
   return { bcBucket, bcPrefix };
@@ -69,11 +74,11 @@ async function getBucketConfig(id, global, component) {
 ////////////////////////////////////////////////////////////////////////////////
 
 async function getTerraformConfig() {
-  let currentPath = await detectScriptsDirectory(process.cwd());
+  let currentPath = await detectScriptsDirectory(Deno.cwd());
 
   cd(currentPath);
 
-  let { terraform } = await fs.readJsonSync("meta.json");
+  let { terraform } = await fsZX.readJsonSync("meta.json");
 
   if (terraform === undefined) {
     throw Error("terraform config not found");
@@ -86,7 +91,7 @@ async function getTerraformConfig() {
 // TERRAFORM DESTROY ENTRYPOINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformDestroyEntry(component, options) {
+export async function terraformDestroyEntry(component: any, options: any) {
   const { all, local } = options;
 
   if (all) {
@@ -97,71 +102,20 @@ export async function terraformDestroyEntry(component, options) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// TERRAFORM DESTROY ALL
-////////////////////////////////////////////////////////////////////////////////
-
-export async function terraformDestroAll(options) {
-  const metaConfig = await fs.readJsonSync("meta.json");
-
-  let { root } = await getTerraformConfig();
-
-  const componentDirectories = await withMetaMatching({
-    property: "type",
-    value: "component",
-    path: `${currentPath}/${root}`,
-  });
-
-  const componentsByPriority = _.sortBy(componentDirectories, (composante) => {
-    return composante.config.terraform.priority;
-  });
-
-  for (let component of componentsByPriority) {
-    let { directory, config } = component;
-    let { id, scope } = config;
-
-    let { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
-
-    cd(`${directory}/`);
-
-    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
-    await $`terraform plan -destroy`;
-    await $`terraform destroy -auto-approve`;
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // TERRAFORM DESTROY UNIT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformDestroyUnit(component, options) {
+export async function terraformDestroyUnit(component: any, options: any) {
   try {
     let metaConfig = await verifyIfMetaJsonExists(currentPath);
-    let { type } = metaConfig;
+    let { terraform, id } = metaConfig;
 
-    let pathResources;
+    let { path, global } = terraform[component];
 
-    if (component !== undefined) {
-      let { terraform } = metaConfig;
-      let { root } = terraform;
-      pathResources = `${currentPath}/${root}/${component}`;
-      cd(`${pathResources}/`);
-      metaConfig = await verifyIfMetaJsonExists(pathResources);
-    }
+    const { bcBucket, bcPrefix } = await getBucketConfig(id, global, component);
 
-    if (type !== "component" && component === undefined) {
-      console.log(`
-      # from parent directory
-      $ run terraform apply component
+    cd(`${currentPath}/${path}`);
 
-      # from component directory
-      $ run terraform apply
-    `);
-      return;
-    }
-
-    let { id, scope } = metaConfig;
-
-    const { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform plan -destroy`;
     await $`terraform destroy -auto-approve`;
@@ -171,57 +125,10 @@ export async function terraformDestroyUnit(component, options) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// TERRAFORM APPLY ENTRYPOINT
-////////////////////////////////////////////////////////////////////////////////
-
-export async function terraformApplyEntry(component, options) {
-  const { all } = options;
-
-  if (all) {
-    await terraformApplyAll(options);
-  } else {
-    await terraformApplyUnit(component, options);
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// TERRAFORM APPLY ALL
-////////////////////////////////////////////////////////////////////////////////
-
-export async function terraformApplyAll(options) {
-  const metaConfig = await fs.readJsonSync("meta.json");
-
-  let { root } = await getTerraformConfig();
-
-  const componentDirectories = await withMetaMatching({
-    property: "type",
-    value: "component",
-    path: `${currentPath}/${root}`,
-  });
-
-  const componentsByPriority = _.sortBy(componentDirectories, (composante) => {
-    return composante.config.terraform.priority;
-  });
-
-  for (let component of componentsByPriority) {
-    let { directory, config } = component;
-    let { id, scope } = config;
-
-    let { bcBucket, bcPrefix } = await getBucketConfig(id, scope);
-
-    cd(`${directory}/`);
-
-    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
-    await $`terraform plan`;
-    await $`terraform apply -auto-approve`;
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // TERRAFORM APPLY UNIT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformApplyUnit(component, options) {
+export async function terraformApplyUnit(component: any, options: any) {
   try {
     let metaConfig = await verifyIfMetaJsonExists(currentPath);
     let { terraform, id } = metaConfig;
@@ -244,7 +151,7 @@ export async function terraformApplyUnit(component, options) {
 // TERRAFORM VARIABLES
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformVariables(component, options) {
+export async function terraformVariables(component: any, options: any) {
   const { envfile, tf } = options;
 
   // if envfile is not defined, set it to .env
@@ -258,10 +165,10 @@ export async function terraformVariables(component, options) {
   const { path } = terraform[component];
 
   const replaceContentBetweenComments = (
-    fileContent,
-    startComment,
-    endComment,
-    newContent
+    fileContent: any,
+    startComment: any,
+    endComment: any,
+    newContent: any
   ) => {
     const regex = new RegExp(`${startComment}[\\s\\S]*?${endComment}`, "g");
     return fileContent.replace(
@@ -271,12 +178,12 @@ export async function terraformVariables(component, options) {
   };
 
   // Read the .env file
-  const content = fs.readFileSync(env_file, "utf-8");
+  const content: any = fsZX.readFileSync(env_file, "utf-8");
   // Extract all variable names that don't start with TF_VAR
-  const nonTfVarNames = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
+  const nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
   // Generate the prefixed variable declarations for non-TF_VAR variables
   const prefixedVars = nonTfVarNames
-    .map((varName) => {
+    .map((varName: any) => {
       const value = content.match(new RegExp(`^${varName}=(.*)$`, "m"))[1];
       return `TF_VAR_${varName}=${value}`;
     })
@@ -292,10 +199,10 @@ export async function terraformVariables(component, options) {
     endEnvComment,
     prefixedVars
   );
-  fs.writeFileSync(`${currentPath}/${env_file}`, updatedEnvContent);
+  fsZX.writeFileSync(`${currentPath}/${env_file}`, updatedEnvContent);
 
   // // Read the .env file
-  const envContent = fs.readFileSync(env_file, "utf-8");
+  const envContent = fsZX.readFileWrite(env_file, "utf-8");
 
   if (tf) {
     // Extract all variable names that start with TF_VAR
@@ -306,14 +213,14 @@ export async function terraformVariables(component, options) {
     }
     // Generate the env declarations for main.tf
     const envDeclarations = tfVarNames
-      .map((varName) => {
+      .map((varName: any) => {
         const tfName = varName.replace(/^TF_VAR_/, "");
         return `        env {\n          name  = "${tfName}"\n          value = var.${tfName}\n        }`;
       })
       .join("\n\n");
     // Generate the variable declarations for variables.tf
     const varDeclarations = tfVarNames
-      .map((varName) => {
+      .map((varName: any) => {
         const tfName = varName.replace(/^TF_VAR_/, "");
         return `variable "${tfName}" {}`;
       })
@@ -323,26 +230,26 @@ export async function terraformVariables(component, options) {
     const endMainComment = `        ##########################################\n        # END ENV\n        ##########################################\n`;
     const mainTfPath = `${currentPath}/${path}/main.tf`;
 
-    const mainTfContent = fs.readFileSync(mainTfPath, "utf-8");
+    const mainTfContent = fsZX.readFileWrite(mainTfPath, "utf-8");
     const updatedMainTfContent = replaceContentBetweenComments(
       mainTfContent,
       startMainComment,
       endMainComment,
       envDeclarations
     );
-    fs.writeFileSync(mainTfPath, updatedMainTfContent);
+    fsZX.writeFileSync(mainTfPath, updatedMainTfContent);
     // Update variables.tf
     const startVariablesComment = `##########################################\n# START ENV\n##########################################\n`;
     const endVariablesComment = `##########################################\n# END ENV\n##########################################\n`;
     const variablesTfPath = `${currentPath}/${path}/variables.tf`;
-    const variablesTfContent = fs.readFileSync(variablesTfPath, "utf-8");
+    const variablesTfContent = fsZX.readFileSync(variablesTfPath, "utf-8");
     const updatedVariablesTfContent = replaceContentBetweenComments(
       variablesTfContent,
       startVariablesComment,
       endVariablesComment,
       varDeclarations
     );
-    fs.writeFileSync(variablesTfPath, updatedVariablesTfContent);
+    fsZX.writeFileSync(variablesTfPath, updatedVariablesTfContent);
   }
 }
 
@@ -365,7 +272,7 @@ export async function cleanDotTerraformFolders() {
 // UNLOCK TERRAFORM
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformUnlock(options) {
+export async function terraformUnlock(options: any) {
   let { env } = options;
 
   const storage = new Storage({});
@@ -375,12 +282,12 @@ export async function terraformUnlock(options) {
   let { id } = await verifyIfMetaJsonExists(currentPath);
 
   if (env === undefined) {
-    env = process.env.ENV;
+    env = Deno.env.get("ENV");
   }
 
   const filename = `${id}/${env}/terraform/default.tflock`;
 
-  const bucketName = process.env.TERRAFORM_BUCKET_NAME;
+  const bucketName: any = Deno.env.get("TERRAFORM_BUCKET_NAME");
 
   const bucket = storage.bucket(bucketName);
   const file = bucket.file(filename);
@@ -398,7 +305,7 @@ export async function terraformUnlock(options) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function commandTerraform(program) {
+export default async function commandTerraform(program: any) {
   const terraform = program.command("terraform");
   terraform.description("infrastructure definition");
 
@@ -421,10 +328,11 @@ export default async function commandTerraform(program) {
     .argument("[component]", "component to deploy")
     .option("--local", "use local state")
     .option("--all", "deploy all components")
-    .action(terraformApplyEntry);
+    .action(terraformApplyUnit);
 
   terraform
     .command("destroy")
+    .argument("[component]", "component to deploy")
     .description("terminate the infrastructure")
     .argument("[component]", "component to destroy")
     .action(terraformDestroyEntry);

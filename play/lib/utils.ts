@@ -1,4 +1,4 @@
-import { $, cd, fs, sleep } from "zx";
+import { $, cd, fs, sleep } from "npm:zx";
 import {
   withMetaMatching,
   verifyIfMetaJsonExists,
@@ -6,11 +6,11 @@ import {
   setSecretsUptoProject,
   recursiveDirectoriesDiscovery,
   getFilesInDirectory,
-} from "../utils/divers.mjs";
-import { nanoid } from "nanoid";
-import jsonfile from "jsonfile";
-import * as inquirer from "inquirer";
-import path from "path";
+} from "../utils/divers.ts";
+import { nanoid } from "npm:nanoid";
+import jsonfile from "npm:jsonfile";
+import * as inquirer from "npm:inquirer";
+import { join } from "https://deno.land/std@0.221.0/path/mod.ts";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -22,7 +22,7 @@ $.verbose = false;
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let currentPath = await detectScriptsDirectory(process.cwd());
+let currentPath = await detectScriptsDirectory(Deno.cwd());
 
 cd(currentPath);
 
@@ -105,7 +105,7 @@ export async function envDevcontainer() {
   //   value: 'environment',
   // });
 
-  const HOME = process.env.HOME;
+  const HOME = Deno.env.get("HOME");
 
   $.verbose = false;
 
@@ -128,7 +128,7 @@ export async function envDevcontainer() {
 
   await $`echo "export ENV=${environemnt}" > ${HOME}/.zshenv`;
 
-  process.env.ENV = environemnt;
+  Deno.env.set("ENV", environemnt);
 
   return environemnt;
 }
@@ -184,27 +184,13 @@ export async function createMetaFile() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// RUN DEVCONTAINER OSTCREATECOMMAND
-////////////////////////////////////////////////////////////////////////////////
-
-export async function initDevcontainer() {
-  $.verbose = true;
-
-  cd(currentPath);
-
-  await setSecretsUptoProject(currentPath);
-
-  await $`${process.env.SRC}/.devcontainer/library-scripts/post-create.mjs dev`;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // CHANGE ALL IDS IN A META.JSON FILE
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function changeAllIds(options) {
+export async function changeAllIds(options: any) {
   const startingPath = options.current
     ? currentPath
-    : process.env.SRC || currentPath;
+    : Deno.env.get("SRC") || currentPath;
 
   // ask the user if they want to change all ids
 
@@ -234,7 +220,7 @@ export async function changeAllIds(options) {
     if (metaConfig) {
       metaConfig.id = nanoid(12);
 
-      await jsonfile.writeFile(path.join(directory, "meta.json"), metaConfig, {
+      await jsonfile.writeFile(join(directory, "meta.json"), metaConfig, {
         spaces: 2,
       });
     }
@@ -244,7 +230,7 @@ export async function changeAllIds(options) {
 
   metaConfig.id = nanoid(12);
 
-  await jsonfile.writeFile(path.join(startingPath, "meta.json"), metaConfig, {
+  await jsonfile.writeFile(join(startingPath, "meta.json"), metaConfig, {
     spaces: 2,
   });
 }
@@ -252,7 +238,7 @@ export async function changeAllIds(options) {
 // COMMIT CHANGES
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function commitChangesReturn(commit) {}
+export async function commitChangesReturn(commit: any) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // INSTALL DEPENDENCIES
@@ -262,7 +248,7 @@ export async function installDependencies() {
   $.verbose = true;
   await $`brew install vault`;
 
-  const VAULT_TOKEN = process.env.VAULT_ROOT_TOKEN;
+  const VAULT_TOKEN = Deno.env.get("VAULT_TOKEN");
 
   await $`vault login ${VAULT_TOKEN}`;
 }
@@ -271,43 +257,22 @@ export async function installDependencies() {
 // REPO
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function repoConvert(arg) {
+export async function repoConvert(arg: any) {
   const { repo } = metaConfig;
 
-  // we need to create a single json  file  with the content of the repo object
-  // {
-  //   "type": "npm_package",
-  //   "names": ["@angular/core", "@angular/common"],
-  //   "repo": {
-  //     "folders": ["src"],
-  //     "files": ["package.json", "README.md"],
-  //     "ignore_extensions": []
-  //   },
-  //   "id": "ic9ETB7juz3g"
-  // }
-  // Final out put should be:
-  // { "src/main.mjs": "// main.mjs content", "src/other.mjs": "// other.mjs content", etc... }
-
-  const { ignore_extensions, ignore_files, ignore_folders, description } = repo;
+  const { description } = repo;
 
   let filesContent = [];
 
-  let folderList = await recursiveDirectoriesDiscovery(
-    currentPath,
-    ignore_folders
-  );
+  let folderList = await recursiveDirectoriesDiscovery(currentPath);
 
   folderList.push(currentPath);
 
   for (const folder of folderList) {
-    const files = await getFilesInDirectory(
-      folder,
-      ignore_files,
-      ignore_extensions
-    );
+    const files = await getFilesInDirectory(folder);
 
     for (const file of files) {
-      const filePath = path.join(folder, file);
+      const filePath = join(folder, file);
 
       const fileContent = await fs.readFile(filePath, "utf8");
 
@@ -338,7 +303,7 @@ export async function repoConvert(arg) {
 // TEMPLATE EXPORT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function templateExport(arg) {
+export async function templateExport(arg: any) {
   //
   // return the content of this url (raw .tf)
   // create a file in the current directory with the content of the url
@@ -374,7 +339,7 @@ export async function templateExport(arg) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function utils(program) {
+export default async function utils(program: any) {
   const utils = program.command("utils");
   utils.description("collection of utils");
   const git = utils.command("git");
@@ -411,10 +376,6 @@ export default async function utils(program) {
   const devInstall = dev.command("install");
   devInstall.description("install app dependencies");
   devInstall.action(devInstallDependencies);
-
-  const devInit = dev.command("init");
-  devInit.description("devcontainer post create command");
-  devInit.action(initDevcontainer);
 
   const devEnv = dev.command("env");
   devEnv.description("change environement");

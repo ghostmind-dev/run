@@ -1,6 +1,8 @@
 {
   "lint": {
-    "include": ["play/", "scrtips/"],
+    "include": ["**/play/**/*.ts"],
+    "exclude": ["**/scripts/**/*.ts"],
+
     "rules": {
       "tags": ["recommended"],
       "include": ["ban-untagged-todo"],

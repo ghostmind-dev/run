@@ -37,7 +37,7 @@
     "INIT_EXPORT_ENV_PROJECT": "false",
     "INIT_EXPORT_ENV_ALL": "false",
     "INIT_DEV_INSTALL_DEPENDENCIES": "false",
-    "INIT_DEV_RESET_LIVE": "true",
+    "INIT_DEV_RESET_LIVE": "false",
     "INIT_LOGIN_NPM": "false",
     "INIT_LOGIN_GCP": "true",
     "INIT_LOGIN_GAM": "false",

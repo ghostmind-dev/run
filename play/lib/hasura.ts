@@ -1,8 +1,8 @@
-import { $, which, sleep, cd, fs } from "zx";
+import { $, which, sleep, cd, fs } from "npm:zx";
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-} from "../utils/divers.mjs";
+} from "../utils/divers.ts";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -11,10 +11,18 @@ import {
 $.verbose = false;
 
 ////////////////////////////////////////////////////////////////////////////////
+// STATE TYPE
+////////////////////////////////////////////////////////////////////////////////
+
+type State = {
+  state: string;
+};
+
+////////////////////////////////////////////////////////////////////////////////
 // ACTION DEFAULT CONFIG
 ////////////////////////////////////////////////////////////////////////////////
 
-const hasuraConfigDefault = {
+const hasuraConfigDefault: State = {
   state: "container/state",
 };
 
@@ -22,7 +30,7 @@ const hasuraConfigDefault = {
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let currentPath = await detectScriptsDirectory(process.cwd());
+let currentPath = await detectScriptsDirectory(Deno.cwd());
 
 cd(currentPath);
 
@@ -36,21 +44,21 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 // RUN ACTION LOCALLY WITH ACT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function hasuraOpenConsole(options) {
+export async function hasuraOpenConsole(options: any) {
   const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
   const { local, wait } = options;
 
-  const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
+  const { state }: State = { ...hasuraConfigDefault, ...hasuraConfig };
 
   cd(`${currentPath}/${state}`);
 
   async function isHasuraReady() {
     try {
       let HASURA_GRAPHQL_ENDPOINT =
-        process.env.HASURA_GRAPHQL_ENDPOINT ||
+        Deno.env.get("HASURA_GRAPHQL_ENDPOINT") ||
         "http://host.docker.internal:8081";
 
       console.log(HASURA_GRAPHQL_ENDPOINT);
@@ -76,11 +84,12 @@ export async function hasuraOpenConsole(options) {
 
   if (local) {
     let HASURA_GRAPHQL_CONSOLE_PORT =
-      process.env.HASURA_GRAPHQL_CONSOLE_PORT || 8085;
+      Deno.env.get("HASURA_GRAPHQL_CONSOLE_PORT") || 8085;
     let HASURA_GRAPHQL_HGE_ENDPOINT =
-      process.env.HASURA_GRAPHQL_HGE_ENDPOINT || "http://0.0.0.0:8081";
+      Deno.env.get("HASURA_GRAPHQL_HGE_ENDPOINT") || "http://0.0.0.0:8081";
     let HASURA_GRAPHQL_ENDPOINT =
-      process.env.HASURA_GRAPHQL_ENDPOINT || "http://host.docker.internal:8081";
+      Deno.env.get("HASURA_GRAPHQL_ENDPOINT") ||
+      "http://host.docker.internal:8081";
 
     if (wait) {
       await waitForHasura();
@@ -89,9 +98,9 @@ export async function hasuraOpenConsole(options) {
 
     await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --address 0.0.0.0 --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --console-hge-endpoint ${HASURA_GRAPHQL_HGE_ENDPOINT} --skip-update-check`;
   } else {
-    let HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
+    let HASURA_GRAPHQL_ENDPOINT = Deno.env.get("HASURA_GRAPHQL_ENDPOINT");
     let HASURA_GRAPHQL_CONSOLE_PORT =
-      process.env.HASURA_GRAPHQL_CONSOLE_PORT || 9695;
+      Deno.env.get("HASURA_GRAPHQL_CONSOLE_PORT") || 9695;
     if (wait) {
       await waitForHasura();
       console.log("Hasura is ready");
@@ -104,17 +113,17 @@ export async function hasuraOpenConsole(options) {
 // SQUASH MIGRATIONS
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function hasuraMigrateSquash(version, options) {
+export async function hasuraMigrateSquash(version: any, options: any) {
   const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
-  const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
+  const { state }: State = { ...hasuraConfigDefault, ...hasuraConfig };
 
   cd(`${currentPath}/${state}`);
 
   const { local } = options;
-  const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
+  const HASURA_GRAPHQL_ENDPOINT = Deno.env.get("HASURA_GRAPHQL_ENDPOINT");
 
   $.verbose = true;
   await $`hasura migrate squash --endpoint ${HASURA_GRAPHQL_ENDPOINT} --from ${version} --database-name default`;
@@ -124,19 +133,19 @@ export async function hasuraMigrateSquash(version, options) {
 // APPLY MIGRATIONS
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function hasuraMigrateApply(options) {
+export async function hasuraMigrateApply(options: any) {
   const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
-  const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
+  const { state }: State = { ...hasuraConfigDefault, ...hasuraConfig };
 
   cd(`${currentPath}/${state}`);
 
   $.verbose = true;
 
   const { local } = options;
-  const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
+  const HASURA_GRAPHQL_ENDPOINT = Deno.env.get("HASURA_GRAPHQL_ENDPOINT");
 
   await $`hasura migrate apply --endpoint ${HASURA_GRAPHQL_ENDPOINT} --database-name default`;
 }
@@ -146,9 +155,13 @@ export async function hasuraMigrateApply(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraSchemaExportToLocal() {
-  const HASURA_GRAPHQL_API_ENDPOINT = process.env.HASURA_GRAPHQL_API_ENDPOINT;
-  const HASURA_GRAPHQL_ADMIN_SECRET = process.env.HASURA_GRAPHQL_ADMIN_SECRET;
-  const SRC = process.env.SRC;
+  const HASURA_GRAPHQL_API_ENDPOINT = Deno.env.get(
+    "HASURA_GRAPHQL_API_ENDPOINT"
+  );
+  const HASURA_GRAPHQL_ADMIN_SECRET = Deno.env.get(
+    "HASURA_GRAPHQL_ADMIN_SECRET"
+  );
+  const SRC = Deno.env.get("SRC");
 
   await $`gq ${HASURA_GRAPHQL_API_ENDPOINT} -H "X-Hasura-Admin-Secret: ${HASURA_GRAPHQL_ADMIN_SECRET}" --introspect > ${SRC}/schema.graphql`;
 }
@@ -157,19 +170,19 @@ export async function hasuraSchemaExportToLocal() {
 // METADATA APPLY
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function metaDataApply(component, options) {
+export async function metaDataApply(component: any, options: any) {
   const metaConfig = await fs.readJsonSync("meta.json");
 
   const { hasura: hasuraConfig } = metaConfig;
 
-  const { state } = { ...hasuraConfigDefault, ...hasuraConfig };
+  const { state }: State = { ...hasuraConfigDefault, ...hasuraConfig };
 
   cd(`${currentPath}/${state}`);
 
   $.verbose = true;
 
   const { local } = options;
-  const HASURA_GRAPHQL_ENDPOINT = process.env.HASURA_GRAPHQL_ENDPOINT;
+  const HASURA_GRAPHQL_ENDPOINT = Deno.env.get("HASURA_GRAPHQL_ENDPOINT");
 
   await $`hasura metadata apply --endpoint ${HASURA_GRAPHQL_ENDPOINT}`;
 }
@@ -178,7 +191,7 @@ export async function metaDataApply(component, options) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function hasura(program) {
+export default async function hasura(program: any) {
   // config({ path: `${currentPath}/${envFilename}`, override: true });
 
   const hasura = program.command("hasura");
