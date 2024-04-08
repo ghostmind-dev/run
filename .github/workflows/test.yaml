@@ -12,5 +12,5 @@ jobs:
       - uses: denoland/setup-deno@v1
         with:
           deno-version: canary
-      - run: deno install --allow-all -f --name play_demo https://raw.githubusercontent.com/ghostmind-dev/run/dev/play/bin/cmd.ts
+      - run: deno install --allow-all -f --name play_demo https://raw.githubusercontent.com/ghostmind-dev/run/main/play/bin/cmd.ts
       - run: play_demo
