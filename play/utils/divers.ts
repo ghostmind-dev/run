@@ -1,5 +1,5 @@
-import { cd, fs } from 'zx';
-import { config } from 'dotenv';
+import { cd, fs } from "npm:zx";
+import { config } from "npm:dotenv";
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONSTANTS
@@ -9,12 +9,12 @@ import { config } from 'dotenv';
 // DETECT SCRIPS DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function detectScriptsDirectory(currentPath) {
+export async function detectScriptsDirectory(currentPath: string) {
   // verify if the current path ends with scripts
 
-  if (currentPath.includes('scripts')) {
+  if (currentPath.includes("scripts")) {
     // remove /scripts from the path
-    currentPath = currentPath.replace('/scripts', '');
+    currentPath = currentPath.replace("/scripts", "");
     return currentPath;
   }
 
@@ -26,13 +26,15 @@ export async function detectScriptsDirectory(currentPath) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function verifyIfProjectCore() {
-  cd(process.env.SRC);
+  const now: string = Deno.env.get("SRC") || "";
 
-  const metaConfig = await fs.readJsonSync('meta.json');
+  cd(now);
+
+  const metaConfig = await fs.readJsonSync("meta.json");
   const { type, name } = metaConfig;
 
-  if (type === 'project') {
-    if (name === 'core') {
+  if (type === "project") {
+    if (name === "core") {
       return true;
     }
   }
@@ -43,41 +45,30 @@ export async function verifyIfProjectCore() {
 // GET FILES IN A DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getFilesInDirectory(
-  path,
-  igbore_files,
-  ignore_extensions
-) {
-  const filesInFolder = await fs.readdir(path, {
+export async function getFilesInDirectory(path: string) {
+  const filesInFolder: any = await fs.readdir(path, {
     withFileTypes: true,
   });
-
-  igbore_files = igbore_files || [];
-  ignore_extensions = ignore_extensions || [];
 
   let files = [];
 
   const defaultFilesToIgnore = [
-    '.DS_Store',
-    '.terraform.lock.hcl',
-    '.env',
-    '.env.local',
-    '.env.development',
-    '.env.test',
-    '.env.production',
-    '.env.backup',
-    '.git',
-    '.terraform',
+    ".DS_Store",
+    ".terraform.lock.hcl",
+    ".env",
+    ".env.local",
+    ".env.development",
+    ".env.test",
+    ".env.production",
+    ".env.backup",
+    ".git",
+    ".terraform",
   ];
 
-  const defaultExtensionsToIgnore = ['DS_Store'];
+  const defaultExtensionsToIgnore = ["DS_Store"];
 
   for (const file of filesInFolder) {
     if (file.isDirectory()) {
-      continue;
-    }
-
-    if (igbore_files.includes(file.name)) {
       continue;
     }
 
@@ -85,11 +76,7 @@ export async function getFilesInDirectory(
       continue;
     }
 
-    if (ignore_extensions.includes(file.name.split('.').pop())) {
-      continue;
-    }
-
-    if (defaultExtensionsToIgnore.includes(file.name.split('.').pop())) {
+    if (defaultExtensionsToIgnore.includes(file.name.split(".").pop())) {
       continue;
     }
 
@@ -103,19 +90,15 @@ export async function getFilesInDirectory(
 // RETURN ALL THE DIRECTORIES IN A PATH
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDirectories(path, ignore_folders) {
+export async function getDirectories(path: string) {
   const directoriesWithFiles = await fs.readdir(`${path}`, {
     withFileTypes: true,
   });
 
-  ignore_folders = ignore_folders || [];
-
   const directories = directoriesWithFiles
     .filter((dirent) => dirent.isDirectory())
-    .filter((dirent) => dirent.name !== 'node_modules')
-    .filter((dirent) => dirent.name !== '.git')
-    // ignore_folders is an array of folders to ignore
-    .filter((dirent) => !ignore_folders.includes(dirent.name))
+    .filter((dirent) => dirent.name !== "node_modules")
+    .filter((dirent) => dirent.name !== ".git")
     .map((dirent) => dirent.name);
 
   return directories;
@@ -125,18 +108,17 @@ export async function getDirectories(path, ignore_folders) {
 // DISCOVER ALL THE DIRECTORIES PATH  IN THE PROJECT (RECURSIVE)
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function recursiveDirectoriesDiscovery(path, ignore_folders) {
-  const directories = await getDirectories(path, ignore_folders);
+export async function recursiveDirectoriesDiscovery(
+  path: string
+): Promise<string[]> {
+  const directories = await getDirectories(path);
 
-  let directoriesPath = [];
+  let directoriesPath: string[] = [];
 
   for (let directory of directories) {
     directoriesPath.push(`${path}/${directory}`);
     directoriesPath = directoriesPath.concat(
-      await recursiveDirectoriesDiscovery(
-        `${path}/${directory}`,
-        ignore_folders
-      )
+      await recursiveDirectoriesDiscovery(`${path}/${directory}`)
     );
   }
 
@@ -147,10 +129,9 @@ export async function recursiveDirectoriesDiscovery(path, ignore_folders) {
 // VERIFY IF THERE IS A META.JSON FILE IN THE CURRENT PATH
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function verifyIfMetaJsonExists(path) {
+export async function verifyIfMetaJsonExists(path: string) {
   try {
     await fs.access(`${path}/meta.json`);
-
     return fs.readJsonSync(`${path}/meta.json`);
   } catch (error) {
     return false;
@@ -165,8 +146,8 @@ export async function verifyIfMetaJsonExists(path) {
 // return {array} - an array of path that matches the condition
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function withMetaMatching({ property, value, path }) {
-  let directoryEntryPath = path || process.env.SRC;
+export async function withMetaMatching({ property, value, path }: any) {
+  let directoryEntryPath = path || Deno.env.get("SRC");
 
   const allDirectories = await recursiveDirectoriesDiscovery(
     directoryEntryPath
@@ -180,8 +161,8 @@ export async function withMetaMatching({ property, value, path }) {
     if (metaConfig) {
       let metaConfigProperty;
 
-      if (property.includes('.')) {
-        const propertyArray = property.split('.');
+      if (property.includes(".")) {
+        const propertyArray = property.split(".");
 
         metaConfigProperty = metaConfig;
 
@@ -211,7 +192,7 @@ export async function withMetaMatching({ property, value, path }) {
 // setSecretsUptoProject
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function setSecretsUptoProject(path) {
+export async function setSecretsUptoProject(path: string) {
   // print all the parent directories
   // example: if path == /home/ghostmind/dev/src/projects/ghostmind
   // print: /home/ghostmind/dev/src/projects/ghostmind
@@ -222,11 +203,11 @@ export async function setSecretsUptoProject(path) {
   // print: /home
   // print: /
 
-  const directories = path.split('/');
+  const directories = path.split("/");
   let directoriesPath = [];
 
   for (let i = directories.length; i > 0; i--) {
-    directoriesPath.push(directories.slice(0, i).join('/'));
+    directoriesPath.push(directories.slice(0, i).join("/"));
   }
 
   for (let directory of directoriesPath) {
@@ -236,48 +217,9 @@ export async function setSecretsUptoProject(path) {
       if (metaConfig.secrets) {
         config({ path: `${directory}/.env` });
       }
-      if (metaConfig.type === 'project') {
+      if (metaConfig.type === "project") {
         return;
       }
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// ENVIRONMENT SAFEGUARD
-////////////////////////////////////////////////////////////////////////////////
-
-export async function environmentSafeguard(currentPath) {
-  const metaConfig = await verifyIfMetaJsonExists(currentPath);
-
-  let directoryNoMatchEnv = [];
-
-  for (const directoryObject of directoriesBindToEnv) {
-    const { directory } = directoryObject;
-    config({ path: `${directory}/.env`, override: true });
-
-    if (process.env.ENV !== process.env.ENVIRONMENT) {
-      directoryNoMatchEnv.push(directory);
-    }
-  }
-
-  if (directoryNoMatchEnv.length > 0) {
-    const prompt = inquirer.createPromptModule();
-
-    const answer = await prompt({
-      type: 'confirm',
-      name: 'answer',
-      message:
-        '\n' +
-        `Some directories are bind to a different environment than ${process.env.ENV}` +
-        `\n` +
-        `\n${directoryNoMatchEnv.join('\n')}` +
-        `\n` +
-        `\nDo you want to continue?`,
-    });
-
-    if (!answer) {
-      process.exit(1);
     }
   }
 }

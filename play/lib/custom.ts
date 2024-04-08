@@ -1,17 +1,15 @@
-import * as zx from 'zx';
-import { createRequire } from 'module';
+import * as zx from "npm:zx";
 import {
-  detectScriptsDirectory,
   verifyIfMetaJsonExists,
   setSecretsUptoProject,
-} from '../utils/divers.mjs';
-import _ from 'lodash';
+} from "../utils/divers.ts";
+import _ from "npm:lodash";
 
 ////////////////////////////////////////////////////////////////////////////////
 //  SETTING UP ZX
 ////////////////////////////////////////////////////////////////////////////////
 
-const { $, cd, sleep, fs } = zx;
+const { $, cd, fs } = zx;
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -20,20 +18,11 @@ const { $, cd, sleep, fs } = zx;
 $.verbose = false;
 
 ////////////////////////////////////////////////////////////////////////////////
-// EXPOSE NPM MODULE
-////////////////////////////////////////////////////////////////////////////////
-
-const require = createRequire(import.meta.url);
-const pathZx = require.resolve('zx');
-
-process.env.ZX = pathZx;
-
-////////////////////////////////////////////////////////////////////////////////
 // CUSTOM CONFIG DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
 
 const customConfigDefault = {
-  root: 'scripts',
+  root: "scripts",
   getSecretsUpToProject: true,
 };
 
@@ -41,10 +30,14 @@ const customConfigDefault = {
 // RUN CUSTOM SCRIPT
 ////////////////////////////////////////////////////////////////////////////////
 
-async function runCustomScript(script, argument, options) {
-  let { custom_script } = await fs.readJsonSync('meta.json');
+async function runCustomScript(
+  script: string,
+  argument: string[] | string,
+  options: any
+) {
+  let { custom_script } = await fs.readJsonSync("meta.json");
 
-  let currentPath = process.cwd();
+  let currentPath = Deno.cwd();
 
   let { test, input, dev } = options;
 
@@ -54,34 +47,34 @@ async function runCustomScript(script, argument, options) {
 
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
-  let testMode = test === undefined ? {} : { root: 'test' };
+  let testMode = test === undefined ? {} : { root: "test" };
 
-  const SRC = process.env.SRC;
+  const SRC = Deno.env.get("SRC");
 
-  let NODE_PATH = await $`npm root -g`;
+  let NODE_PATH: any = await $`npm root -g`;
   NODE_PATH = NODE_PATH.stdout.trim();
 
   const run =
     dev === true
-      ? `${SRC}/dev/app/bin/cmd.mjs`
-      : `${NODE_PATH}/@ghostmind-dev/run/app/bin/cmd.mjs`;
+      ? `${SRC}/dev/app/bin/cmd.ts`
+      : `${NODE_PATH}/@ghostmind-dev/run/app/bin/cmd.ts`;
 
   const utils =
     dev === true
-      ? `${SRC}/dev/app/main.mjs`
-      : `${NODE_PATH}/@ghostmind-dev/run/app/main.mjs`;
+      ? `${SRC}/dev/app/main.ts`
+      : `${NODE_PATH}/@ghostmind-dev/run/app/main.ts`;
 
   ////////////////////////////////////////////////////////////////////////////////
   // GET INPUT VALUE
   ////////////////////////////////////////////////////////////////////////////////
 
-  async function extract(inputName) {
+  async function extract(inputName: string) {
     // return the value of the input
     // format of each input is: INPUT_NAME=INPUT_VALUE
-    let foundElement = _.find(input, (element) => {
+    let foundElement = _.find(input, (element: any) => {
       // if the element is not a string
       // return false
-      if (typeof element !== 'string') {
+      if (typeof element !== "string") {
         return false;
       }
 
@@ -101,24 +94,38 @@ async function runCustomScript(script, argument, options) {
       return undefined;
     }
 
-    foundElement = foundElement.replace(`${inputName}=`, '');
+    foundElement = foundElement.replace(`${inputName}=`, "");
 
     return foundElement;
+  }
+
+  function has(argument: any) {
+    return function (arg: any) {
+      if (argument === undefined) {
+        return false;
+      }
+      if (typeof argument === "string") {
+        return argument === arg;
+      }
+      if (Array.isArray(argument)) {
+        return argument.includes(arg);
+      }
+    };
   }
 
   ////////////////////////////////////////////////////////////////////////////////
   // VERIFY IF VALUE EXISTS
   ////////////////////////////////////////////////////////////////////////////////
 
-  function detect(value) {
-    return _.some(input, (x) => x === `${value}`);
+  function detect(value: string) {
+    return _.some(input, (x: string) => x === `${value}`);
   }
 
   ////////////////////////////////////////////////////////////////////////////////
   // CUSTOM CONFIG
   ////////////////////////////////////////////////////////////////////////////////
 
-  const { root, getSecretsUpToProject } = {
+  const { root, getSecretsUpToProject }: any = {
     ...customConfigDefault,
     ...custom_script,
     ...testMode,
@@ -133,46 +140,30 @@ async function runCustomScript(script, argument, options) {
   // return the list of available custom scripts
   if (script === undefined) {
     try {
-      const { stdout: scripts } = await $`ls *.mjs`;
+      const { stdout: scripts } = await $`ls *.ts`;
       // remove \n from apps
-      let scriptsArray = scripts.split('\n');
+      let scriptsArray = scripts.split("\n");
       // removing empty element from scriptsArray
       scriptsArray.pop();
-      console.log('Available scripts:');
+      console.log("Available scripts:");
       for (let scriptAvailable of scriptsArray) {
-        scriptAvailable = scriptAvailable.replace('.mjs', '');
+        scriptAvailable = scriptAvailable.replace(".ts", "");
         console.log(`- ${scriptAvailable}`);
       }
     } catch (error) {
-      console.log('no custom script found');
+      console.log("no custom script found");
     }
     return;
   }
   // if there is a custom script
   // try to run the custom script
   try {
-    const custom_function = await import(
-      `${currentPath}/${root}/${script}.mjs`
-    );
+    const custom_function = await import(`${currentPath}/${root}/${script}.ts`);
 
     $.verbose = true;
 
     if (argument.length === 1) {
       argument = argument[0];
-    }
-
-    function has(argument) {
-      return function (arg) {
-        if (argument === undefined) {
-          return false;
-        }
-        if (typeof argument === 'string') {
-          return argument === arg;
-        }
-        if (Array.isArray(argument)) {
-          return argument.includes(arg);
-        }
-      };
     }
 
     await custom_function.default(argument, {
@@ -182,29 +173,28 @@ async function runCustomScript(script, argument, options) {
       has: has(argument),
       metaConfig,
       currentPath,
-      zx,
       run,
       utils,
-      env: process.env,
-      _,
+      // set Deno equivalent of process.env
+      env: Deno.env.toObject(),
     });
   } catch (e) {
     console.log(e);
-    console.log('something went wrong');
+    console.log("something went wrong");
   }
 }
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function commandCustom(program) {
-  const custom = program.command('custom');
+export default async function commandCustom(program: any) {
+  const custom = program.command("custom");
   custom
-    .description('run custom script')
-    .argument('[script]', 'script to perform')
-    .argument('[argument...]', 'single argument for the script')
-    .option('-i, --input <items...>', 'multiple arguments for the script')
-    .option('--dev', 'run in dev mode')
-    .option('--test', 'run in test mode')
+    .description("run custom script")
+    .argument("[script]", "script to perform")
+    .argument("[argument...]", "single argument for the script")
+    .option("-i, --input <items...>", "multiple arguments for the script")
+    .option("--dev", "run in dev mode")
+    .option("--test", "run in test mode")
     .action(runCustomScript);
 }

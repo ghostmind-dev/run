@@ -1,10 +1,9 @@
-import { $, which, sleep, cd, fs } from 'zx';
+import { $, which, sleep, cd, fs } from "npm:zx";
 import {
   detectScriptsDirectory,
   recursiveDirectoriesDiscovery,
   verifyIfMetaJsonExists,
-  environmentSafeguard,
-} from '../utils/divers.mjs';
+} from "../utils/divers.ts";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -22,7 +21,7 @@ const vaultConfigDefault = {};
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let currentPath = await detectScriptsDirectory(process.cwd());
+let currentPath = await detectScriptsDirectory(Deno.cwd());
 
 cd(currentPath);
 
@@ -36,25 +35,25 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 // UTILS
 ////////////////////////////////////////////////////////////////////////////////
 
-async function defineSecretNamespace(target) {
-  const ENV = process.env.ENV;
-  let currentPath = await detectScriptsDirectory(process.cwd());
+async function defineSecretNamespace(target?: string) {
+  const ENV = Deno.env.get("ENV");
+  let currentPath = await detectScriptsDirectory(Deno.cwd());
   cd(currentPath);
-  let metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await fs.readJsonSync("meta.json");
   let { id, scope } = metaConfig;
   let secretNamespace;
   if (target) {
     secretNamespace = `${id}/${target}`;
-  } else if (scope === 'global') {
+  } else if (scope === "global") {
     secretNamespace = `${id}/global`;
   } else {
     let environment;
-    if (ENV === 'prod') {
-      environment = 'prod';
-    } else if (ENV === 'preview') {
-      environment = 'preview';
+    if (ENV === "prod") {
+      environment = "prod";
+    } else if (ENV === "preview") {
+      environment = "preview";
     } else {
-      environment = 'dev';
+      environment = "dev";
     }
 
     secretNamespace = `${id}/${environment}`;
@@ -67,7 +66,7 @@ async function defineSecretNamespace(target) {
 // Import json file
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function vaultKvCertsToVault(data, directoryPath) {
+export async function vaultKvCertsToVault(data: any, directoryPath: string) {
   if (directoryPath !== undefined) {
     metaConfig = await verifyIfMetaJsonExists(directoryPath);
   }
@@ -83,7 +82,7 @@ export async function vaultKvCertsToVault(data, directoryPath) {
 // Import json file
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function vaultKvCertsToLocal(data) {
+export async function vaultKvCertsToLocal(data: any) {
   let secretPath = await defineSecretNamespace();
 
   secretPath = `${secretPath}/certificats`;
@@ -101,7 +100,7 @@ export async function vaultKvCertsToLocal(data) {
 
     return CREDS;
   } catch (e) {
-    return '';
+    return "";
   }
 }
 
@@ -109,12 +108,12 @@ export async function vaultKvCertsToLocal(data) {
 // Import .env FILE to remote vault
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function vaultKvLocalToVault(options) {
+export async function vaultKvLocalToVault(options: any) {
   const { target, envfile } = options;
 
-  let envfilePath = '';
+  let envfilePath = "";
 
-  const targetSet = target !== undefined ? target : 'local';
+  const targetSet = target !== undefined ? target : "local";
 
   if (envfile) {
     envfilePath = envfile;
@@ -122,7 +121,7 @@ export async function vaultKvLocalToVault(options) {
     envfilePath = `.env.${targetSet}`;
   }
 
-  const envFileRaw = await fs.readFileSync(envfilePath, 'utf8');
+  const envFileRaw = await fs.readFileSync(envfilePath, "utf8");
 
   let secretPath = await defineSecretNamespace(targetSet);
 
@@ -159,7 +158,7 @@ export async function vaultKvVaultToGkeCredentials() {
 // Export remote vault credentials to .env file
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function vaultKvVaultToLocalEntry(options) {
+export async function vaultKvVaultToLocalEntry(options: any) {
   const { all } = options;
 
   if (all) {
@@ -174,12 +173,12 @@ export async function vaultKvVaultToLocalEntry(options) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function vaultKvVaultToLocalAll() {
-  let metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await fs.readJsonSync("meta.json");
   let allDirectories = await recursiveDirectoriesDiscovery(
-    `${process.env.SRC}`
+    `${Deno.env.get("SRC")}`
   );
 
-  allDirectories.push(`${process.env.SRC}`);
+  allDirectories.push(`${Deno.env.get("SRC")}`);
 
   for (let directory of allDirectories) {
     const meta = await verifyIfMetaJsonExists(directory);
@@ -200,8 +199,8 @@ export async function vaultKvVaultToLocalAll() {
 export async function vaultKvVaultToLocalUnit({
   currentPathNew,
   options = {},
-}) {
-  let currentPath = await detectScriptsDirectory(process.cwd());
+}: any) {
+  let currentPath = await detectScriptsDirectory(Deno.cwd());
 
   if (currentPathNew !== undefined) {
     currentPath = currentPathNew;
@@ -209,14 +208,14 @@ export async function vaultKvVaultToLocalUnit({
 
   cd(currentPath);
 
-  let metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await fs.readJsonSync("meta.json");
 
   let { vault } = metaConfig;
 
   if (vault !== undefined) {
     let { ignoreEnv } = vault;
     if (ignoreEnv) {
-      const environment = process.env.ENV;
+      const environment = Deno.env.get("ENV");
 
       // verify if environment is included in ignoreEnv array
       if (ignoreEnv.includes(environment)) {
@@ -250,11 +249,11 @@ export async function vaultKvVaultToLocalUnit({
   // if .env file exists, create a backup
 
   if (envfile) {
-    fs.writeFileSync(envfile, CREDS, 'utf8');
+    fs.writeFileSync(envfile, CREDS, "utf8");
   } else {
-    fs.writeFileSync('.env', CREDS, 'utf8');
-    if (fs.existsSync('.env.backup')) {
-      fs.unlinkSync('.env.backup');
+    fs.writeFileSync(".env", CREDS, "utf8");
+    if (fs.existsSync(".env.backup")) {
+      fs.unlinkSync(".env.backup");
     }
   }
 }
@@ -267,25 +266,25 @@ export async function vaultKvVaultToLocalUnit({
 // create/update a vault secret
 // actions
 
-export default async function vault(program) {
-  const vault = program.command('vault');
-  vault.description('manage project secrets');
-  const vaultKv = vault.command('kv');
-  vaultKv.description('manage key-value pairs');
+export default async function vault(program: any) {
+  const vault = program.command("vault");
+  vault.description("manage project secrets");
+  const vaultKv = vault.command("kv");
+  vaultKv.description("manage key-value pairs");
 
-  const vaultKvImport = vaultKv.command('import');
-  const vaultKvExport = vaultKv.command('export');
+  const vaultKvImport = vaultKv.command("import");
+  const vaultKvExport = vaultKv.command("export");
 
   vaultKvImport
-    .description('from .env to remote vault')
+    .description("from .env to remote vault")
     .action(vaultKvLocalToVault)
-    .option('--envfile <path>', 'path to .env file')
-    .option('--target <environment>', 'environment target');
+    .option("--envfile <path>", "path to .env file")
+    .option("--target <environment>", "environment target");
 
   vaultKvExport
-    .description('from remote vault to .env')
-    .option('--all', 'export all project secrets')
-    .option('--envfile <path>', 'path to .env file')
-    .option('--target <environment>', 'environment target')
+    .description("from remote vault to .env")
+    .option("--all", "export all project secrets")
+    .option("--envfile <path>", "path to .env file")
+    .option("--target <environment>", "environment target")
     .action(vaultKvVaultToLocalEntry);
 }

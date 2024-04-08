@@ -28,13 +28,10 @@
   },
   "terminal.integrated.defaultProfile.linux": "zsh",
   "deno.enable": true,
+  "deno.disablePaths": ["scripts"],
   "deno.unstable": true,
   "deno.lint": true,
   "deno.cacheOnSave": true,
   "deno.path": "/deno/bin/deno",
-  "deno.enablePaths": ["/workspaces/jupyter-deno/app/src"],
-  "typescript.tsserver.experimental.enableProjectDiagnostics": false,
-  "[typescript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  "deno.cache": "/deno/.cache"
 }

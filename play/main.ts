@@ -1,4 +1,4 @@
-import { config } from 'dotenv';
+import { config } from "npm:dotenv";
 
 ////////////////////////////////////////////////////////////////////////////////
 // DOTENV
@@ -10,8 +10,8 @@ config({ override: true });
 // STARTING PROGRAM
 ////////////////////////////////////////////////////////////////////////////////
 
-export * from './lib/command-action.mjs';
-export * from './lib/command-custom.mjs';
-export * from './lib/command-docker.mjs';
-export * from './lib/command-utils.mjs';
-export * from './utils/divers.mjs';
+export * from "./lib/action.ts";
+export * from "./lib/custom.ts";
+export * from "./lib/docker.ts";
+export * from "./lib/utils.ts";
+export * from "./utils/divers.ts";
