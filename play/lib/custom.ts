@@ -1,9 +1,9 @@
-import * as zx from 'npm:zx';
+import * as zx from "npm:zx";
 import {
   verifyIfMetaJsonExists,
   setSecretsUptoProject,
-} from '../utils/divers.ts';
-import _ from 'npm:lodash';
+} from "../utils/divers.ts";
+import _ from "npm:lodash";
 
 ////////////////////////////////////////////////////////////////////////////////
 //  SETTING UP ZX
@@ -22,7 +22,7 @@ $.verbose = false;
 ////////////////////////////////////////////////////////////////////////////////
 
 const customConfigDefault = {
-  root: 'scripts',
+  root: "scripts",
   getSecretsUpToProject: true,
 };
 
@@ -52,7 +52,7 @@ async function runCustomScript(
   argument: string[] | string,
   options: any
 ) {
-  let { custom_script } = await fs.readJsonSync('meta.json');
+  let { custom_script } = await fs.readJsonSync("meta.json");
 
   let currentPath = Deno.cwd();
 
@@ -64,10 +64,10 @@ async function runCustomScript(
 
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
-  let testMode = test === undefined ? {} : { root: 'test' };
+  let testMode = test === undefined ? {} : { root: "test" };
 
-  const SRC = Deno.env.get('SRC');
-  const HOME = Deno.env.get('HOME');
+  const SRC = Deno.env.get("SRC");
+  const HOME = Deno.env.get("HOME");
 
   let NODE_PATH: any = await $`npm root -g`;
   NODE_PATH = NODE_PATH.stdout.trim();
@@ -85,7 +85,7 @@ async function runCustomScript(
     let foundElement = _.find(input, (element: any) => {
       // if the element is not a string
       // return false
-      if (typeof element !== 'string') {
+      if (typeof element !== "string") {
         return false;
       }
 
@@ -105,7 +105,7 @@ async function runCustomScript(
       return undefined;
     }
 
-    foundElement = foundElement.replace(`${inputName}=`, '');
+    foundElement = foundElement.replace(`${inputName}=`, "");
 
     return foundElement;
   }
@@ -115,7 +115,7 @@ async function runCustomScript(
       if (argument === undefined) {
         return false;
       }
-      if (typeof argument === 'string') {
+      if (typeof argument === "string") {
         return argument === arg;
       }
       if (Array.isArray(argument)) {
@@ -153,23 +153,26 @@ async function runCustomScript(
     try {
       const { stdout: scripts } = await $`ls *.ts`;
       // remove \n from apps
-      let scriptsArray = scripts.split('\n');
+      let scriptsArray = scripts.split("\n");
       // removing empty element from scriptsArray
       scriptsArray.pop();
-      console.log('Available scripts:');
+      console.log("Available scripts:");
       for (let scriptAvailable of scriptsArray) {
-        scriptAvailable = scriptAvailable.replace('.ts', '');
+        scriptAvailable = scriptAvailable.replace(".ts", "");
         console.log(`- ${scriptAvailable}`);
       }
     } catch (error) {
-      console.log('no custom script found');
+      console.log("no custom script found");
     }
     return;
   }
   // if there is a custom script
   // try to run the custom script
   try {
-    const specifier = true ? `${currentPath}/${root}/${script}.ts` : '';
+    const specifier =
+      script !== "DO_NOT_SET_TO_THIS_VALUE"
+        ? `${currentPath}/${root}/${script}.ts`
+        : "";
 
     const custom_function = await import(specifier);
 
@@ -191,7 +194,7 @@ async function runCustomScript(
     });
   } catch (e) {
     console.log(e);
-    console.log('something went wrong');
+    console.log("something went wrong");
   }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -199,13 +202,13 @@ async function runCustomScript(
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function commandCustom(program: any) {
-  const custom = program.command('custom');
+  const custom = program.command("custom");
   custom
-    .description('run custom script')
-    .argument('[script]', 'script to perform')
-    .argument('[argument...]', 'single argument for the script')
-    .option('-i, --input <items...>', 'multiple arguments for the script')
-    .option('--dev', 'run in dev mode')
-    .option('--test', 'run in test mode')
+    .description("run custom script")
+    .argument("[script]", "script to perform")
+    .argument("[argument...]", "single argument for the script")
+    .option("-i, --input <items...>", "multiple arguments for the script")
+    .option("--dev", "run in dev mode")
+    .option("--test", "run in test mode")
     .action(runCustomScript);
 }
