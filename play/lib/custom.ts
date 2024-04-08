@@ -73,8 +73,7 @@ async function runCustomScript(
   NODE_PATH = NODE_PATH.stdout.trim();
 
   const run =
-    dev === true ? `${SRC}/dev/app/bin/cmd.ts` : `${HOME}/.deno/bin/run`;
-
+    dev === true ? `${SRC}/dev/play/bin/cmd.ts` : `${HOME}/run/play/bin/cmd.ts`;
   ////////////////////////////////////////////////////////////////////////////////
   // GET INPUT VALUE
   ////////////////////////////////////////////////////////////////////////////////
