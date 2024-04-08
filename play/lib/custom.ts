@@ -169,16 +169,9 @@ async function runCustomScript(
   // if there is a custom script
   // try to run the custom script
   try {
-    const customFunctionPath = `${currentPath}/${root}/${script}.ts`;
+    const specifier = true ? `${currentPath}/${root}/${script}.ts` : '';
 
-    // remove https://raw.githubusercontent.com from the path
-
-    const modifiedPath = customFunctionPath.replace(
-      'https://raw.githubusercontent.com',
-      ''
-    );
-
-    const custom_function = await import(modifiedPath);
+    const custom_function = await import(specifier);
 
     $.verbose = true;
 
