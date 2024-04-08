@@ -27,6 +27,24 @@ const customConfigDefault = {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+// TYPE DEFINITION
+////////////////////////////////////////////////////////////////////////////////
+
+export interface CustomScriptOptions {
+  input?: string[];
+  extract?: (inputName: string) => string | undefined;
+  detect?: (value: string) => boolean;
+  has?: (argument: string | string[]) => (arg: string) => boolean;
+  metaConfig?: any;
+  currentPath?: string;
+  run?: string;
+  utils?: string;
+  env?: Record<string, string>;
+}
+
+export type CustomScriptArgument = string;
+
+////////////////////////////////////////////////////////////////////////////////
 // RUN CUSTOM SCRIPT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -175,7 +193,6 @@ async function runCustomScript(
       currentPath,
       run,
       utils,
-      // set Deno equivalent of process.env
       env: Deno.env.toObject(),
     });
   } catch (e) {
