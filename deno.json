@@ -1,6 +1,6 @@
 {
   "lint": {
-    "include": ["**/play/**/*.ts"],
+    "include": ["**/run/**/*.ts"],
     "exclude": ["**/scripts/**/*.ts"],
 
     "rules": {

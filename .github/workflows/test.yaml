@@ -12,5 +12,12 @@ jobs:
       - uses: denoland/setup-deno@v1
         with:
           deno-version: canary
-      - run: deno install --allow-all -f --name play_demo https://raw.githubusercontent.com/ghostmind-dev/run/main/play/bin/cmd.ts
-      - run: play_demo
+      - run: |
+          rm -rf /root/run
+          git clone https://github.com/ghostmind-dev/run.git
+          deno install --allow-all --force --name run /root/run/run/bin/cmd.ts
+          echo "/root/.deno/bin" >> $GITHUB_PATH
+        working-directory:  "/root"
+      - run: run
+
+     
