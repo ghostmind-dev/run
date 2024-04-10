@@ -21,7 +21,8 @@
     "**/backend.tf": true,
     "**/versions.tf": true,
     "**/.npmignore": true,
-    "**/.env.compose": true
+    "**/.env.compose": true,
+    "**/deno.lock": true
   },
   "files.associations": {
     "*.json": "jsonc"
@@ -32,5 +33,6 @@
   "deno.lint": true,
   "deno.cacheOnSave": true,
   "deno.path": "/deno/bin/deno",
-  "deno.cache": "/deno/.cache"
+  "deno.cache": "/deno/.cache",
+  "deno.config": "~/deno.json"
 }

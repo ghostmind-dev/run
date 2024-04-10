@@ -8,7 +8,9 @@
   },
   "overrideCommand": false,
   "containerUser": "vscode",
-  "postCreateCommand": "/usr/local/share/post-create.mjs",
+  "postCreateCommand": "deno run --allow-all https://raw.githubusercontent.com/ghostmind-dev/init/main/init/main.ts",
+  "postStartCommand": "/usr/local/share/post-start.ts",
+  "postAttachCommand": "echo 'Hello from postAttachCommand'",
   "remoteUser": "vscode",
   "remoteEnv": {
     "SYNC_LOCALHOST_KUBECONFIG": "true",

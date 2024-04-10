@@ -1,5 +1,12 @@
 {
   "type": "project",
   "name": "run",
-  "id": "ic9ETB7juz3g"
+  "id": "ic9ETB7juz3g",
+  "deno": {
+    "config": {
+      "lint": {
+        "include": ["**/run/**/*.ts", "**/.devcontainer/**/*.ts"]
+      }
+    }
+  }
 }
