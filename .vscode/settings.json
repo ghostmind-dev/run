@@ -34,5 +34,5 @@
   "deno.cacheOnSave": true,
   "deno.path": "/deno/bin/deno",
   "deno.cache": "/deno/.cache",
-  "deno.config": "~/deno.json"
+  "deno.config": "deno.json"
 }

@@ -1,5 +1,10 @@
 {
   "type": "project",
   "name": "run",
-  "id": "ic9ETB7juz3g"
+  "id": "ic9ETB7juz3g",
+  "npm": {
+    "scripts": {
+      "test": "echo 'npm scripts to run'"
+    }
+  }
 }
