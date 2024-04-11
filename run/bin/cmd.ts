@@ -46,16 +46,18 @@ import commmandVault from "../lib/vault.ts";
 ////////////////////////////////////////////////////////////////////////////////
 
 config({ path: `${currentPath}/.env.local` });
+config({ path: `${Deno.env.get("HOME")}/.zprofile`, override: false });
 
 program
   .option("--envname <env context>", "name of the env to load")
   .on("option:envname", function (envname) {
     config({ path: `${currentPath}/${envname}`, override: true });
+    config({ path: `${Deno.env.get("HOME")}/.zprofile`, override: false });
   })
   .option("--envpath <filename>", "path to envfile to load")
   .on("option:envpath", function (filepath) {
-    console.log(resolve(currentPath, filepath));
     config({ path: resolve(currentPath, filepath), override: true });
+    config({ path: `${Deno.env.get("HOME")}/.zprofile`, override: false });
   });
 
 ////////////////////////////////////////////////////////////////////////////////
