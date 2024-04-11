@@ -37,7 +37,7 @@
   "runArgs": [
     "--cap-add=CAP_IPC_LOCK",
     "--cap-add=NET_ADMIN",
-    "--name=run-dvc",
+    "--name=run-devcontainer",
     "--network=host"
   ],
   "customizations": {
