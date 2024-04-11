@@ -1,5 +1,5 @@
 {
-  "name": "graph-this",
+  "name": "run",
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
@@ -29,12 +29,9 @@
     "INIT_LOGIN_VAULT": "true",
     "INIT_LOGIN_CLOUDFLARED": "true"
   },
-  "forwardPorts": ["3000:3000"],
-  "appPort": ["8085:8085"],
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind",
-    "source=${env:HOME}${env:USERPROFILE}/.kube,target=/usr/local/share/kube-localhost,type=bind",
-    "source=ghostmind-graph-this-history,target=/commandhistory,type=volume",
+    "source=ghostmind-run-history,target=/commandhistory,type=volume",
     "source=${env:HOME}${env:USERPROFILE}/projects/container/run,target=/Users/francoisseguin/projects/container/run,type=bind"
   ],
   "runArgs": [
