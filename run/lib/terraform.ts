@@ -199,10 +199,11 @@ export async function terraformVariables(component: any, options: any) {
     endEnvComment,
     prefixedVars
   );
+
   fsZX.writeFileSync(`${currentPath}/${env_file}`, updatedEnvContent);
 
   // // Read the .env file
-  const envContent = fsZX.writeFileSync(env_file, 'utf-8');
+  const envContent = fsZX.readFileSync(env_file, 'utf-8');
 
   if (tf) {
     // Extract all variable names that start with TF_VAR
