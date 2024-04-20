@@ -88,20 +88,6 @@ async function getTerraformConfig() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// TERRAFORM DESTROY ENTRYPOINT
-////////////////////////////////////////////////////////////////////////////////
-
-export async function terraformDestroyEntry(component: any, options: any) {
-  const { all, local } = options;
-
-  if (all) {
-    await terraformDestroAll(options);
-  } else {
-    await terraformDestroyUnit(component, options);
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // TERRAFORM DESTROY UNIT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -339,8 +325,7 @@ export default async function commandTerraform(program: any) {
     .command('destroy')
     .argument('[component]', 'component to deploy')
     .description('terminate the infrastructure')
-    .argument('[component]', 'component to destroy')
-    .action(terraformDestroyEntry);
+    .action(terraformDestroyUnit);
 
   terraform
     .command('unlock')
