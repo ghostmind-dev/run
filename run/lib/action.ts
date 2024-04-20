@@ -6,11 +6,7 @@ import {
 } from '../utils/divers.ts';
 
 import { envDevcontainer } from '../main.ts';
-import {
-  resolve,
-  join,
-  extname,
-} from 'https://deno.land/std@0.221.0/path/mod.ts';
+import { join, extname } from 'https://deno.land/std@0.221.0/path/mod.ts';
 import yaml from 'npm:js-yaml';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -18,6 +14,12 @@ import yaml from 'npm:js-yaml';
 ////////////////////////////////////////////////////////////////////////////////
 
 $.verbose = false;
+
+////////////////////////////////////////////////////////////////////////////////
+// TYPE
+////////////////////////////////////////////////////////////////////////////////
+
+const fsZX: any = fs;
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONSTANTS
@@ -57,20 +59,18 @@ const actArgmentsDefault = [
     name: '--platform',
     value: 'ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest',
   },
-  { name: '--defaultbranch', value: 'main' },
   { name: '--directory', value: LOCALHOST_SRC },
   { name: '--bind', value: `` },
   { name: '--use-gitignore', value: '' },
   {
     name: '--secret',
-    value: `GH_TOKEN=${Deno.env.get('GH_TOKEN')}`,
+    value: `GH_TOKEN=${Deno.env.get('GITHUB_TOKEN')}`,
   },
   {
     name: '--secret',
     value: `VAULT_ROOT_TOKEN=${Deno.env.get('VAULT_ROOT_TOKEN')}`,
   },
   { name: '--secret', value: `VAULT_ADDR=${Deno.env.get('VAULT_ADDR')}` },
-  {},
 ];
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -144,10 +144,6 @@ export async function actionRunLocal(
     actArgmentsCombined
   );
 
-  //  read all files in /github/workflows
-
-  // remove /tmo/.github if it exists
-
   let workflowsPath = LOCALHOST_SRC + '/.github/workflows';
 
   if (custom == true) {
@@ -203,6 +199,7 @@ export async function actionRunLocal(
     if (event === 'push') {
       actArgmentsArray.push('--eventpath');
     }
+
     await $`act ${event} ${actArgmentsArray}`;
   }
 }
@@ -247,7 +244,7 @@ export async function actionRunLocalEntry(target: any, options: any) {
     // add these properties to the /tmp/inputs.json file
 
     const currentInputs = JSON.parse(
-      fs.readFileSync('/tmp/inputs.json', 'utf8')
+      fsZX.readFileSync('/tmp/inputs.json', 'utf8')
     );
     const eventFileJson = JSON.parse(eventFile);
 
@@ -259,6 +256,7 @@ export async function actionRunLocalEntry(target: any, options: any) {
   if (!secure) {
     actArgments.push({ name: '--insecure-secrets', value: '' });
   }
+
   await actionRunLocal(target, actArgments, event, custom);
 }
 
@@ -304,7 +302,7 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
   const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
 
-  const data = fs.readFileSync(secretsPath, 'utf8');
+  const data = fsZX.readFileSync(secretsPath, 'utf8');
   const lines = data.split('\n');
 
   for (const line of lines) {
