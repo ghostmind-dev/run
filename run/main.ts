@@ -1,4 +1,4 @@
-import { config } from "npm:dotenv";
+import { config } from 'npm:dotenv';
 
 ////////////////////////////////////////////////////////////////////////////////
 // DOTENV
@@ -10,8 +10,17 @@ config({ override: true });
 // STARTING PROGRAM
 ////////////////////////////////////////////////////////////////////////////////
 
-export * from "./lib/action.ts";
-export * from "./lib/custom.ts";
-export * from "./lib/docker.ts";
-export * from "./lib/utils.ts";
-export * from "./utils/divers.ts";
+export * from './lib/action.ts';
+export * from './lib/custom.ts';
+export * from './lib/docker.ts';
+export * from './lib/hasura.ts';
+export * from './lib/machine.ts';
+export * from './lib/npm.ts';
+export * from './lib/terraform.ts';
+export * from './lib/tunnel.ts';
+export * from './lib/utils.ts';
+export * from './lib/vault.ts';
+
+////////////////////////////////////////////////////////////////////////////////
+// THE END
+////////////////////////////////////////////////////////////////////////////////
