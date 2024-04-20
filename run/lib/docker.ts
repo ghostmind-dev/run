@@ -1,14 +1,9 @@
-import { $, which, sleep, cd, fs } from "npm:zx";
+import { $, which, sleep, cd, fs } from 'npm:zx';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-} from "../utils/divers.ts";
-import _ from "npm:lodash";
-import {
-  resolve,
-  join,
-  extname,
-} from "https://deno.land/std@0.221.0/path/mod.ts";
+} from '../utils/divers.ts';
+import _ from 'npm:lodash';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -30,12 +25,12 @@ cd(currentPath);
 
 export async function getDockerfileAndImageName(component: any) {
   $.verbose = true;
-  const ENV = `${Deno.env.get("ENV")}`;
+  const ENV = `${Deno.env.get('ENV')}`;
   let currentPath = await detectScriptsDirectory(Deno.cwd());
 
   let { docker } = await verifyIfMetaJsonExists(currentPath);
 
-  component = component || "default";
+  component = component || 'default';
 
   let { root, image, context_dockerfile } = docker[component];
 
@@ -68,7 +63,7 @@ export async function getDockerImageDigest(arch: any, component: any) {
 
   // rempcve the tag from the image name
 
-  if (arch === "amd64") {
+  if (arch === 'amd64') {
     $.verbose = true;
 
     const imageDigestRaw = await $`docker manifest inspect ${image}`;
@@ -78,15 +73,15 @@ export async function getDockerImageDigest(arch: any, component: any) {
     // find manifest with platform amd64
 
     const digest = jsonManifest.manifests.map((manifest: any) => {
-      if (manifest.platform.architecture === "amd64") {
+      if (manifest.platform.architecture === 'amd64') {
         return manifest.digest;
       }
     });
 
-    image = image.split(":")[0];
+    image = image.split(':')[0];
     return `${image}@${digest[0]}`;
     // remove undefined from the array
-  } else if (arch === "arm64") {
+  } else if (arch === 'arm64') {
     $.verbose = false;
 
     const imageDigestRaw = await $`docker manifest inspect ${image}`;
@@ -96,12 +91,12 @@ export async function getDockerImageDigest(arch: any, component: any) {
     // find manifest with platform amd64
 
     const digest = jsonManifest.manifests.map((manifest: any) => {
-      if (manifest.platform.architecture === "arm64") {
+      if (manifest.platform.architecture === 'arm64') {
         return manifest.digest;
       }
     });
 
-    image = image.split(":")[0];
+    image = image.split(':')[0];
     return `${image}@${digest[0]}`;
     // remove undefined from the array
   } else {
@@ -130,34 +125,38 @@ export async function dockerBuildUnit(component: any, options: any) {
     component
   );
 
+  Deno.env.set('BUILDX_NO_DEFAULT_ATTESTATIONS', '1');
+
   // Determine the machine architecture
 
   if (amd64) {
     // Ensure a buildx builder instance exists and is bootstrapped
     try {
+      $.verbose = false;
       await $`docker buildx use mybuilder`;
     } catch {
+      $.verbose = true;
       // If 'mybuilder' doesn't exist, create and bootstrap it
       await $`docker buildx create --name mybuilder --use`;
       await $`docker buildx inspect mybuilder --bootstrap`;
     }
 
     let baseCommand = [
-      "docker",
-      "buildx",
-      "build",
-      "--platform=linux/amd64",
-      "-t",
+      'docker',
+      'buildx',
+      'build',
+      '--platform=linux/amd64',
+      '-t',
       `${image}-amd64`,
-      "--file",
+      '--file',
       dockerfile,
-      "--push",
+      '--push',
       dockerContext,
     ];
 
     if (argument) {
       argument.map((arg: any) => {
-        baseCommand.push("--build-arg");
+        baseCommand.push('--build-arg');
         baseCommand.push(arg);
       });
     }
@@ -186,24 +185,24 @@ export async function dockerBuildUnit(component: any, options: any) {
     }
 
     let baseCommand = [
-      "docker",
-      "buildx",
-      "build",
-      "--platform",
-      "linux/arm64",
-      "-t",
+      'docker',
+      'buildx',
+      'build',
+      '--platform',
+      'linux/arm64',
+      '-t',
       image,
-      "-t",
+      '-t',
       `${image}-arm64`,
-      "--file",
+      '--file',
       dockerfile,
-      "--push",
+      '--push',
       dockerContext,
     ];
 
     if (argument) {
       argument.map((arg: any) => {
-        baseCommand.push("--build-arg");
+        baseCommand.push('--build-arg');
         baseCommand.push(arg);
       });
     }
@@ -220,19 +219,19 @@ export async function dockerBuildUnit(component: any, options: any) {
     }
   } else {
     let baseCommand = [
-      "docker",
-      "build",
-      "-t",
+      'docker',
+      'build',
+      '-t',
       image,
-      "--file",
+      '--file',
       dockerfile,
-      "--push",
+      '--push',
       dockerContext,
     ];
 
     if (argument) {
       argument.map((arg: any) => {
-        baseCommand.push("--build-arg");
+        baseCommand.push('--build-arg');
         baseCommand.push(arg);
       });
     }
@@ -249,20 +248,20 @@ export async function dockerComposeUp(component: any, options: any) {
   let { file, forceRecreate } = options;
 
   if (file === undefined) {
-    file = "compose.yaml";
+    file = 'compose.yaml';
   }
 
-  let metaConfig = await fs.readJsonSync("meta.json");
+  let metaConfig = await fs.readJsonSync('meta.json');
 
   let { compose } = metaConfig;
 
-  component = component || "default";
+  component = component || 'default';
 
   let { root } = compose[component];
 
-  const baseCommand = ["docker", "compose", "-f", `${root}/${file}`, "up"];
+  const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'up'];
   if (forceRecreate) {
-    baseCommand.push("--force-recreate");
+    baseCommand.push('--force-recreate');
   }
 
   $.verbose = true;
@@ -278,21 +277,21 @@ export async function dockerComposeBuild(component: any, options: any) {
   let { file, cache } = options;
 
   if (file === undefined) {
-    file = "compose.yaml";
+    file = 'compose.yaml';
   }
 
-  let metaConfig = await fs.readJsonSync("meta.json");
+  let metaConfig = await fs.readJsonSync('meta.json');
 
   let { compose } = metaConfig;
 
-  component = component || "default";
+  component = component || 'default';
 
   let { root } = compose[component];
 
-  const baseCommand = ["docker", "compose", "-f", `${root}/${file}`, "build"];
+  const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'build'];
 
   if (cache === undefined) {
-    baseCommand.push("--no-cache");
+    baseCommand.push('--no-cache');
   }
 
   $.verbose = true;
@@ -305,38 +304,38 @@ export async function dockerComposeBuild(component: any, options: any) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function commandDocker(program: any) {
-  const docker = program.command("docker");
-  docker.description("docker commands");
+  const docker = program.command('docker');
+  docker.description('docker commands');
 
-  const dockerBuild = docker.command("build");
-  dockerBuild.description("Build docker image");
-  dockerBuild.option("-a, --all", "Build all docker images");
+  const dockerBuild = docker.command('build');
+  dockerBuild.description('Build docker image');
+  dockerBuild.option('-a, --all', 'Build all docker images');
   dockerBuild.option(
-    "-arg, --argument <arguments...>",
-    "Build docker image with arguments"
+    '-arg, --argument <arguments...>',
+    'Build docker image with arguments'
   );
-  dockerBuild.option("--amd64", "Build amd64 docker image");
-  dockerBuild.option("--arm64", "Build arm64 docker image");
-  dockerBuild.argument("[component]", "Component to build");
+  dockerBuild.option('--amd64', 'Build amd64 docker image');
+  dockerBuild.option('--arm64', 'Build arm64 docker image');
+  dockerBuild.argument('[component]', 'Component to build');
   dockerBuild.action(dockerBuildActionEntry);
 
-  const dockerCompose = docker.command("compose");
-  dockerCompose.description("docker compose commands");
+  const dockerCompose = docker.command('compose');
+  dockerCompose.description('docker compose commands');
 
   dockerCompose
-    .command("up")
-    .description("docker compose up")
+    .command('up')
+    .description('docker compose up')
     .action(dockerComposeUp)
-    .argument("[component]", "Component to build")
-    .option("-f, --file <file>", "docker compose file")
-    .option("--force-recreate", "force recreate")
-    .option("-e, --envfile <file>", "env filename");
+    .argument('[component]', 'Component to build')
+    .option('-f, --file <file>', 'docker compose file')
+    .option('--force-recreate', 'force recreate')
+    .option('-e, --envfile <file>', 'env filename');
 
   dockerCompose
-    .command("build")
-    .description("docker compose build")
-    .argument("[component]", "Component to build")
+    .command('build')
+    .description('docker compose build')
+    .argument('[component]', 'Component to build')
     .action(dockerComposeBuild)
-    .option("-f, --file <file>", "docker compose file")
-    .option("--cache", "enable cache");
+    .option('-f, --file <file>', 'docker compose file')
+    .option('--cache', 'enable cache');
 }

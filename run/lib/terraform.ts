@@ -273,7 +273,7 @@ export async function cleanDotTerraformFolders() {
 // UNLOCK TERRAFORM
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformUnlock(options: any) {
+export async function terraformUnlock(component: string, options: any) {
   let { env } = options;
 
   const storage = new Storage({});
@@ -286,7 +286,7 @@ export async function terraformUnlock(options: any) {
     env = Deno.env.get('ENV');
   }
 
-  const filename = `${id}/${env}/terraform/default.tflock`;
+  const filename = `${id}/${env}/terraform/${component}/default.tflock`;
 
   const bucketName: any = Deno.env.get('TERRAFORM_BUCKET_NAME');
 
@@ -300,6 +300,8 @@ export async function terraformUnlock(options: any) {
   }
 
   await file.delete();
+
+  console.log(`gs://${bucketName}/${filename} deleted.`);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -307,6 +309,8 @@ export async function terraformUnlock(options: any) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function commandTerraform(program: any) {
+  Deno.env.set('GOOGLE_APPLICATION_CREDENTIALS', '/tmp/gsa_key.json');
+
   const terraform = program.command('terraform');
   terraform.description('infrastructure definition');
 
@@ -341,6 +345,7 @@ export default async function commandTerraform(program: any) {
   terraform
     .command('unlock')
     .description('delete the lock file')
+    .argument('[component]', 'component to unlock')
     .action(terraformUnlock)
     .option('--env <env>', 'environment');
 }
