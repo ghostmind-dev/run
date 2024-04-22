@@ -67,7 +67,6 @@ export async function machineInit() {
   devcontainer.remoteEnv.LOCALHOST_SRC =
     "${env:HOME}${env:USERPROFILE}/" + pathFromHome + "/" + projectName;
   devcontainer.mounts[2] = `source=ghostmind-${projectName}-history,target=/commandhistory,type=volume`;
-  devcontainer.mounts[2] = `source=ghostmind-${projectName}-history,target=/commandhistory,type=volume`;
   devcontainer.mounts[3] =
     "source=${env:HOME}${env:USERPROFILE}/" +
     pathFromHome +
@@ -76,7 +75,7 @@ export async function machineInit() {
     "," +
     `target=${Deno.env.get("HOME")}/${pathFromHome}/${projectName},type=bind`;
 
-  devcontainer.runArgs[2] = `devcontainer-${projectName}`;
+  devcontainer.runArgs[3] = `--name=potion-devcontainer-${projectName}`;
 
   // write the file back
 
