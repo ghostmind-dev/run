@@ -114,6 +114,9 @@ export async function machineInit() {
   await $`rm -rf .git`;
 
   await $`git init`;
+  // exit the execution
+
+  Deno.exit(0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
