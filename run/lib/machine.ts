@@ -111,8 +111,6 @@ export async function machineInit() {
   );
   $.verbose = true;
 
-  await $`run utils meta ids`;
-
   await $`rm -rf .git`;
 
   await $`git init`;
