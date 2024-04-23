@@ -46,7 +46,6 @@ export async function machineInit() {
 
   const pathFromHome = currentPath.replace(`${Deno.env.get("HOME")}/`, "");
 
-
   cd(projectName);
 
   // we have to change so value in a few files. First
@@ -115,7 +114,7 @@ export async function machineInit() {
   await $`rm -rf .git`;
 
   await $`git init`;
-  exit the execution
+  // exit the execution
 
   Deno.exit(0);
 }
