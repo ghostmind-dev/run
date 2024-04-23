@@ -44,7 +44,8 @@ export async function machineInit() {
 
   // remove the user path from currentPath
 
-  const pathFromHome = currentPath.replace(`${Deno.env.get("ENV")}/`, "");
+  const pathFromHome = currentPath.replace(`${Deno.env.get("HOME")}/`, "");
+
 
   cd(projectName);
 
@@ -114,7 +115,7 @@ export async function machineInit() {
   await $`rm -rf .git`;
 
   await $`git init`;
-  // exit the execution
+  exit the execution
 
   Deno.exit(0);
 }
