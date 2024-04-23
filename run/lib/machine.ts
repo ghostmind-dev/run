@@ -75,7 +75,7 @@ export async function machineInit() {
     "," +
     `target=${Deno.env.get("HOME")}/${pathFromHome}/${projectName},type=bind`;
 
-  devcontainer.runArgs[3] = `--name=potion-devcontainer-${projectName}`;
+  devcontainer.runArgs[3] = `--name=devcontainer-${projectName}`;
 
   // write the file back
 
