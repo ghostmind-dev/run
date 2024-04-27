@@ -245,7 +245,7 @@ export async function dockerBuildUnit(component: any, options: any) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerComposeUp(component: any, options: any) {
-  let { file, forceRecreate } = options;
+  let { file, forceRecreate, detach } = options;
 
   if (file === undefined) {
     file = 'compose.yaml';
@@ -264,6 +264,119 @@ export async function dockerComposeUp(component: any, options: any) {
     baseCommand.push('--force-recreate');
   }
 
+  if (detach) {
+    baseCommand.push('--detach');
+  }
+
+  $.verbose = true;
+
+  await $`${baseCommand}`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// DOCKER COMPOSE DOWN
+////////////////////////////////////////////////////////////////////////////////
+
+export async function dockerComposeDown(component: any, options: any) {
+  let { file, forceRecreate } = options;
+
+  if (file === undefined) {
+    file = 'compose.yaml';
+  }
+
+  let metaConfig = await fs.readJsonSync('meta.json');
+
+  let { compose } = metaConfig;
+
+  component = component || 'default';
+
+  let { root } = compose[component];
+
+  const baseCommand = [
+    'docker',
+    'compose',
+    '-f',
+    `${root}/${file}`,
+    'down',
+    '--remove-orphans',
+  ];
+  if (forceRecreate) {
+    baseCommand.push('--force-recreate');
+  }
+
+  $.verbose = true;
+
+  await $`${baseCommand}`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// DOCKER COMPOSE EXEC
+////////////////////////////////////////////////////////////////////////////////
+
+export async function dockerComposeExec(
+  container: any,
+  command: any,
+  component: any,
+  options: any
+) {
+  let { file, forceRecreate } = options;
+  if (file === undefined) {
+    file = 'compose.yaml';
+  }
+
+  let metaConfig = await fs.readJsonSync('meta.json');
+
+  let { compose } = metaConfig;
+  component = component || 'default';
+  let { root } = compose[component];
+
+  let notReady = true;
+
+  while (notReady) {
+    try {
+      let state = await $`docker ps --format=json`;
+
+      // Split the output into lines
+      let lines = `${state}`.split('\n');
+
+      // Filter out any empty lines
+      lines = lines.filter((line) => line.trim() !== '');
+
+      // Parse each line as a separate JSON object
+      let jsonState = lines.map((line) => JSON.parse(line));
+
+      let containerDetected = jsonState.find((box) =>
+        box.Names.includes(container)
+      );
+
+      if (containerDetected) {
+        console.log('Container found:', container);
+        notReady = false;
+      } else {
+        console.log('Container not found. Retrying...');
+      }
+
+      await sleep(5000);
+    } catch (e) {
+      console.log(e);
+      await sleep(5000);
+    }
+  }
+
+  const baseCommand = [
+    'docker',
+    'compose',
+    '-f',
+    `${root}/${file}`,
+    'exec',
+    container,
+    '/bin/bash',
+    '-c',
+    command,
+  ];
+  if (forceRecreate) {
+    baseCommand.push('--force-recreate');
+  }
   $.verbose = true;
 
   await $`${baseCommand}`;
@@ -327,6 +440,27 @@ export default async function commandDocker(program: any) {
     .description('docker compose up')
     .action(dockerComposeUp)
     .argument('[component]', 'Component to build')
+    .option('-f, --file <file>', 'docker compose file')
+    .option('--force-recreate', 'force recreate')
+    .option('-e, --envfile <file>', 'env filename')
+    .option('-d, --detach', 'detach');
+
+  dockerCompose
+    .command('down')
+    .description('docker compose down')
+    .action(dockerComposeDown)
+    .argument('[component]', 'Component to build')
+    .option('-f, --file <file>', 'docker compose file')
+    .option('--force-recreate', 'force recreate')
+    .option('-e, --envfile <file>', 'env filename');
+
+  dockerCompose
+    .command('exec')
+    .description('docker compose exec')
+    .action(dockerComposeExec)
+    .argument('[container]', 'Container to exec into)')
+    .argument('[command]', 'Command to run')
+    .argument('[component]', 'Component to exec into)')
     .option('-f, --file <file>', 'docker compose file')
     .option('--force-recreate', 'force recreate')
     .option('-e, --envfile <file>', 'env filename');
