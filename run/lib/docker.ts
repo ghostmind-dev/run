@@ -4,6 +4,8 @@ import {
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
 import _ from 'npm:lodash';
+import { parse } from 'npm:yaml';
+import { readFileSync } from 'https://deno.land/std@0.112.0/node/fs.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -314,8 +316,8 @@ export async function dockerComposeDown(component: any, options: any) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerComposeExec(
+  instructions: any,
   container: any,
-  command: any,
   component: any,
   options: any
 ) {
@@ -323,46 +325,49 @@ export async function dockerComposeExec(
   if (file === undefined) {
     file = 'compose.yaml';
   }
-
   let metaConfig = await fs.readJsonSync('meta.json');
-
   let { compose } = metaConfig;
+
   component = component || 'default';
+
   let { root } = compose[component];
 
   let notReady = true;
 
+  if (container === undefined) {
+    const yamlText = readFileSync(`${root}/${file}`, 'utf8');
+    const yamlObject = parse(yamlText);
+
+    // Get the first service name
+    const firstServiceName = Object.keys(yamlObject.services)[0];
+
+    container = firstServiceName;
+  }
+
   while (notReady) {
     try {
       let state = await $`docker ps --format=json`;
-
       // Split the output into lines
       let lines = `${state}`.split('\n');
-
       // Filter out any empty lines
       lines = lines.filter((line) => line.trim() !== '');
-
       // Parse each line as a separate JSON object
       let jsonState = lines.map((line) => JSON.parse(line));
-
       let containerDetected = jsonState.find((box) =>
         box.Names.includes(container)
       );
-
       if (containerDetected) {
         console.log('Container found:', container);
         notReady = false;
       } else {
         console.log('Container not found. Retrying...');
       }
-
       await sleep(5000);
     } catch (e) {
       console.log(e);
       await sleep(5000);
     }
   }
-
   const baseCommand = [
     'docker',
     'compose',
@@ -372,13 +377,12 @@ export async function dockerComposeExec(
     container,
     '/bin/bash',
     '-c',
-    command,
+    instructions,
   ];
   if (forceRecreate) {
     baseCommand.push('--force-recreate');
   }
   $.verbose = true;
-
   await $`${baseCommand}`;
 }
 
@@ -458,8 +462,8 @@ export default async function commandDocker(program: any) {
     .command('exec')
     .description('docker compose exec')
     .action(dockerComposeExec)
+    .argument('[instructions]', 'Commands to run')
     .argument('[container]', 'Container to exec into)')
-    .argument('[command]', 'Command to run')
     .argument('[component]', 'Component to exec into)')
     .option('-f, --file <file>', 'docker compose file')
     .option('--force-recreate', 'force recreate')
