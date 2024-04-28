@@ -142,7 +142,7 @@ export async function terraformVariables(component: any, options: any) {
 
   // if envfile is not defined, set it to .env
 
-  let env_file = envfile || '.env';
+  let env_file = envfile || '.env.local';
 
   // read meta.json
 
