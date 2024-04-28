@@ -215,16 +215,28 @@ async function runCustomScript(
 
     cd(currentPath);
 
-    await custom_function.default(argument, {
-      input: input === undefined ? [] : input,
-      extract,
+    const utils = {
       detect,
+      extract,
       has: has(argument),
+    };
+
+    let env = Deno.env.toObject();
+
+    input = input === undefined ? [] : input;
+
+    ///////////////////////////////////////////////////////////////////////
+    // CALL CUSTOM FUNCTION
+    ///////////////////////////////////////////////////////////////////////
+
+    await custom_function.default(argument, {
+      env,
+      run,
+      url,
+      utils,
+      input,
       metaConfig,
       currentPath,
-      url,
-      run,
-      env: Deno.env.toObject(),
     });
   } catch (e) {
     console.log(e);
