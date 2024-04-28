@@ -74,8 +74,30 @@ async function runCustomScript(
 
   const run =
     dev === true ? `${SRC}/dev/run/bin/cmd.ts` : `${HOME}/run/run/bin/cmd.ts`;
+
   ////////////////////////////////////////////////////////////////////////////////
-  // GET INPUT VALUE
+  // EXTRACT
+  ////////////////////////////////////////////////////////////////////////////////
+
+  const PORT = Deno.env.get('PORT');
+
+  let url: any = {
+    docker: `http://host.docker.internal:${PORT}`,
+    local: `http://localhost:${PORT}`,
+  };
+
+  if (metaConfig.tunnel) {
+    let subdomain = metaConfig.tunnel.hostname;
+
+    let tunnelUrl = `https://${subdomain}.${Deno.env.get(
+      'CLOUDFLARED_TUNNEL_URL'
+    )}`;
+
+    url['tunnel'] = tunnelUrl;
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // EXTRACT
   ////////////////////////////////////////////////////////////////////////////////
 
   async function extract(inputName: string) {
@@ -108,6 +130,10 @@ async function runCustomScript(
 
     return foundElement;
   }
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // HAS
+  ////////////////////////////////////////////////////////////////////////////////
 
   function has(argument: any) {
     return function (arg: any) {
@@ -190,6 +216,7 @@ async function runCustomScript(
       has: has(argument),
       metaConfig,
       currentPath,
+      url,
       run,
       env: Deno.env.toObject(),
     });

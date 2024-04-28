@@ -54,8 +54,6 @@ export default async function act(program: any) {
 
     const CLOUDFLARED_TUNNEL_URL = Deno.env.get('CLOUDFLARED_TUNNEL_URL') || '';
 
-    let tunnelUrl = CLOUDFLARED_TUNNEL_URL.replace('https://', '');
-
     interface Ingress {
       // add hostname (optional)
       hostname?: string;
@@ -81,7 +79,7 @@ export default async function act(program: any) {
 
       for (const service of services) {
         const subdomain = service.config.tunnel.hostname;
-        const hostname = `${subdomain}.${tunnelUrl}`;
+        const hostname = `${subdomain}.${CLOUDFLARED_TUNNEL_URL}`;
 
         await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${hostname}`;
         ingress.push(service.config.tunnel);
@@ -90,7 +88,7 @@ export default async function act(program: any) {
       config.ingress = ingress;
     } else {
       let { tunnel } = await verifyIfMetaJsonExists(currentPath);
-      let hostname = `${tunnel.hostname}.${tunnelUrl}`;
+      let hostname = `${tunnel.hostname}.${CLOUDFLARED_TUNNEL_URL}`;
       await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${hostname}`;
       ingress.push(tunnel);
       config.ingress = ingress;
