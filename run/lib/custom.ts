@@ -82,7 +82,7 @@ async function runCustomScript(
   const PORT = Deno.env.get('PORT');
 
   let url: any = {
-    docker: `http://host.docker.internal:${PORT}`,
+    internal: `http://host.docker.internal:${PORT}`,
     local: `http://localhost:${PORT}`,
   };
 
