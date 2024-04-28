@@ -82,7 +82,7 @@ export default async function act(program: any) {
         const hostname = `${subdomain}.${CLOUDFLARED_TUNNEL_URL}`;
 
         await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${hostname}`;
-        ingress.push(service.config.tunnel);
+        ingress.push({ hostname, service: service.config.tunnel.service });
       }
 
       config.ingress = ingress;
@@ -90,7 +90,7 @@ export default async function act(program: any) {
       let { tunnel } = await verifyIfMetaJsonExists(currentPath);
       let hostname = `${tunnel.hostname}.${CLOUDFLARED_TUNNEL_URL}`;
       await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${hostname}`;
-      ingress.push(tunnel);
+      ingress.push({ hostname, service: tunnel.service });
       config.ingress = ingress;
     }
 
