@@ -6,7 +6,7 @@ import {
 } from '../utils/divers.ts';
 import yaml from 'npm:js-yaml';
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -78,17 +78,38 @@ export default async function act(program: any) {
       const services = await withMetaMatching({ property: 'tunnel' });
 
       for (const service of services) {
-        const subdomain = service.config.tunnel.hostname;
-        const hostname = `${subdomain}.${CLOUDFLARED_TUNNEL_URL}`;
+        const subdomain = service.config.tunnel.subdomain;
 
-        await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${hostname}`;
-        ingress.push({ hostname, service: service.config.tunnel.service });
+        let hostname = '';
+
+        if (subdomain) {
+          hostname = `${subdomain}.${CLOUDFLARED_TUNNEL_URL}`;
+        } else {
+          hostname = `${CLOUDFLARED_TUNNEL_URL}`;
+        }
+
+        // await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${hostname}`;
+
+        ingress.push({
+          hostname,
+          service: service.config.tunnel.service,
+        });
       }
 
       config.ingress = ingress;
     } else {
       let { tunnel } = await verifyIfMetaJsonExists(currentPath);
-      let hostname = `${tunnel.hostname}.${CLOUDFLARED_TUNNEL_URL}`;
+
+      let hostname = '';
+
+      let subdomain = tunnel.subdomain;
+
+      if (subdomain) {
+        hostname = `${subdomain}.${CLOUDFLARED_TUNNEL_URL}`;
+      } else {
+        hostname = `${CLOUDFLARED_TUNNEL_URL}`;
+      }
+
       await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${hostname}`;
       ingress.push({ hostname, service: tunnel.service });
       config.ingress = ingress;

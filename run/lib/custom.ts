@@ -87,11 +87,17 @@ async function runCustomScript(
   };
 
   if (metaConfig.tunnel) {
-    let subdomain = metaConfig.tunnel.hostname;
+    let subdomain = metaConfig.tunnel.subdomain;
 
-    let tunnelUrl = `https://${subdomain}.${Deno.env.get(
-      'CLOUDFLARED_TUNNEL_URL'
-    )}`;
+    let tunnelUrl = '';
+
+    if (subdomain) {
+      tunnelUrl = `https://${subdomain}.${Deno.env.get(
+        'CLOUDFLARED_TUNNEL_URL'
+      )}`;
+    } else {
+      tunnelUrl = `https://${Deno.env.get('CLOUDFLARED_TUNNEL_URL')}`;
+    }
 
     url['tunnel'] = tunnelUrl;
   }
