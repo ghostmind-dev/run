@@ -42,14 +42,6 @@ export interface CustomOptionsUrl {
   tunnel: string;
 }
 
-env,
-run,
-url,
-utils,
-input,
-metaConfig,
-currentPath,
-
 export interface CustomOptions {
   env?: Record<string, string>;
   run?: string;
