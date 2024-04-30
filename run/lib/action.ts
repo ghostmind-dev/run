@@ -206,7 +206,8 @@ export async function actionRunLocal(
 
 export async function actionRunLocalEntry(target: any, options: any) {
   const ENV = Deno.env.get('ENV');
-  const { live, input, reuse, secure, event, push, custom } = options;
+  const { live, input, reuse, secure, event, push, custom, workaround } =
+    options;
 
   let inputsArguments: any = {};
 
@@ -232,6 +233,13 @@ export async function actionRunLocalEntry(target: any, options: any) {
   ];
   if (reuse === true) {
     actArgments.push({ name: '--reuse', value: '' });
+  }
+
+  if (workaround === true) {
+    actArgments.push({
+      name: '-W',
+      value: `${LOCALHOST_SRC}/.github/workflows/${target}.yaml`,
+    });
   }
 
   if (event === 'push') {
@@ -287,7 +295,7 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
     const { CREDS } = credsValue.data.data;
 
     await $`rm -rf /tmp/.env.global`;
-    fs.writeFileSync('/tmp/.env.global', CREDS, 'utf8');
+    fsZX.writeFileSync('/tmp/.env.global', CREDS, 'utf8');
 
     secretsPath = '/tmp/.env.global';
   } else {
@@ -358,6 +366,10 @@ export default async function act(program: any) {
     .option('--no-reuse', 'do not reuse container state')
     .option('--no-secure', "show secrets in logs (don't use in production)")
     .option('--custom', 'custom act container')
+    .option(
+      '-W, --workaround',
+      'set file path to .github/workflows/workflow_name (workaround for a bug)'
+    )
     .option('-i, --input [inputs...]', 'action inputs')
     .option('--event <string>", " trigger event (ex: workflow_run')
     .action(actionRunLocalEntry);
