@@ -136,7 +136,8 @@ export async function actionRunLocal(
   target: any,
   actArguments: any,
   event: any,
-  custom: any
+  custom: any,
+  workaround: any
 ) {
   const actArgmentsCombined = [...actArgmentsDefault, ...actArguments];
 
@@ -184,8 +185,13 @@ export async function actionRunLocal(
 
   $.verbose = true;
 
-  actArgmentsArray.push('--workflows');
-  actArgmentsArray.push(workflowsPath);
+  if (workaround !== undefined) {
+    actArgmentsArray.push('--workflows');
+    actArgmentsArray.push(`${workflowsPath}/${target}.yaml`);
+  } else {
+    actArgmentsArray.push('--workflows');
+    actArgmentsArray.push(workflowsPath);
+  }
 
   if (event === undefined) {
     actArgmentsArray.push('--job');
@@ -235,13 +241,6 @@ export async function actionRunLocalEntry(target: any, options: any) {
     actArgments.push({ name: '--reuse', value: '' });
   }
 
-  if (workaround === true) {
-    actArgments.push({
-      name: '-W',
-      value: `${LOCALHOST_SRC}/.github/workflows/${target}.yaml`,
-    });
-  }
-
   if (event === 'push') {
     const eventFile = await fs.readFile(
       `${LOCALHOST_SRC}/.github/mocking/push.json`,
@@ -265,7 +264,7 @@ export async function actionRunLocalEntry(target: any, options: any) {
     actArgments.push({ name: '--insecure-secrets', value: '' });
   }
 
-  await actionRunLocal(target, actArgments, event, custom);
+  await actionRunLocal(target, actArgments, event, custom, workaround);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
