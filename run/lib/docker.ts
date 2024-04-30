@@ -28,6 +28,9 @@ cd(currentPath);
 export async function getDockerfileAndImageName(component: any) {
   $.verbose = true;
   const ENV = `${Deno.env.get('ENV')}`;
+
+  const SRC = Deno.env.get('SRC') || '';
+
   let currentPath = await detectScriptsDirectory(Deno.cwd());
 
   let { docker } = await verifyIfMetaJsonExists(currentPath);
@@ -51,9 +54,17 @@ export async function getDockerfileAndImageName(component: any) {
 
   // $.verbose = true;
 
-  image = `${image}:${ENV}`;
+  const { name: PROJECT_NAME } = await verifyIfMetaJsonExists(SRC);
 
-  return { dockerfile, dockerContext, image };
+  if (image.includes('gcr.io') || image.includes('ghcr.io')) {
+    image = `${image}:${ENV}`;
+    return { dockerfile, dockerContext, image };
+  } else {
+    const PROJECT = Deno.env.get('PROJECT') || PROJECT_NAME;
+    const DOCKER_GCR_BASE = Deno.env.get('DOCKER_GCR_BASE');
+    image = `${DOCKER_GCR_BASE}/${PROJECT}-${image}:${ENV}`;
+    return { dockerfile, dockerContext, image };
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -108,20 +119,10 @@ export async function getDockerImageDigest(arch: any, component: any) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// DOCKER BUILD
-////////////////////////////////////////////////////////////////////////////////
-
-export async function dockerBuildActionEntry(component: any, options: any) {
-  const { all } = options;
-
-  await dockerBuildUnit(component, options);
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // DOCKER BUILD UNIT
 ////////////////////////////////////////////////////////////////////////////////
 export async function dockerBuildUnit(component: any, options: any) {
-  const { amd64, arm64, argument } = options;
+  const { amd64, arm64, argument, cache } = options;
 
   const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(
     component
@@ -147,21 +148,25 @@ export async function dockerBuildUnit(component: any, options: any) {
       'docker',
       'buildx',
       'build',
+      '--pull=false',
       '--platform=linux/amd64',
-      '-t',
-      `${image}-amd64`,
-      '--file',
-      dockerfile,
+      `--tag=${image}`,
+      `--tag=${image}-amd64`,
+      `--file=${dockerfile}`,
       '--push',
-      dockerContext,
     ];
+
+    if (cache === undefined) {
+      baseCommand.push('--no-cache');
+    }
 
     if (argument) {
       argument.map((arg: any) => {
-        baseCommand.push('--build-arg');
-        baseCommand.push(arg);
+        baseCommand.push(`--build-arg=${arg}`);
       });
     }
+
+    baseCommand.push(dockerContext);
 
     await $`${baseCommand}`;
 
@@ -190,24 +195,24 @@ export async function dockerBuildUnit(component: any, options: any) {
       'docker',
       'buildx',
       'build',
-      '--platform',
-      'linux/arm64',
-      '-t',
-      image,
-      '-t',
-      `${image}-arm64`,
-      '--file',
-      dockerfile,
+      '--platform=linux/arm64',
+      `--tag=${image}`,
+      `--tag=${image}-arm64`,
+      `--file=${dockerfile}`,
       '--push',
-      dockerContext,
     ];
+
+    if (cache === undefined) {
+      baseCommand.push('--no-cache');
+    }
 
     if (argument) {
       argument.map((arg: any) => {
-        baseCommand.push('--build-arg');
-        baseCommand.push(arg);
+        baseCommand.push(`--build-arg=${arg}`);
       });
     }
+
+    baseCommand.push(dockerContext);
 
     await $`${baseCommand}`;
 
@@ -432,9 +437,12 @@ export default async function commandDocker(program: any) {
     'Build docker image with arguments'
   );
   dockerBuild.option('--amd64', 'Build amd64 docker image');
+  // add a --no-cache option with true as default
+  dockerBuild.option('--no-cache', 'Build docker image without cache');
+
   dockerBuild.option('--arm64', 'Build arm64 docker image');
   dockerBuild.argument('[component]', 'Component to build');
-  dockerBuild.action(dockerBuildActionEntry);
+  dockerBuild.action(dockerBuildUnit);
 
   const dockerCompose = docker.command('compose');
   dockerCompose.description('docker compose commands');
