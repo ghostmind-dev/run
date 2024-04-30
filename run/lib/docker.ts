@@ -176,10 +176,11 @@ export async function dockerBuildUnit(component: any, options: any) {
 
     try {
       await $`docker manifest inspect ${image}-arm64`;
-      await $`docker manifest create ${image} ${image}-amd64 ${image}-arm64`;
+      await $`docker manifest create --amend ${image} ${image}-amd64 ${image}-arm64`;
+      await $`docker manifest push ${image}`;
     } catch (e) {
       $.verbose = true;
-      await $`docker manifest create ${image} ${image}-amd64 --amend`;
+      await $`docker manifest create --amend ${image} ${image}-amd64 --amend`;
       await $`docker manifest push ${image}`;
     }
   }
@@ -221,9 +222,10 @@ export async function dockerBuildUnit(component: any, options: any) {
     try {
       $.verbose = false;
       const arm64Exists = await $`docker manifest inspect ${image}-amd64`;
-      await $`docker manifest create ${image} ${image}-amd64 ${image}-arm64`;
+      await $`docker manifest create --amend ${image} ${image}-amd64 ${image}-arm64`;
+      await $`docker manifest push ${image}`;
     } catch (e) {
-      await $`docker manifest create ${image} ${image}-arm64 --amend`;
+      await $`docker manifest create --amend ${image} ${image}-arm64 --amend`;
       await $`docker manifest push ${image}`;
     }
   }
