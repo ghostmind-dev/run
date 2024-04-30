@@ -175,14 +175,16 @@ export async function dockerBuildUnit(component: any, options: any) {
     // verify if image-arm64 exists
 
     try {
-      const arm64Exists = await $`docker manifest inspect ${image}-arm64`;
+      await $`docker manifest inspect ${image}-arm64`;
       await $`docker manifest create ${image} ${image}-amd64 ${image}-arm64`;
     } catch (e) {
       $.verbose = true;
       await $`docker manifest create ${image} ${image}-amd64 --amend`;
       await $`docker manifest push ${image}`;
     }
-  } else if (arm64) {
+  }
+
+  if (arm64) {
     try {
       await $`docker buildx use mybuilder`;
     } catch {
@@ -224,16 +226,15 @@ export async function dockerBuildUnit(component: any, options: any) {
       await $`docker manifest create ${image} ${image}-arm64 --amend`;
       await $`docker manifest push ${image}`;
     }
-  } else {
+  }
+
+  if (amd64 === undefined && arm64 === undefined) {
     let baseCommand = [
       'docker',
       'build',
-      '-t',
-      image,
-      '--file',
-      dockerfile,
+      `--tag=${image}`,
+      `--file=${dockerfile}`,
       '--push',
-      dockerContext,
     ];
 
     if (argument) {
@@ -242,6 +243,12 @@ export async function dockerBuildUnit(component: any, options: any) {
         baseCommand.push(arg);
       });
     }
+
+    if (cache === undefined) {
+      baseCommand.push('--no-cache');
+    }
+
+    baseCommand.push(dockerContext);
 
     await $`${baseCommand}`;
   }
