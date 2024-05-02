@@ -42,7 +42,7 @@ export interface CustomOptionsUrl {
   tunnel: string;
 }
 
-export interface CustomOptions {
+export interface ScriptOptons {
   env?: Record<string, string>;
   run?: string;
   url?: CustomOptionsUrl;
@@ -52,7 +52,9 @@ export interface CustomOptions {
   currentPath?: string;
 }
 
-export type CustomScriptArgument = string;
+// type for the Argument
+
+export type ScriptArgs = string | string[];
 
 ////////////////////////////////////////////////////////////////////////////////
 // RUN CUSTOM SCRIPT
@@ -263,7 +265,7 @@ export default async function commandCustom(program: any) {
   custom
     .description("run custom script")
     .argument("[script]", "script to perform")
-    .argument("[argument...]", "single argument for the script")
+    .argument("[argument...]", "arguments for the script")
     .option("-i, --input <items...>", "multiple arguments for the script")
     .option("--dev", "run in dev mode")
     .option("--test", "run in test mode")
