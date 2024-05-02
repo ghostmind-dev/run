@@ -42,7 +42,7 @@ export interface CustomOptionsUrl {
   tunnel: string;
 }
 
-export interface ScriptOptons {
+export interface CustomOptions {
   env?: Record<string, string>;
   run?: string;
   url?: CustomOptionsUrl;
@@ -54,7 +54,7 @@ export interface ScriptOptons {
 
 // type for the Argument
 
-export type ScriptArgs = string | string[];
+export type CustomArgs = string | string[];
 
 ////////////////////////////////////////////////////////////////////////////////
 // RUN CUSTOM SCRIPT
