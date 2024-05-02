@@ -72,16 +72,16 @@ program.name("run");
 // GIT COMMAND
 ////////////////////////////////////////////////////////////////////////////////
 
-commandAction(program);
-commandCustom(program);
-commandDocker(program);
-commandHasura(program);
-commandMachine(program);
-commandNpm(program);
-commandTerraform(program);
-commandTunnel(program);
-commandUtils(program);
-commmandVault(program);
+await commandAction(program);
+await commandCustom(program);
+await commandDocker(program);
+await commandHasura(program);
+await commandMachine(program);
+await commandNpm(program);
+await commandTerraform(program);
+await commandTunnel(program);
+await commandUtils(program);
+await commmandVault(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // PARSING ARGUMENTS

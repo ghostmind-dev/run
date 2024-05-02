@@ -11,5 +11,8 @@
         "require-await"
       ]
     }
+  },
+  "compilerOptions": {
+    "types": ["./run/types/global.d.ts"]
   }
 }

@@ -27,36 +27,6 @@ const customConfigDefault = {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// TYPE DEFINITION
-////////////////////////////////////////////////////////////////////////////////
-
-export interface CustomOptionsUtils {
-  detect: (value: string) => boolean;
-  extract: (inputName: string) => string | undefined;
-  has: (argument: string | string[]) => (arg: string) => boolean;
-}
-
-export interface CustomOptionsUrl {
-  internal: string;
-  local: string;
-  tunnel: string;
-}
-
-export interface CustomOptions {
-  env?: Record<string, string>;
-  run?: string;
-  url?: CustomOptionsUrl;
-  utils: CustomOptionsUtils;
-  input?: string[];
-  metaConfig?: any;
-  currentPath?: string;
-}
-
-// type for the Argument
-
-export type CustomArgs = string | string[];
-
-////////////////////////////////////////////////////////////////////////////////
 // RUN CUSTOM SCRIPT
 ////////////////////////////////////////////////////////////////////////////////
 
