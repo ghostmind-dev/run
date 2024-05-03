@@ -52,6 +52,8 @@ interface ModuleActions {
   quickAmend(): Promise<void>;
   quickCommit(): Promise<void>;
   repoConvert(): Promise<void>;
+  getAppName(): Promise<void>;
+  getProjectName(): Promise<void>;
   templateExport(): Promise<void>;
   terraformApplyUnit(): Promise<void>;
   terraformDestroyUnit(): Promise<void>;
