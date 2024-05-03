@@ -27,14 +27,21 @@ interface ModuleActions {
   createMetaFile(): Promise<void>;
   createShortUUID(): Promise<void>;
   devInstallDependencies(): Promise<void>;
-  dockerBuildUnit(): Promise<void>;
-  dockerComposeBuild(): Promise<void>;
-  dockerComposeDown(): Promise<void>;
-  dockerComposeExec(): Promise<void>;
-  dockerComposeUp(): Promise<void>;
+  dockerBuildUnit(component: any, options: any): Promise<void>;
+  dockerComposeBuild(component: any, options: any): Promise<void>;
+  dockerComposeDown(component: any, options: any): Promise<void>;
+  dockerComposeExec(
+    instructions: any,
+    container: any,
+    component: any,
+    options: any
+  ): Promise<void>;
+  dockerComposeUp(component: any, options: any): Promise<void>;
   envDevcontainer(): Promise<void>;
-  getDockerImageDigest(): Promise<void>;
-  getDockerfileAndImageName(): Promise<void>;
+  getDockerImageDigest(arch: any, component: any): Promise<void>;
+  getDockerfileAndImageName(
+    component: any
+  ): Promise<{ dockerfile: string; dockerContext: string; image: string }>;
   hasuraMigrateApply(): Promise<void>;
   hasuraMigrateSquash(): Promise<void>;
   hasuraOpenConsole(): Promise<void>;
