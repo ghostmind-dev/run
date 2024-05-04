@@ -14,6 +14,23 @@ interface CustomOptionsUrl {
   tunnel: string;
 }
 
+interface CustomOptions {
+  env: any;
+  run?: string;
+  url?: CustomOptionsUrl;
+  main: ModuleActions; // Updated to use ModuleActions type
+  utils: CustomOptionsUtils;
+  input?: string[];
+  metaConfig?: any;
+  currentPath?: string;
+}
+
+type CustomArgs = string | string[];
+
+////////////////////////////////////////////////////////////////////////////////
+// MAIN
+////////////////////////////////////////////////////////////////////////////////
+
 // Adding ModuleActions definition
 interface ModuleActions {
   actionEnvSet(): Promise<void>;
@@ -67,23 +84,6 @@ interface ModuleActions {
   vaultKvVaultToLocalEntry(): Promise<void>;
   vaultKvVaultToLocalUnit(): Promise<void>;
 }
-
-interface CustomOptions {
-  env?: Record<string, string>;
-  run?: string;
-  url?: CustomOptionsUrl;
-  main: ModuleActions; // Updated to use ModuleActions type
-  utils: CustomOptionsUtils;
-  input?: string[];
-  metaConfig?: any;
-  currentPath?: string;
-}
-
-type CustomArgs = string | string[];
-
-////////////////////////////////////////////////////////////////////////////////
-// MAIN
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // THE END

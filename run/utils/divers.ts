@@ -1,5 +1,6 @@
-import { cd, fs } from "npm:zx";
-import { config } from "npm:dotenv";
+import { cd, fs } from 'npm:zx';
+import { config } from 'npm:dotenv';
+import { expand } from 'npm:dotenv-expand';
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONSTANTS
@@ -12,9 +13,9 @@ import { config } from "npm:dotenv";
 export async function detectScriptsDirectory(currentPath: string) {
   // verify if the current path ends with scripts
 
-  if (currentPath.includes("scripts")) {
+  if (currentPath.includes('scripts')) {
     // remove /scripts from the path
-    currentPath = currentPath.replace("/scripts", "");
+    currentPath = currentPath.replace('/scripts', '');
     return currentPath;
   }
 
@@ -26,15 +27,15 @@ export async function detectScriptsDirectory(currentPath: string) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function verifyIfProjectCore() {
-  const now: string = Deno.env.get("SRC") || "";
+  const now: string = Deno.env.get('SRC') || '';
 
   cd(now);
 
-  const metaConfig = await fs.readJsonSync("meta.json");
+  const metaConfig = await fs.readJsonSync('meta.json');
   const { type, name } = metaConfig;
 
-  if (type === "project") {
-    if (name === "core") {
+  if (type === 'project') {
+    if (name === 'core') {
       return true;
     }
   }
@@ -53,19 +54,19 @@ export async function getFilesInDirectory(path: string) {
   let files = [];
 
   const defaultFilesToIgnore = [
-    ".DS_Store",
-    ".terraform.lock.hcl",
-    ".env",
-    ".env.local",
-    ".env.development",
-    ".env.test",
-    ".env.production",
-    ".env.backup",
-    ".git",
-    ".terraform",
+    '.DS_Store',
+    '.terraform.lock.hcl',
+    '.env',
+    '.env.local',
+    '.env.development',
+    '.env.test',
+    '.env.production',
+    '.env.backup',
+    '.git',
+    '.terraform',
   ];
 
-  const defaultExtensionsToIgnore = ["DS_Store"];
+  const defaultExtensionsToIgnore = ['DS_Store'];
 
   for (const file of filesInFolder) {
     if (file.isDirectory()) {
@@ -76,7 +77,7 @@ export async function getFilesInDirectory(path: string) {
       continue;
     }
 
-    if (defaultExtensionsToIgnore.includes(file.name.split(".").pop())) {
+    if (defaultExtensionsToIgnore.includes(file.name.split('.').pop())) {
       continue;
     }
 
@@ -97,8 +98,8 @@ export async function getDirectories(path: string) {
 
   const directories = directoriesWithFiles
     .filter((dirent) => dirent.isDirectory())
-    .filter((dirent) => dirent.name !== "node_modules")
-    .filter((dirent) => dirent.name !== ".git")
+    .filter((dirent) => dirent.name !== 'node_modules')
+    .filter((dirent) => dirent.name !== '.git')
     .map((dirent) => dirent.name);
 
   return directories;
@@ -147,7 +148,7 @@ export async function verifyIfMetaJsonExists(path: string) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function withMetaMatching({ property, value, path }: any) {
-  let directoryEntryPath = path || Deno.env.get("SRC");
+  let directoryEntryPath = path || Deno.env.get('SRC');
 
   const allDirectories = await recursiveDirectoriesDiscovery(
     directoryEntryPath
@@ -161,8 +162,8 @@ export async function withMetaMatching({ property, value, path }: any) {
     if (metaConfig) {
       let metaConfigProperty;
 
-      if (property.includes(".")) {
-        const propertyArray = property.split(".");
+      if (property.includes('.')) {
+        const propertyArray = property.split('.');
 
         metaConfigProperty = metaConfig;
 
@@ -203,11 +204,11 @@ export async function setSecretsUptoProject(path: string) {
   // print: /home
   // print: /
 
-  const directories = path.split("/");
+  const directories = path.split('/');
   let directoriesPath = [];
 
   for (let i = directories.length; i > 0; i--) {
-    directoriesPath.push(directories.slice(0, i).join("/"));
+    directoriesPath.push(directories.slice(0, i).join('/'));
   }
 
   for (let directory of directoriesPath) {
@@ -215,9 +216,9 @@ export async function setSecretsUptoProject(path: string) {
 
     if (metaConfig) {
       if (metaConfig.secrets) {
-        config({ path: `${directory}/.env` });
+        expand(config({ path: `${directory}/.env` }));
       }
-      if (metaConfig.type === "project") {
+      if (metaConfig.type === 'project') {
         return;
       }
     }
