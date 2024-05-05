@@ -5,9 +5,13 @@ import {
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
 
+import { getAppName } from './utils.ts';
+
 import { envDevcontainer } from '../main.ts';
 import { join, extname } from 'https://deno.land/std@0.221.0/path/mod.ts';
 import yaml from 'npm:js-yaml';
+import { parse } from 'npm:dotenv';
+import { expand } from 'npm:dotenv-expand';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -212,7 +216,7 @@ export async function actionRunLocal(
 
 export async function actionRunLocalEntry(target: any, options: any) {
   const ENV = Deno.env.get('ENV');
-  const { live, input, reuse, secure, event, push, custom, workaround } =
+  const { live, input, reuse, secure, event, push, custom, workaround, env } =
     options;
 
   let inputsArguments: any = {};
@@ -237,8 +241,13 @@ export async function actionRunLocalEntry(target: any, options: any) {
     // { name: '--env', value: `ENV=${ENV}` },
     { name: '--eventpath', value: '/tmp/inputs.json' },
   ];
+
   if (reuse === true) {
     actArgments.push({ name: '--reuse', value: '' });
+  }
+
+  if (env) {
+    actArgments.push({ name: '--env', value: `SET_ENV=${env}` });
   }
 
   if (event === 'push') {
@@ -280,11 +289,7 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
   $.verbose = true;
 
-  let secretsPath = '';
-  cd(currentPath);
-
   if (global) {
-    $.verbose = true;
     await $`rm -rf /tmp/env.global.json`;
 
     await $`vault kv get -format=json kv/GLOBAL/global/secrets  > /tmp/env.global.json`;
@@ -294,33 +299,98 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
     const { CREDS } = credsValue.data.data;
 
     await $`rm -rf /tmp/.env.global`;
+
     fsZX.writeFileSync('/tmp/.env.global', CREDS, 'utf8');
 
-    secretsPath = '/tmp/.env.global';
+    const originalEnvContent = fs.readFileSync(`/tmp/.env.global`, 'utf8');
+
+    const envConfig = parse(originalEnvContent);
+
+    // Use dotenv-expand to expand the variables
+    const expandedConfig: any = expand({
+      parsed: envConfig,
+    });
+
+    const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
+
+    const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
+
+    for (let keyValue in expandedConfig.parsed) {
+      await $`echo ${keyValue}=${expandedConfig.parsed[keyValue]} >> ${gitEnvPath}`;
+    }
   } else {
-    await $`run vault kv export`;
+    const APP_NAME = await getAppName();
+    const ENV = Deno.env.get('ENV');
 
-    secretsPath = `${currentPath}/.env`;
-  }
+    await $`rm -rf /tmp/.env.${APP_NAME}`;
 
-  $.verbose = true;
+    await $`run vault kv export --target=${ENV} --envfile=/tmp/.env.${APP_NAME}`;
 
-  const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
+    let env_file = `/tmp/.env.${APP_NAME}`;
 
-  const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
+    // Read the .env file
+    const content: any = fsZX.readFileSync(env_file, 'utf-8');
+    // Extract all variable names that don't start with TF_VAR
+    let nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
+    // Generate the prefixed variable declarations for non-TF_VAR variables
 
-  const data = fsZX.readFileSync(secretsPath, 'utf8');
-  const lines = data.split('\n');
+    // remove element TF_VAR_PORT
 
-  for (const line of lines) {
-    if (!line.startsWith('#') && line.includes('=')) {
-      const [secretName, ...valueParts] = line.split('=');
-      const secretValueRaw = valueParts.join('=');
+    let prefixedVars = nonTfVarNames
 
-      core.setSecret(secretValueRaw);
-      core.setOutput(secretName, secretValueRaw);
+      .map((varName: any) => {
+        const value = content.match(new RegExp(`^${varName}=(.*)$`, 'm'))[1];
+        return `TF_VAR_${varName}=${value}`;
+      })
+      .join('\n');
 
-      await $`echo ${secretName}=${secretValueRaw} >> ${gitEnvPath}`;
+    const projectHasBeenDefined = prefixedVars.match(/^TF_VAR_PROJECT=(.*)$/m);
+    const appNameHasBeenDefined = prefixedVars.match(/^TF_VAR_APP=(.*)$/m);
+    const gcpProjectIdhAsBeenDefined = prefixedVars.match(
+      /^TF_VAR_GCP_PROJECT_ID=(.*)$/m
+    );
+
+    if (!projectHasBeenDefined) {
+      const SRC = Deno.env.get('SRC') || '';
+      const { name } = await verifyIfMetaJsonExists(SRC);
+      // add the project name to the .env file
+      prefixedVars += `\nTF_VAR_PROJECT=${name}`;
+    }
+
+    if (!appNameHasBeenDefined) {
+      const { name } = await verifyIfMetaJsonExists(currentPath);
+      prefixedVars += `\nTF_VAR_APP=${name}`;
+    }
+
+    if (!gcpProjectIdhAsBeenDefined) {
+      const GCP_PROJECT_ID = Deno.env.get('GCP_PROJECT_ID') || '';
+      prefixedVars += `\nTF_VAR_GCP_PROJECT_ID=${GCP_PROJECT_ID}`;
+    }
+
+    await $`rm -rf /tmp/.env.${APP_NAME}`;
+    // write content to /tmp/.env.APP_NAME and addd prefixedVars at the end
+
+    await fsZX.writeFile(
+      `/tmp/.env.${APP_NAME}`,
+      `${content}\n${prefixedVars}`
+    );
+
+    const originalEnvContent = fs.readFileSync(`/tmp/.env.${APP_NAME}`, 'utf8');
+
+    const envConfig = parse(originalEnvContent);
+
+    // Use dotenv-expand to expand the variables
+    const expandedConfig: any = expand({
+      parsed: envConfig,
+    });
+
+    const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
+
+    const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
+
+    for (let keyValue in expandedConfig.parsed) {
+      console.log(expandedConfig.parsed[keyValue]);
+      await $`echo ${keyValue}=${expandedConfig.parsed[keyValue]} >> ${gitEnvPath}`;
     }
   }
 }
@@ -330,9 +400,13 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function actionEnvSet() {
-  const environement = await envDevcontainer();
+  let environement = '';
 
-  console.log(environement);
+  if (Deno.env.get('SET_ENV')) {
+    environement = Deno.env.get('SET_ENV') || '';
+  } else {
+    environement = await envDevcontainer();
+  }
 
   const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
 
@@ -340,7 +414,6 @@ export async function actionEnvSet() {
 
   core.setSecret(environement);
   core.setOutput('ENV', environement);
-
   await $`echo ENV=${environement} >> ${gitEnvPath}`;
 }
 
@@ -362,6 +435,7 @@ export default async function act(program: any) {
     .argument('[target]', 'workflow or job name')
     .option('--live', 'run live version on run')
     .option('--push', 'simulate push event')
+    .option('--env <string>', "set environment name (ex: 'dev'")
     .option('--no-reuse', 'do not reuse container state')
     .option('--no-secure', "show secrets in logs (don't use in production)")
     .option('--custom', 'custom act container')

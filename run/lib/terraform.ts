@@ -4,6 +4,7 @@ import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
 } from '../utils/divers.ts';
+import { getAppName } from './utils.ts';
 import _ from 'npm:lodash';
 import { Storage } from 'npm:@google-cloud/storage';
 
@@ -134,11 +135,11 @@ export async function terraformApplyUnit(component: any, options: any) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function terraformVariables(component: any, options: any) {
-  const { envfile, tf } = options;
+  const { target, tf } = options;
 
   // if envfile is not defined, set it to .env
 
-  let env_file = envfile || '.env.local';
+  let env_file = `.env.${target}` || '.env.local';
 
   // read meta.json
 
@@ -198,81 +199,72 @@ export async function terraformVariables(component: any, options: any) {
     prefixedVars += `\nTF_VAR_GCP_PROJECT_ID=${GCP_PROJECT_ID}`;
   }
 
-  // Append the prefixed variable declarations to the env_file (.env)
-  // Add an empty line before the new content if the file already exists and is not empty
-  const startEnvComment = `###############################################################################\n# TERRAFORM\n###############################################################################\n`;
-  const endEnvComment = `###############################################################################\n# THE END\n###############################################################################\n`;
+  const APP_NAME = await getAppName();
 
-  const updatedEnvContent = replaceContentBetweenComments(
-    content,
-    startEnvComment,
-    endEnvComment,
-    prefixedVars
-  );
+  await $`rm -rf /tmp/.env.${APP_NAME}`;
+  // write content to /tmp/.env.APP_NAME and addd prefixedVars at the end
 
-  fsZX.writeFileSync(`${currentPath}/${env_file}`, updatedEnvContent);
+  await fsZX.writeFile(`/tmp/.env.${APP_NAME}`, `${content}\n${prefixedVars}`);
 
   // // Read the .env file
-  const envContent = fsZX.readFileSync(env_file, 'utf-8');
+  const envContent = fsZX.readFileSync(`/tmp/.env.${APP_NAME}`, 'utf-8');
 
-  if (tf) {
-    // Extract all variable names that start with TF_VAR
-    let tfVarNames = envContent.match(/^TF_VAR_[A-Z_]+(?==)/gm);
-    if (!tfVarNames) {
-      console.log('No TF_VAR_ variables found.');
-      return;
-    }
-    // Generate the env declarations for main.tf
-
-    //remote the TF_VAR_PROJECT
-
-    // tfVarNames = tfVarNames.filter(
-    //   (varName: any) => varName !== 'TF_VAR_PROJECT'
-    // );
-
-    const varDeclarations = tfVarNames
-      // remove if equal TF_VAR_PROJECT
-
-      .map((varName: any) => {
-        const tfName = varName.replace(/^TF_VAR_/, '');
-        return `variable "${tfName}" {}`;
-      })
-      .join('\n');
-
-    const envDeclarations = tfVarNames
-      .filter((varName: any) => varName !== 'TF_VAR_PORT')
-      .map((varName: any) => {
-        const tfName = varName.replace(/^TF_VAR_/, '');
-        return `        env {\n          name  = "${tfName}"\n          value = var.${tfName}\n        }`;
-      })
-      .join('\n\n');
-    // Generate the variable declarations for variables.tf
-    // Function to replace content between start and end comments
-    const startMainComment = `        ##########################################\n        # START ENV\n        ##########################################\n`;
-    const endMainComment = `        ##########################################\n        # END ENV\n        ##########################################\n`;
-    const mainTfPath = `${currentPath}/${path}/main.tf`;
-
-    const mainTfContent = fsZX.readFileSync(mainTfPath, 'utf-8');
-    const updatedMainTfContent = replaceContentBetweenComments(
-      mainTfContent,
-      startMainComment,
-      endMainComment,
-      envDeclarations
-    );
-    fsZX.writeFileSync(mainTfPath, updatedMainTfContent);
-    // Update variables.tf
-    const startVariablesComment = `##########################################\n# START ENV\n##########################################\n`;
-    const endVariablesComment = `##########################################\n# END ENV\n##########################################\n`;
-    const variablesTfPath = `${currentPath}/${path}/variables.tf`;
-    const variablesTfContent = fsZX.readFileSync(variablesTfPath, 'utf-8');
-    const updatedVariablesTfContent = replaceContentBetweenComments(
-      variablesTfContent,
-      startVariablesComment,
-      endVariablesComment,
-      varDeclarations
-    );
-    fsZX.writeFileSync(variablesTfPath, updatedVariablesTfContent);
+  // Extract all variable names that start with TF_VAR
+  let tfVarNames = envContent.match(/^TF_VAR_[A-Z_]+(?==)/gm);
+  if (!tfVarNames) {
+    console.log('No TF_VAR_ variables found.');
+    return;
   }
+  // Generate the env declarations for main.tf
+
+  //remote the TF_VAR_PROJECT
+
+  // tfVarNames = tfVarNames.filter(
+  //   (varName: any) => varName !== 'TF_VAR_PROJECT'
+  // );
+
+  const varDeclarations = tfVarNames
+    // remove if equal TF_VAR_PROJECT
+
+    .map((varName: any) => {
+      const tfName = varName.replace(/^TF_VAR_/, '');
+      return `variable "${tfName}" {}`;
+    })
+    .join('\n');
+
+  const envDeclarations = tfVarNames
+    .filter((varName: any) => varName !== 'TF_VAR_PORT')
+    .map((varName: any) => {
+      const tfName = varName.replace(/^TF_VAR_/, '');
+      return `        env {\n          name  = "${tfName}"\n          value = var.${tfName}\n        }`;
+    })
+    .join('\n\n');
+  // Generate the variable declarations for variables.tf
+  // Function to replace content between start and end comments
+  const startMainComment = `        ##########################################\n        # START ENV\n        ##########################################\n`;
+  const endMainComment = `        ##########################################\n        # END ENV\n        ##########################################\n`;
+  const mainTfPath = `${currentPath}/${path}/main.tf`;
+
+  const mainTfContent = fsZX.readFileSync(mainTfPath, 'utf-8');
+  const updatedMainTfContent = replaceContentBetweenComments(
+    mainTfContent,
+    startMainComment,
+    endMainComment,
+    envDeclarations
+  );
+  fsZX.writeFileSync(mainTfPath, updatedMainTfContent);
+  // Update variables.tf
+  const startVariablesComment = `##########################################\n# START ENV\n##########################################\n`;
+  const endVariablesComment = `##########################################\n# END ENV\n##########################################\n`;
+  const variablesTfPath = `${currentPath}/${path}/variables.tf`;
+  const variablesTfContent = fsZX.readFileSync(variablesTfPath, 'utf-8');
+  const updatedVariablesTfContent = replaceContentBetweenComments(
+    variablesTfContent,
+    startVariablesComment,
+    endVariablesComment,
+    varDeclarations
+  );
+  fsZX.writeFileSync(variablesTfPath, updatedVariablesTfContent);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -345,8 +337,7 @@ export default async function commandTerraform(program: any) {
     .description('generate varialbes for .env and .tf')
     .action(terraformVariables)
     .argument('[component]', 'component to deploy')
-    .option('--envfile <path>', 'path to .env file')
-    .option('--no-tf', 'do not generate variables for .tf files');
+    .option('--target <name>', 'environment to target');
 
   terraform
     .command('apply')
