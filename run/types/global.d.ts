@@ -14,8 +14,12 @@ interface CustomOptionsUrl {
   tunnel: string;
 }
 
+interface CustomOptionsEnv {
+  [key: string]: string;
+}
+
 interface CustomOptions {
-  env: any;
+  env: CustomOptionsEnv;
   run?: string;
   url?: CustomOptionsUrl;
   main: ModuleActions; // Updated to use ModuleActions type

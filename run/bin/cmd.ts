@@ -51,28 +51,56 @@ async function setSecretsOnLocal(target: string) {
   if (!Deno.env.get('GITHUB_ACTIONS')) {
     const APP_NAME = await getAppName();
 
-    let env_file = `${currentPath}/.env.${target}`;
-
-    // verify if the file exists
-
-    try {
-      await fs.access(env_file, fs.constants.R_OK);
-    } catch (err) {
-      return;
-    }
-
     const fsZX: any = fs;
 
-    // Read the .env file
+    // let baseUrl = null;
+
+    const { secrets } = await verifyIfMetaJsonExists(currentPath);
+
+    let env_file = `/tmp/.env.${APP_NAME}`;
+
+    if (secrets?.base) {
+      let base_file = `${currentPath}/${secrets.base}`;
+      let target_file = `${currentPath}/.env.${target}`;
+
+      try {
+        await fs.access(target_file, fsZX.constants.R_OK);
+      } catch (err) {
+        return;
+      }
+
+      // merge base and target files in /tmp/.env.APP_NAME
+
+      await $`rm -rf /tmp/.env.${APP_NAME}`;
+
+      await $`cat ${base_file} ${target_file} > /tmp/.env.${APP_NAME}`;
+    } else {
+      let target_file = `${currentPath}/.env.${target}`;
+      await $`rm -rf /tmp/.env.${APP_NAME}`;
+
+      try {
+        await fs.access(target_file, fsZX.constants.R_OK);
+      } catch (err) {
+        return;
+      }
+
+      // Read the .env file
+
+      await $`cp ${target_file} /tmp/.env.${APP_NAME}`;
+    }
+
+    //
+
+    // // Read the .env file
     const content: any = fsZX.readFileSync(env_file, 'utf-8');
+
+    const nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
+
     // Extract all variable names that don't start with TF_VAR
-    let nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
-    // Generate the prefixed variable declarations for non-TF_VAR variables
 
     // remove element TF_VAR_PORT
 
     let prefixedVars = nonTfVarNames
-
       .map((varName: any) => {
         const value = content.match(new RegExp(`^${varName}=(.*)$`, 'm'))[1];
         return `TF_VAR_${varName}=${value}`;
@@ -122,16 +150,7 @@ async function setSecretsOnLocal(target: string) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-await setSecretsOnLocal('local');
-
-program
-  .option('--cible <env context>', 'target environment context')
-  .on('option:cible', async function (cible) {
-    await setSecretsOnLocal(cible);
-  });
-
-program.exitOverride();
-
+program.option('--cible <env context>', 'target environment context');
 program.name('run');
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -155,6 +174,10 @@ await commmandVault(program);
 
 try {
   program.parse();
+
+  const { cible } = program.opts();
+
+  await setSecretsOnLocal(cible || 'local');
 } catch (err) {
   const { exitCode, name, code, message } = err;
 

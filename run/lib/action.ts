@@ -320,24 +320,48 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
     }
   } else {
     const APP_NAME = await getAppName();
-    const ENV = Deno.env.get('ENV');
+    const target = Deno.env.get('ENV');
 
     await $`rm -rf /tmp/.env.${APP_NAME}`;
 
-    await $`run vault kv export --target=${ENV} --envfile=/tmp/.env.${APP_NAME}`;
+    const { secrets } = await verifyIfMetaJsonExists(currentPath);
 
     let env_file = `/tmp/.env.${APP_NAME}`;
+
+    if (secrets?.base) {
+      let base_file = `/tmp/.env.base.${APP_NAME}`;
+      let target_file = `/tmp/.env.target${APP_NAME}`;
+
+      await $`rm -rf /tmp/.env.base.${APP_NAME}`;
+      await $`rm -rf /tmp/.env.target.${APP_NAME}`;
+
+      await $`run vault kv export --target=base --envfile=/tmp/.env.base.${APP_NAME}`;
+      await $`run vault kv export --target=${target} --envfile=/tmp/.env.target.${APP_NAME}`;
+
+      // merge base and target files in /tmp/.env.APP_NAME
+
+      await $`rm -rf /tmp/.env.${APP_NAME}`;
+
+      await $`cat ${base_file} ${target_file} > /tmp/.env.${APP_NAME}`;
+    } else {
+      await $`rm -rf /tmp/.env.${APP_NAME}`;
+
+      await $`run vault kv export --target=${target} --envfile=/tmp/.env.${APP_NAME}`;
+
+      // Read the .env file
+    }
 
     // Read the .env file
     const content: any = fsZX.readFileSync(env_file, 'utf-8');
     // Extract all variable names that don't start with TF_VAR
-    let nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
+
+    const nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
+
     // Generate the prefixed variable declarations for non-TF_VAR variables
 
     // remove element TF_VAR_PORT
 
     let prefixedVars = nonTfVarNames
-
       .map((varName: any) => {
         const value = content.match(new RegExp(`^${varName}=(.*)$`, 'm'))[1];
         return `TF_VAR_${varName}=${value}`;

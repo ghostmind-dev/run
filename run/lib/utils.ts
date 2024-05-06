@@ -116,10 +116,8 @@ export async function envDevcontainer() {
   let environemnt;
   if (currentBranch === 'main') {
     environemnt = 'prod';
-  } else if (currentBranch === 'preview') {
-    environemnt = 'preview';
   } else {
-    environemnt = 'dev';
+    environemnt = currentBranch;
   }
 
   $.verbose = true;
@@ -154,7 +152,7 @@ export async function createShortUUID(options = { print: false }) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function createMetaFile() {
-  const id = await createShortUUID();
+  const id = (await createShortUUID()) || '';
 
   const prompt = inquirer.createPromptModule();
 
@@ -164,23 +162,39 @@ export async function createMetaFile() {
     message: 'What is the name of this object?',
   });
   const { type } = await prompt({
-    type: 'input',
+    // type needs to allow the choice of 3 types
+
+    type: 'list',
     name: 'type',
+    choices: ['project', 'app', 'config'],
     message: 'What is the type of this object?',
   });
-  const { scope } = await prompt({
-    type: 'input',
-    name: 'scope',
-    message: 'What is the scope of this object?',
+  const { global } = await prompt({
+    type: 'confirm',
+    name: 'global',
+    message: 'Is this a environment-based app  d?',
   });
-  const meta = {
+
+  interface TypeMetaJson {
+    id: string;
+    name: string;
+    type: string;
+    [key: string]: string; // Restricts all dynamic properties to be of type string
+  }
+
+  let meta: TypeMetaJson = {
+    id,
     name,
     type,
-    scope,
-    id,
   };
 
+  if (global) {
+    meta.global = 'true';
+  }
+
   await jsonfile.writeFile('meta.json', meta, { spaces: 2 });
+
+  Deno.exit();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

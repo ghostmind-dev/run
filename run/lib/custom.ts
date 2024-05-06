@@ -205,6 +205,11 @@ async function runCustomScript(
       has: has(argument),
     };
 
+    interface mdsods {
+      keokeosd: string;
+      kdosocdks: string;
+    }
+
     let env = Deno.env.toObject();
 
     input = input === undefined ? [] : input;
