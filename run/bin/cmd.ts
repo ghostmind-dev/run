@@ -186,6 +186,12 @@ try {
 } catch (err) {
   const { exitCode, name, code, message } = err;
 
+  console.log(exitCode);
+
+  console.log(name);
+
+  console.log(message);
+
   if (!message.includes('outputHelp')) {
     console.log(message);
     console.error('something went wrong');
