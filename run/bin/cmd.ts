@@ -65,6 +65,7 @@ async function setSecretsOnLocal(target: string) {
 
       try {
         await fs.access(target_file, fsZX.constants.R_OK);
+        await fs.access(base_file, fsZX.constants.R_OK);
       } catch (err) {
         return;
       }
