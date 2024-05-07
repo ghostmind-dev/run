@@ -49,6 +49,7 @@ import commmandVault from '../lib/vault.ts';
 
 async function setSecretsOnLocal(target: string) {
   if (!Deno.env.get('GITHUB_ACTIONS')) {
+    console.log(32823);
     const APP_NAME = await getAppName();
 
     const fsZX: any = fs;
