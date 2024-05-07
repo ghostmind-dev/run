@@ -187,8 +187,6 @@ try {
   const { cible } = program.opts();
 
   await setSecretsOnLocal(cible || 'local');
-
-  Deno.exit(0);
 } catch (err) {
   const { exitCode, name, code, message } = err;
 
