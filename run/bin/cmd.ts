@@ -49,7 +49,6 @@ import commmandVault from '../lib/vault.ts';
 
 async function setSecretsOnLocal(target: string) {
   if (!Deno.env.get('GITHUB_ACTIONS')) {
-    console.log(32823);
     const APP_NAME = await getAppName();
 
     const fsZX: any = fs;
@@ -146,6 +145,8 @@ async function setSecretsOnLocal(target: string) {
       config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
     );
   }
+
+  return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -180,6 +181,8 @@ try {
   const { cible } = program.opts();
 
   await setSecretsOnLocal(cible || 'local');
+
+  Deno.exit(0);
 } catch (err) {
   const { exitCode, name, code, message } = err;
 
