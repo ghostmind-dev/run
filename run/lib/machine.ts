@@ -1,9 +1,9 @@
-import { $, which, sleep, cd, fs } from "npm:zx";
+import { $, which, sleep, cd, fs } from 'npm:zx';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-} from "../utils/divers.ts";
-import inquirer from "npm:inquirer";
+} from '../utils/divers.ts';
+import inquirer from 'npm:inquirer';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -20,12 +20,6 @@ let currentPath = await detectScriptsDirectory(Deno.cwd());
 cd(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
-// CURRENT METADATA
-////////////////////////////////////////////////////////////////////////////////
-
-let metaConfig = await verifyIfMetaJsonExists(currentPath);
-
-////////////////////////////////////////////////////////////////////////////////
 // INIT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -34,9 +28,9 @@ export async function machineInit() {
 
   const { projectName } = await inquirer.prompt([
     {
-      type: "input",
-      name: "projectName",
-      message: "What is the name of the project?",
+      type: 'input',
+      name: 'projectName',
+      message: 'What is the name of the project?',
     },
   ]);
 
@@ -44,7 +38,7 @@ export async function machineInit() {
 
   // remove the user path from currentPath
 
-  const pathFromHome = currentPath.replace(`${Deno.env.get("HOME")}/`, "");
+  const pathFromHome = currentPath.replace(`${Deno.env.get('HOME')}/`, '');
 
   cd(projectName);
 
@@ -54,7 +48,7 @@ export async function machineInit() {
 
   let devcontainer: any = await fs.readFile(
     `${currentPath}/${projectName}/.devcontainer/devcontainer.json`,
-    "utf8"
+    'utf8'
   );
 
   devcontainer = JSON.parse(devcontainer);
@@ -63,17 +57,17 @@ export async function machineInit() {
 
   devcontainer.name = projectName;
   devcontainer.build.args.PROJECT_DIR =
-    "${env:HOME}${env:USERPROFILE}/" + pathFromHome + "/" + projectName;
+    '${env:HOME}${env:USERPROFILE}/' + pathFromHome + '/' + projectName;
   devcontainer.remoteEnv.LOCALHOST_SRC =
-    "${env:HOME}${env:USERPROFILE}/" + pathFromHome + "/" + projectName;
+    '${env:HOME}${env:USERPROFILE}/' + pathFromHome + '/' + projectName;
   devcontainer.mounts[2] = `source=ghostmind-${projectName}-history,target=/commandhistory,type=volume`;
   devcontainer.mounts[3] =
-    "source=${env:HOME}${env:USERPROFILE}/" +
+    'source=${env:HOME}${env:USERPROFILE}/' +
     pathFromHome +
-    "/" +
+    '/' +
     projectName +
-    "," +
-    `target=${Deno.env.get("HOME")}/${pathFromHome}/${projectName},type=bind`;
+    ',' +
+    `target=${Deno.env.get('HOME')}/${pathFromHome}/${projectName},type=bind`;
 
   devcontainer.runArgs[3] = `--name=devcontainer-${projectName}`;
 
@@ -82,14 +76,14 @@ export async function machineInit() {
   await fs.writeFile(
     `${currentPath}/${projectName}/.devcontainer/devcontainer.json`,
     JSON.stringify(devcontainer, null, 2),
-    "utf8"
+    'utf8'
   );
 
   // now , we need to modify ./meta.json
 
   let meta = await fs.readFile(
     `${currentPath}/${projectName}/meta.json`,
-    "utf8"
+    'utf8'
   );
 
   meta = JSON.parse(meta);
@@ -99,7 +93,7 @@ export async function machineInit() {
   await fs.writeFile(
     `${currentPath}/${projectName}/meta.json`,
     JSON.stringify(meta, null, 2),
-    "utf8"
+    'utf8'
   );
 
   // now we need replace the content of Readme.md and only write a ssingle line header
@@ -107,7 +101,7 @@ export async function machineInit() {
   await fs.writeFile(
     `${currentPath}/${projectName}/Readme.md`,
     `# ${projectName}`,
-    "utf8"
+    'utf8'
   );
   $.verbose = true;
 
@@ -124,10 +118,10 @@ export async function machineInit() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function machine(program: any) {
-  const machine = program.command("machine");
-  machine.description("create a devcontainer for the project");
+  const machine = program.command('machine');
+  machine.description('create a devcontainer for the project');
 
-  const init = machine.command("init");
-  init.description("create a devcontainer for the project");
+  const init = machine.command('init');
+  init.description('create a devcontainer for the project');
   init.action(machineInit);
 }

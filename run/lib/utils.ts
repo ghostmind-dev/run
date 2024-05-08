@@ -96,42 +96,6 @@ export async function devInstallDependencies() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// CHANGE ENVIRONMENT
-////////////////////////////////////////////////////////////////////////////////
-
-export async function envDevcontainer() {
-  // const directories = await withMetaMatching({
-  //   property: 'scope',
-  //   value: 'environment',
-  // });
-
-  const HOME = Deno.env.get('HOME');
-
-  $.verbose = false;
-
-  const currentBranchRaw = await $`git branch --show-current`;
-  // trim the trailing newline
-  const currentBranch = currentBranchRaw.stdout.trim();
-
-  let environemnt;
-  if (currentBranch === 'main') {
-    environemnt = 'prod';
-  } else {
-    environemnt = currentBranch;
-  }
-
-  $.verbose = true;
-
-  // set environment name in zshenv
-
-  await $`echo "export ENV=${environemnt}" > ${HOME}/.zshenv`;
-
-  Deno.env.set('ENV', environemnt);
-
-  return environemnt;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // CREATE A SHORT UUID
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -250,11 +214,6 @@ export async function changeAllIds(options: any) {
 
   Deno.exit();
 }
-////////////////////////////////////////////////////////////////////////////////
-// COMMIT CHANGES
-////////////////////////////////////////////////////////////////////////////////
-
-export async function commitChangesReturn(commit: any) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // INSTALL DEPENDENCIES
@@ -267,52 +226,6 @@ export async function installDependencies() {
   const VAULT_TOKEN = Deno.env.get('VAULT_TOKEN');
 
   await $`vault login ${VAULT_TOKEN}`;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// REPO
-////////////////////////////////////////////////////////////////////////////////
-
-export async function repoConvert(arg: any) {
-  const { repo } = metaConfig;
-
-  const { description } = repo;
-
-  let filesContent = [];
-
-  let folderList = await recursiveDirectoriesDiscovery(currentPath);
-
-  folderList.push(currentPath);
-
-  for (const folder of folderList) {
-    const files = await getFilesInDirectory(folder);
-
-    for (const file of files) {
-      const filePath = join(folder, file);
-
-      const fileContent = await fs.readFile(filePath, 'utf8');
-
-      // remove the currentPath from the filePath
-
-      const filePathWithoutCurrentPath = filePath.replace(currentPath, '');
-
-      filesContent.push({
-        path: filePathWithoutCurrentPath.slice(1),
-        content: fileContent,
-      });
-    }
-  }
-
-  // invert the filesContent array
-
-  filesContent = filesContent.reverse();
-  // create a single json file with the content of the repo object
-
-  fs.writeFile(
-    `${currentPath}/repo.json`,
-    JSON.stringify({ files: filesContent }, null, 4),
-    'utf8'
-  );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -400,10 +313,6 @@ export default async function utils(program: any) {
 
   const repo = utils.command('repo');
 
-  repo.description('repo utils');
-  repo.action(repoConvert);
-  repo.argument('[repo]', 'repo to convert');
-
   const gitAmend = git.command('amend');
   gitAmend.description('amend the last commit');
   gitAmend.action(quickAmend);
@@ -415,10 +324,6 @@ export default async function utils(program: any) {
   const devInstall = dev.command('install');
   devInstall.description('install app dependencies');
   devInstall.action(devInstallDependencies);
-
-  const devEnv = dev.command('env');
-  devEnv.description('change environement');
-  devEnv.action(envDevcontainer);
 
   const id = nanoid.command('id');
   id.description('generate a nanoid');
@@ -433,11 +338,6 @@ export default async function utils(program: any) {
   devMetaChangeId.description('change all ids in a meta.json file');
   devMetaChangeId.option('--current', 'start from currentPath');
   devMetaChangeId.action(changeAllIds);
-
-  const commitChanges = commit.command('changes');
-  commitChanges.description('return an array of changed files');
-  commitChanges.argument('[commit]', 'commit to compare to]');
-  commitChanges.action(commitChangesReturn);
 
   const dependenciesInstall = dependencies.command('install');
   dependenciesInstall.description('install dependencies');

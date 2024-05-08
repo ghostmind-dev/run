@@ -7,7 +7,6 @@ import {
 
 import { getAppName } from './utils.ts';
 
-import { envDevcontainer } from '../main.ts';
 import { join, extname } from 'https://deno.land/std@0.221.0/path/mod.ts';
 import yaml from 'npm:js-yaml';
 import { parse } from 'npm:dotenv';
@@ -41,18 +40,6 @@ const LOCALHOST_SRC =
 let currentPath = await detectScriptsDirectory(Deno.cwd());
 
 cd(currentPath);
-
-////////////////////////////////////////////////////////////////////////////////
-// CURRENT METADATA
-////////////////////////////////////////////////////////////////////////////////
-
-let metaConfig = await verifyIfMetaJsonExists(currentPath);
-
-////////////////////////////////////////////////////////////////////////////////
-// ACTION DEFAULT CONFIG
-////////////////////////////////////////////////////////////////////////////////
-
-const actionConfigDefault = {};
 
 ////////////////////////////////////////////////////////////////////////////////
 // ACT DEFAULT CONFIG
@@ -429,7 +416,13 @@ export async function actionEnvSet() {
   if (Deno.env.get('SET_ENV')) {
     environement = Deno.env.get('SET_ENV') || '';
   } else {
-    environement = await envDevcontainer();
+    const currentBranchRaw = await $`git branch --show-current`;
+    // trim the trailing newline
+    const currentBranch = currentBranchRaw.stdout.trim();
+
+    environement = currentBranch;
+
+    Deno.env.set('ENV', environement);
   }
 
   const gitEnvPathRaw = await $`echo $GITHUB_ENV`;

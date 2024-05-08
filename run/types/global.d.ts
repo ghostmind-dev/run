@@ -44,7 +44,6 @@ interface ModuleActions {
   actionSecretsSet(): Promise<void>;
   changeAllIds(): Promise<void>;
   cleanDotTerraformFolders(): Promise<void>;
-  commitChangesReturn(): Promise<void>;
   createMetaFile(): Promise<void>;
   createShortUUID(): Promise<void>;
   devInstallDependencies(): Promise<void>;
@@ -58,7 +57,6 @@ interface ModuleActions {
     options: any
   ): Promise<void>;
   dockerComposeUp(component: any, options: any): Promise<void>;
-  envDevcontainer(): Promise<void>;
   getDockerImageDigest(arch: any, component: any): Promise<void>;
   getDockerfileAndImageName(
     component: any
@@ -72,7 +70,6 @@ interface ModuleActions {
   metaDataApply(): Promise<void>;
   quickAmend(): Promise<void>;
   quickCommit(): Promise<void>;
-  repoConvert(): Promise<void>;
   getAppName(): Promise<void>;
   getProjectName(): Promise<void>;
   templateExport(): Promise<void>;

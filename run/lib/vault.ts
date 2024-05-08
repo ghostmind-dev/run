@@ -109,20 +109,6 @@ export async function vaultKvVaultToLocalUnit({
 
   let metaConfig = await fs.readJsonSync('meta.json');
 
-  let { vault } = metaConfig;
-
-  if (vault !== undefined) {
-    let { ignoreEnv } = vault;
-    if (ignoreEnv) {
-      const environment = Deno.env.get('ENV');
-
-      // verify if environment is included in ignoreEnv array
-      if (ignoreEnv.includes(environment)) {
-        return;
-      }
-    }
-  }
-
   const { target, envfile } = options;
 
   let secretPath;
