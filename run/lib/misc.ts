@@ -40,7 +40,8 @@ export default async function misc(program: any) {
         await $`git commit -m "${message}"`;
         await $`git push origin ${branch}`;
       } catch (e) {
-        console.error('faied');
+        console.error(e);
+        Deno.exit(0);
         return;
       }
 
