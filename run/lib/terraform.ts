@@ -4,7 +4,7 @@ import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
 } from '../utils/divers.ts';
-import { getAppName } from './utils.ts';
+import { getAppName } from '../utils/divers.ts';
 import _ from 'npm:lodash';
 import { Storage } from 'npm:@google-cloud/storage';
 

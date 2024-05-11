@@ -4,9 +4,7 @@ import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
-
-import { getAppName } from './utils.ts';
-
+import { getAppName } from '../utils/divers.ts';
 import { join, extname } from 'https://deno.land/std@0.221.0/path/mod.ts';
 import yaml from 'npm:js-yaml';
 import { parse } from 'npm:dotenv';

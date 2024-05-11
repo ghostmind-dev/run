@@ -70,8 +70,6 @@ interface ModuleActions {
   metaDataApply(): Promise<void>;
   quickAmend(): Promise<void>;
   quickCommit(): Promise<void>;
-  getAppName(): Promise<void>;
-  getProjectName(): Promise<void>;
   templateExport(): Promise<void>;
   terraformApplyUnit(): Promise<void>;
   terraformDestroyUnit(): Promise<void>;

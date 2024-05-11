@@ -8,8 +8,8 @@
   },
   "overrideCommand": false,
   "containerUser": "vscode",
-  "postCreateCommand": "deno run --allow-all https://raw.githubusercontent.com/ghostmind-dev/init/main/init/main.ts",
-  "postStartCommand": "/usr/local/share/post-start.ts",
+  "postStartCommand": "deno run --allow-all https://raw.githubusercontent.com/ghostmind-dev/init/main/init/main.ts",
+  "postAttachCommand": "deno run --allow-all /usr/local/share/post-attach.ts",
   "remoteUser": "vscode",
   "remoteEnv": {
     "SRC": "${containerWorkspaceFolder}",
@@ -67,7 +67,6 @@
         "be5invis.vscode-icontheme-nomo-dark",
         "pkief.material-icon-theme",
         "mtxr.sqltools",
-        "ghostmind.mode-context",
         "github.copilot-chat",
         "github.copilot-nightly",
         "ms-python.python",

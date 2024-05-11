@@ -5,6 +5,8 @@ import {
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
 
+import { setEnvOnLocal } from '../utils/divers.ts';
+
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
@@ -42,7 +44,6 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 
 async function defineSecretNamespace(target?: string) {
-  const ENV = Deno.env.get('ENV');
   let currentPath = await detectScriptsDirectory(Deno.cwd());
   cd(currentPath);
   let metaConfig = await fs.readJsonSync('meta.json');
@@ -53,11 +54,8 @@ async function defineSecretNamespace(target?: string) {
   } else if (global === 'true') {
     secretNamespace = `${id}/global`;
   } else {
-    const currentBranchRaw = await $`git branch --show-current`;
-    // trim the trailing newline
-    const currentBranch = currentBranchRaw.stdout.trim();
-
-    secretNamespace = `${id}/${currentBranch}`;
+    const ENV = Deno.env.get('ENV');
+    secretNamespace = `${id}/${ENV}`;
   }
   $.verbose = true;
   return secretNamespace;
@@ -82,7 +80,7 @@ export async function vaultKvLocalToVault(options: any) {
 
   const envFileRaw = await fsZX.readFileSync(envfilePath, 'utf8');
 
-  let secretPath = await defineSecretNamespace(targetSet);
+  let secretPath = await defineSecretNamespace();
 
   secretPath = `${secretPath}/secrets`;
 
@@ -153,6 +151,7 @@ export async function vaultKvVaultToLocalUnit({
 
 export default async function vault(program: any) {
   const vault = program.command('vault');
+
   vault.description('manage project secrets');
   const vaultKv = vault.command('kv');
   vaultKv.description('manage key-value pairs');
