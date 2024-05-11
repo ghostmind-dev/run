@@ -31,12 +31,16 @@ export default async function misc(program: any) {
         },
       ]);
 
+      const branchRaw = await $`git branch --show-current`;
+
+      const branch = branchRaw.stdout.trim();
+
       try {
         await $`git add .`;
         await $`git commit -m "${message}"`;
-        await $`git push origin master`;
+        await $`git push origin ${branch}`;
       } catch (e) {
-        console.error('failed');
+        console.error('faied');
         return;
       }
 
