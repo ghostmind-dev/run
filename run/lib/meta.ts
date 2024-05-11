@@ -170,8 +170,204 @@ export async function metaChange(options: any) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// MAIN ENTRY POINT
+// ADD A NEW PROPERTY TO A META.JSON FILE
 ////////////////////////////////////////////////////////////////////////////////
+
+export async function metaAddDocker() {
+  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+  const prompt = inquirer.createPromptModule();
+
+  // "docker": {
+  //     "default": {
+  //       "root": "container",
+  //       "image": "gcr.io/ghostmind-core/templates-butane",
+  //       "context_dockerfile": false
+  //     }
+  //   }
+
+  const { name } = await prompt({
+    type: 'input',
+    name: 'name',
+    message: 'What is the name of the docker config?',
+    default: 'default',
+  });
+
+  const { root } = await prompt({
+    type: 'input',
+    name: 'root',
+    message: 'What is the Dockerfile path (relative to the meta.json)?',
+    default: 'container',
+  });
+
+  const { image } = await prompt({
+    type: 'input',
+    name: 'image',
+    message: 'What is the Docker image?',
+  });
+
+  const { context_dockerfile } = await prompt({
+    type: 'confirm',
+    name: 'context_dockerfile',
+    message: 'Is there a Dockerfile per environment?',
+    default: false,
+  });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // ADD DOCKER CONFIG
+  ////////////////////////////////////////////////////////////////////////////////
+
+  if (!metaConfig.docker) {
+    metaConfig.docker = {};
+  }
+
+  metaConfig.docker[name] = {
+    root,
+    image,
+    context_dockerfile,
+  };
+
+  await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+    spaces: 2,
+  });
+
+  Deno.exit();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// ADD COMPOSE CONFIG
+////////////////////////////////////////////////////////////////////////////////
+
+export async function metaAddCompose() {
+  // "compose": {
+  //   "default": {
+  //     "root": "container"
+  //   }
+  // },
+
+  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+  const prompt = inquirer.createPromptModule();
+
+  const { name } = await prompt({
+    type: 'input',
+    name: 'name',
+    message: 'What is the name of the compose config?',
+    default: 'default',
+  });
+
+  const { root } = await prompt({
+    type: 'input',
+    name: 'root',
+    message: 'What is the root of the compose file?',
+    default: 'container',
+  });
+
+  if (!metaConfig.compose) {
+    metaConfig.compose = {};
+  }
+
+  metaConfig.compose[name] = {
+    root,
+  };
+
+  await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+    spaces: 2,
+  });
+
+  Deno.exit();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// ADD TUNNEL CONFIG
+////////////////////////////////////////////////////////////////////////////////
+
+export async function metaAddTunnel() {
+  // "tunnel": {
+  //   "subdomain": "templates-pluto",
+  //   "service": "http://host.docker.internal:5001"
+  // },
+
+  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+  const prompt = inquirer.createPromptModule();
+
+  const { subdomain } = await prompt({
+    type: 'input',
+    name: 'subdomain',
+    message: 'What is the subdomain of the tunnel?',
+  });
+
+  const { service } = await prompt({
+    type: 'input',
+    name: 'service',
+    message: 'What is the service of the tunnel?',
+  });
+
+  metaConfig.tunnel = {
+    subdomain,
+    service,
+  };
+
+  await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+    spaces: 2,
+  });
+
+  Deno.exit();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// ADD TERAFORM CONFIG
+////////////////////////////////////////////////////////////////////////////////
+
+export async function metaAddTerraform() {
+  // "terraform": {
+  //   "core": {
+  //     "path": "run",
+  //     "global": false
+  //   }
+  // }
+
+  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+  const prompt = inquirer.createPromptModule();
+
+  const { name } = await prompt({
+    type: 'input',
+    name: 'name',
+    message: 'What is the name of the terraform config?',
+    default: 'core',
+  });
+
+  const { path } = await prompt({
+    type: 'input',
+    name: 'path',
+    message: 'What is the path of the terraform config?',
+    default: 'run',
+  });
+
+  const { global } = await prompt({
+    type: 'confirm',
+    name: 'global',
+    message: 'Is this a global terraform config?',
+    default: false,
+  });
+
+  if (!metaConfig.terraform) {
+    metaConfig.terraform = {};
+  }
+
+  metaConfig.terraform[name] = {
+    path,
+    global,
+  };
+
+  await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+    spaces: 2,
+  });
+
+  Deno.exit();
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
@@ -191,5 +387,24 @@ export default async function meta(program: any) {
 
   const metaAdd = meta.command('add');
   metaChange.description('add a new property to a meta.json file');
-  metaChange.action(metaAdd);
+
+  metaAdd
+    .command('docker')
+    .description('add docker properties to a meta.json file')
+    .action(metaAddDocker);
+
+  metaAdd
+    .command('compose')
+    .description('add docker-compose properties to a meta.json file')
+    .action(metaAddCompose);
+
+  metaAdd
+    .command('tunnel')
+    .description('add tunnel properties to a meta.json file')
+    .action(metaAddTunnel);
+
+  metaAdd
+    .command('terraform')
+    .description('add terraform properties to a meta.json file')
+    .action(metaAddTerraform);
 }
