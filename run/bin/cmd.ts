@@ -74,7 +74,7 @@ program.exitOverride();
 try {
   await program.parseAsync();
 } catch (err) {
-  const { exitCode, name, code, message } = err;
+  const { message } = err;
 
   if (!message.includes('outputHelp')) {
     console.log(message);
