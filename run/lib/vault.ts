@@ -1,7 +1,6 @@
-import { $, which, sleep, cd, fs } from 'npm:zx';
+import { $, cd, fs } from 'npm:zx';
 import {
   detectScriptsDirectory,
-  recursiveDirectoriesDiscovery,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
 

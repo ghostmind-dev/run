@@ -31,7 +31,7 @@ const customConfigDefault = {
 // RUN CUSTOM SCRIPT
 ////////////////////////////////////////////////////////////////////////////////
 
-async function runCustomScript(
+async function runScript(
   script: string,
   argument: string[] | string,
   options: any
@@ -237,14 +237,14 @@ async function runCustomScript(
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function commandCustom(program: any) {
-  const custom = program.command('custom');
-  custom
+export default async function commandScript(program: any) {
+  const script = program.command('script');
+  script
     .description('run custom script')
     .argument('[script]', 'script to perform')
     .argument('[argument...]', 'arguments for the script')
     .option('-i, --input <items...>', 'multiple arguments for the script')
     .option('--dev', 'run in dev mode')
     .option('--test', 'run in test mode')
-    .action(runCustomScript);
+    .action(runScript);
 }

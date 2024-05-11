@@ -1,8 +1,5 @@
-import { $, which, sleep, cd, fs } from 'npm:zx';
-import {
-  detectScriptsDirectory,
-  verifyIfMetaJsonExists,
-} from '../utils/divers.ts';
+import { $, cd, fs } from 'npm:zx';
+import { detectScriptsDirectory } from '../utils/divers.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT

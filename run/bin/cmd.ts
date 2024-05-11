@@ -21,21 +21,26 @@ const program = new Command();
 ////////////////////////////////////////////////////////////////////////////////
 
 import commandAction from '../lib/action.ts';
-import commandCustom from '../lib/custom.ts';
 import commandDocker from '../lib/docker.ts';
 import commandHasura from '../lib/hasura.ts';
 import commandMachine from '../lib/machine.ts';
-import commandNpm from '../lib/npm.ts';
+import commandMeta from '../lib/meta.ts';
+import commandRoutine from '../lib/routine.ts';
+import commandScript from '../lib/script.ts';
 import commandTerraform from '../lib/terraform.ts';
 import commandTunnel from '../lib/tunnel.ts';
-import commandUtils from '../lib/utils.ts';
 import commmandVault from '../lib/vault.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-program.name('run');
+const run = program.name('run');
+
+////////////////////////////////////////////////////////////////////////////////
+// MAIN ENTRY POINT
+////////////////////////////////////////////////////////////////////////////////
+
 program
   .option('--cible <env context>', 'target environment context')
   .hook('preAction', async (thisCommand) => {
@@ -51,14 +56,14 @@ program
 ////////////////////////////////////////////////////////////////////////////////
 
 await commandAction(program);
-await commandCustom(program);
 await commandDocker(program);
 await commandHasura(program);
 await commandMachine(program);
-await commandNpm(program);
+await commandMeta(program);
+await commandRoutine(program);
+await commandScript(program);
 await commandTerraform(program);
 await commandTunnel(program);
-await commandUtils(program);
 await commmandVault(program);
 
 ////////////////////////////////////////////////////////////////////////////////

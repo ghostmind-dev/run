@@ -1,4 +1,4 @@
-import { $, which, sleep, cd, fs } from 'npm:zx';
+import { $, sleep, cd, fs } from 'npm:zx';
 import core from 'npm:@actions/core';
 import {
   detectScriptsDirectory,

@@ -12,15 +12,20 @@ expand(config({ override: true }));
 ////////////////////////////////////////////////////////////////////////////////
 
 export * from './lib/action.ts';
-export * from './lib/custom.ts';
 export * from './lib/docker.ts';
 export * from './lib/hasura.ts';
 export * from './lib/machine.ts';
-export * from './lib/npm.ts';
+export * from './lib/routine.ts';
+export * from './lib/script.ts';
 export * from './lib/terraform.ts';
 export * from './lib/tunnel.ts';
-export * from './lib/utils.ts';
 export * from './lib/vault.ts';
+
+////////////////////////////////////////////////////////////////////////////////
+// STARTING PROGRAM
+////////////////////////////////////////////////////////////////////////////////
+
+export * from './utils/divers.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // THE END

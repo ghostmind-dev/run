@@ -1,6 +1,62 @@
 import { cd, fs, $ } from 'npm:zx';
 import { config } from 'npm:dotenv';
 import { expand } from 'npm:dotenv-expand';
+import { nanoid } from 'npm:nanoid';
+
+////////////////////////////////////////////////////////////////////////////////
+// QUICK COMMIT AMEND
+////////////////////////////////////////////////////////////////////////////////
+
+export async function quickAmend() {
+  $.verbose = true;
+
+  try {
+    await $`git rev-parse --is-inside-work-tree 2>/dev/null`;
+    await $`echo "git amend will begin" &&
+          git add . &&
+          git commit --amend --no-edit &&
+          git push origin main -f
+      `;
+  } catch (e) {
+    console.error('git amend failed');
+    return;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// QUICK COMMIT AND PUSH
+////////////////////////////////////////////////////////////////////////////////
+
+export async function quickCommit() {
+  $.verbose = true;
+
+  try {
+    await $`echo "git commit will begin" &&
+          git add . &&
+          git commit -m "quick commit" &&
+          git push origin main -f
+      `;
+  } catch (e) {
+    console.error('git commit failed');
+    return;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// CREATE A SHORT UUID
+////////////////////////////////////////////////////////////////////////////////
+
+export async function createShortUUID(options = { print: false }) {
+  const { print } = options;
+  const id = nanoid(12);
+
+  if (print) {
+    console.log(id);
+    return;
+  }
+
+  return id;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // GET APP NAME
@@ -33,11 +89,15 @@ export async function getProjectName() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function setEnvOnLocal() {
-  const currentBranchRaw = await $`git branch --show-current`;
+  try {
+    const currentBranchRaw = await $`git branch --show-current`;
 
-  const currentBranch = currentBranchRaw.stdout.trim();
+    const currentBranch = currentBranchRaw.stdout.trim();
 
-  Deno.env.set('ENV', currentBranch);
+    Deno.env.set('ENV', currentBranch);
+  } catch (err) {
+    return;
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

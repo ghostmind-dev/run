@@ -1,8 +1,8 @@
-import { $, cd, fs } from "npm:zx";
+import { $, cd, fs } from 'npm:zx';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
-} from "../utils/divers.ts";
+} from '../utils/divers.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -29,39 +29,48 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function npm(program: any) {
-  const npm = program.command("npm");
-  npm
-    .description("run npm scxripts")
-    .argument("<script>", "script to run")
+  $.verbose = false;
+  const routine = program.command('routine');
+  routine
+    .description('run npm scxripts')
+    .argument('<script>', 'script to run')
     .action(async (script: any) => {
-      $.verbose = true;
+      $.verbose = false;
 
-      if (!fs.existsSync("package.json")) {
-        const { npm } = metaConfig;
+      if (!fs.existsSync('package.json')) {
+        const { routines } = metaConfig;
 
-        if (npm) {
-          let { scripts } = npm;
-
-          if (scripts && scripts[script]) {
+        if (routines) {
+          if (routines && routines[script]) {
             // create a tmp package.json with the scripts
             const packageJson = {
-              name: "tmp",
-              version: "1.0.0",
-              scripts: { ...scripts },
+              scripts: { ...routines },
             };
 
+            const randomFolder = Math.random().toString(36).substring(7);
+
+            await $`rm -rf /tmp/${randomFolder}`;
+
+            await $`mkdir -p /tmp/${randomFolder}`;
+
             fs.writeFileSync(
-              "/tmp/package.json",
+              `/tmp/${randomFolder}/package.json`,
               JSON.stringify(packageJson, null, 2)
             );
 
-            await $`cd /tmp && npm run ${script}`;
+            cd(`/tmp/${randomFolder}`);
+
+            $.verbose = true;
+
+            await $`npm run ${script}`;
+
+            $.verbose = false;
+
+            await $`rm -rf /tmp/${randomFolder}`;
           }
 
           return;
         }
       }
-
-      //   await $`npm run ${script}`;
     });
 }
