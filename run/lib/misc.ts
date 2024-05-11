@@ -9,9 +9,13 @@ import { createUUID } from '../utils/divers.ts';
 export default async function misc(program: any) {
   const misc = program.command('misc');
 
+  ////////////////////////////////////////////////////////////////////////////
+  // GIT AWAYE
+  ////////////////////////////////////////////////////////////////////////////
+
   misc
     .command('commit')
-    .description('git ad,commit,push')
+    .description('git add,commit,push')
     .action(async () => {
       $.verbose = true;
 
@@ -28,15 +32,20 @@ export default async function misc(program: any) {
       ]);
 
       try {
-        await $`git add . &&
-                git commit -m "${message}" &&
-                git push origin main
-                `;
+        await $`git add .`;
+        await $`git commit -m "${message}"`;
+        await $`git push origin master`;
       } catch (e) {
-        console.error('git awaye failed');
+        console.error('failed');
         return;
       }
+
+      Deno.exit(0);
     });
+
+  ////////////////////////////////////////////////////////////////////////////
+  // GENERATE A UUID
+  ////////////////////////////////////////////////////////////////////////////
 
   misc
     .command('uuid')
