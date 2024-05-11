@@ -21,12 +21,12 @@ const program = new Command();
 ////////////////////////////////////////////////////////////////////////////////
 
 import commandAction from '../lib/action.ts';
+import commandCustom from '../lib/custom.ts';
 import commandDocker from '../lib/docker.ts';
 import commandHasura from '../lib/hasura.ts';
 import commandMachine from '../lib/machine.ts';
 import commandMeta from '../lib/meta.ts';
 import commandRoutine from '../lib/routine.ts';
-import commandScript from '../lib/script.ts';
 import commandTerraform from '../lib/terraform.ts';
 import commandTunnel from '../lib/tunnel.ts';
 import commmandVault from '../lib/vault.ts';
@@ -56,12 +56,12 @@ program
 ////////////////////////////////////////////////////////////////////////////////
 
 await commandAction(program);
+await commandCustom(program);
 await commandDocker(program);
 await commandHasura(program);
 await commandMachine(program);
 await commandMeta(program);
 await commandRoutine(program);
-await commandScript(program);
 await commandTerraform(program);
 await commandTunnel(program);
 await commmandVault(program);
