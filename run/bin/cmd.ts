@@ -81,7 +81,12 @@ program.exitOverride();
 try {
   await program.parseAsync();
 } catch (err) {
-  console.error(err);
+  const { message } = err;
+
+  if (!message.includes('outputHelp')) {
+    console.log(message);
+    console.error('something went wrong');
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
