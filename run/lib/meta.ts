@@ -7,7 +7,7 @@ import { nanoid } from 'npm:nanoid';
 import jsonfile from 'npm:jsonfile';
 import * as inquirer from 'npm:inquirer';
 import { join } from 'https://deno.land/std@0.221.0/path/mod.ts';
-import { createShortUUID } from '../utils/divers.ts';
+import { createUUID } from '../utils/divers.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -28,7 +28,7 @@ cd(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function createMetaFile() {
-  const id = (await createShortUUID()) || '';
+  const id = (await createUUID()) || '';
 
   const prompt = inquirer.createPromptModule();
 

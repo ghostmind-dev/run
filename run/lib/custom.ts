@@ -24,7 +24,6 @@ $.verbose = false;
 
 const customConfigDefault = {
   root: 'scripts',
-  getSecretsUpToProject: true,
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -151,16 +150,12 @@ async function runScript(
   // CUSTOM CONFIG
   ////////////////////////////////////////////////////////////////////////////////
 
-  const { root, getSecretsUpToProject }: any = {
+  const { root }: any = {
     ...customConfigDefault,
     ...custom_script,
     ...testMode,
   };
   cd(`${currentPath}/${root}`);
-
-  if (getSecretsUpToProject === true) {
-    await setSecretsUptoProject(currentPath);
-  }
 
   // if there is no custom script
   // return the list of available custom scripts
@@ -238,8 +233,8 @@ async function runScript(
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function commandScript(program: any) {
-  const script = program.command('script');
-  script
+  const custom = program.command('custom');
+  custom
     .description('run custom script')
     .argument('[script]', 'script to perform')
     .argument('[argument...]', 'arguments for the script')

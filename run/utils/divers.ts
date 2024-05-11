@@ -1,59 +1,14 @@
-import { cd, fs, $ } from 'npm:zx';
+import { fs, $ } from 'npm:zx';
 import { config } from 'npm:dotenv';
 import { expand } from 'npm:dotenv-expand';
 import { nanoid } from 'npm:nanoid';
 
 ////////////////////////////////////////////////////////////////////////////////
-// QUICK COMMIT AMEND
-////////////////////////////////////////////////////////////////////////////////
-
-export async function quickAmend() {
-  $.verbose = true;
-
-  try {
-    await $`git rev-parse --is-inside-work-tree 2>/dev/null`;
-    await $`echo "git amend will begin" &&
-          git add . &&
-          git commit --amend --no-edit &&
-          git push origin main -f
-      `;
-  } catch (e) {
-    console.error('git amend failed');
-    return;
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// QUICK COMMIT AND PUSH
-////////////////////////////////////////////////////////////////////////////////
-
-export async function quickCommit() {
-  $.verbose = true;
-
-  try {
-    await $`echo "git commit will begin" &&
-          git add . &&
-          git commit -m "quick commit" &&
-          git push origin main -f
-      `;
-  } catch (e) {
-    console.error('git commit failed');
-    return;
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // CREATE A SHORT UUID
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function createShortUUID(options = { print: false }) {
-  const { print } = options;
-  const id = nanoid(12);
-
-  if (print) {
-    console.log(id);
-    return;
-  }
+export async function createUUID(length: number = 12) {
+  const id = nanoid(length);
 
   return id;
 }
@@ -189,26 +144,6 @@ export async function detectScriptsDirectory(currentPath: string) {
   }
 
   return currentPath;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// GET PROJECT TYPE
-////////////////////////////////////////////////////////////////////////////////
-
-export async function verifyIfProjectCore() {
-  const now: string = Deno.env.get('SRC') || '';
-
-  cd(now);
-
-  const metaConfig = await fs.readJsonSync('meta.json');
-  const { type, name } = metaConfig;
-
-  if (type === 'project') {
-    if (name === 'core') {
-      return true;
-    }
-  }
-  return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -359,37 +294,5 @@ export async function withMetaMatching({ property, value, path }: any) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// setSecretsUptoProject
+// THE END
 ////////////////////////////////////////////////////////////////////////////////
-
-export async function setSecretsUptoProject(path: string) {
-  // print all the parent directories
-  // example: if path == /home/ghostmind/dev/src/projects/ghostmind
-  // print: /home/ghostmind/dev/src/projects/ghostmind
-  // print: /home/ghostmind/dev/src/projects
-  // print: /home/ghostmind/dev/src
-  // print: /home/ghostmind/dev
-  // print: /home/ghostmind
-  // print: /home
-  // print: /
-
-  const directories = path.split('/');
-  let directoriesPath = [];
-
-  for (let i = directories.length; i > 0; i--) {
-    directoriesPath.push(directories.slice(0, i).join('/'));
-  }
-
-  for (let directory of directoriesPath) {
-    let metaConfig = await verifyIfMetaJsonExists(directory);
-
-    if (metaConfig) {
-      if (metaConfig.secrets) {
-        expand(config({ path: `${directory}/.env` }));
-      }
-      if (metaConfig.type === 'project') {
-        return;
-      }
-    }
-  }
-}
