@@ -78,6 +78,17 @@ export async function vaultKvLocalToVault(options: any) {
     envfilePath = `.env.${targetSet}`;
   }
 
+  // try to read the file
+
+  $.verbose = false;
+
+  try {
+    await fsZX.access(envfilePath);
+  } catch (e) {
+    console.error(`File ${envfilePath} not found`);
+    return;
+  }
+
   const envFileRaw = await fsZX.readFileSync(envfilePath, 'utf8');
 
   let secretPath = await defineSecretNamespace();
@@ -144,10 +155,6 @@ export async function vaultKvVaultToLocalUnit({
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
-
-// commands
-// create/update a vault secret
-// actions
 
 export default async function vault(program: any) {
   const vault = program.command('vault');
