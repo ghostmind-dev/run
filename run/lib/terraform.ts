@@ -55,7 +55,10 @@ async function getBucketConfig(id: any, global: any, component: any) {
 // TERRAFORM DESTROY UNIT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformDestroyUnit(component: any, options: any) {
+export async function terraformDestroy(
+  component: string,
+  options: TerraformDestroyOptions
+) {
   try {
     let metaConfig = await verifyIfMetaJsonExists(currentPath);
     let { terraform, id } = metaConfig;
@@ -63,6 +66,8 @@ export async function terraformDestroyUnit(component: any, options: any) {
     let { path, global } = terraform[component];
 
     const { bcBucket, bcPrefix } = await getBucketConfig(id, global, component);
+
+    Deno.env.set('TF_VAR_IMAGE_DIGEST', '');
 
     cd(`${currentPath}/${path}`);
 
@@ -339,8 +344,10 @@ export default async function commandTerraform(program: any) {
   terraform
     .command('destroy')
     .argument('[component]', 'component to deploy')
+    .option('--arch <arch>', 'architecture. default to amd64')
+    .option('--docker <docker>', 'docker app name')
     .description('terminate the infrastructure')
-    .action(terraformDestroyUnit);
+    .action(terraformDestroy);
 
   terraform
     .command('unlock')

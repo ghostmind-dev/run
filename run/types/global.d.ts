@@ -209,12 +209,20 @@ interface TerraformActivateOptionsWithComponent
   component: string;
 }
 
+interface TerraformDestroyOptions {
+  arch?: string;
+  docker?: string;
+}
+
 interface TerraformModuleActions {
   terraformActivate(
     componentOrOptions: string | TerraformActivateOptionsWithComponent,
     options?: TerraformActivateOptions
   ): Promise<void>;
-  terraformDestroyUnit(): Promise<void>;
+  terraformDestroy(
+    component: string,
+    options?: TerraformDestroyOptions
+  ): Promise<void>;
   terraformUnlock(): Promise<void>;
   terraformVariables(): Promise<void>;
   cleanDotTerraformFolders(): Promise<void>;
