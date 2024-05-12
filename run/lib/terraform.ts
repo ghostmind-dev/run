@@ -5,6 +5,7 @@ import {
   recursiveDirectoriesDiscovery,
 } from '../utils/divers.ts';
 import { getAppName } from '../utils/divers.ts';
+import { getDockerImageDigest } from '../main.ts';
 import _ from 'npm:lodash';
 import { Storage } from 'npm:@google-cloud/storage';
 
@@ -19,14 +20,6 @@ $.verbose = false;
 ////////////////////////////////////////////////////////////////////////////////
 
 const fsZX: any = fs;
-
-////////////////////////////////////////////////////////////////////////////////
-// TERRAFORM DEFAULT CONFIG
-////////////////////////////////////////////////////////////////////////////////
-
-const terraformConfigDefault = {
-  root: 'gcp',
-};
 
 ////////////////////////////////////////////////////////////////////////////////
 // RUNNING COMMAND LOCATION
@@ -59,24 +52,6 @@ async function getBucketConfig(id: any, global: any, component: any) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// GET TERAFORM ROOT AND DOCKER BUILD CONFIG
-////////////////////////////////////////////////////////////////////////////////
-
-async function getTerraformConfig() {
-  let currentPath = await detectScriptsDirectory(Deno.cwd());
-
-  cd(currentPath);
-
-  let { terraform } = await fsZX.readJsonSync('meta.json');
-
-  if (terraform === undefined) {
-    throw Error('terraform config not found');
-  }
-
-  return { ...terraformConfigDefault, ...terraform };
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // TERRAFORM DESTROY UNIT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -103,9 +78,31 @@ export async function terraformDestroyUnit(component: any, options: any) {
 // TERRAFORM APPLY UNIT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformApplyUnit(component: any, options: any) {
+export async function terraformActivate(
+  componentOrOptions: string | TerraformActivateOptionsWithComponent,
+  options?: TerraformActivateOptions
+) {
+  let component: string;
+
+  if (typeof componentOrOptions === 'string') {
+    component = componentOrOptions;
+    options = options || {};
+  } else {
+    component = componentOrOptions.component;
+    options = componentOrOptions;
+  }
+
   try {
     let metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+    let dockerAppName = options.docker || 'default';
+
+    let arch = options.arch || 'amd64';
+
+    const imageDigest: any = await getDockerImageDigest(arch, dockerAppName);
+
+    Deno.env.set('TF_VAR_IMAGE_DIGEST', imageDigest);
+
     let { terraform, id } = metaConfig;
     let { path, global } = terraform[component];
     const { bcBucket, bcPrefix } = await getBucketConfig(id, global, component);
@@ -117,7 +114,6 @@ export async function terraformApplyUnit(component: any, options: any) {
     console.error(error.message);
   }
 }
-
 ////////////////////////////////////////////////////////////////////////////////
 // TERRAFORM VARIABLES
 ////////////////////////////////////////////////////////////////////////////////
@@ -328,12 +324,17 @@ export default async function commandTerraform(program: any) {
     .option('--target <name>', 'environment to target');
 
   terraform
-    .command('apply')
+    .command('activate')
     .description('apply the infrastructure')
-    .argument('[component]', 'component to deploy')
+    .option('--arch <arch>', 'architecture. default to amd64')
+    .option('--docker <docker>', 'docker app name')
+    .argument(
+      '[component]',
+      'component to deplo. It has priority over --component option'
+    )
+    .option('--component <component>', 'component to deploy')
     .option('--local', 'use local state')
-    .option('--all', 'deploy all components')
-    .action(terraformApplyUnit);
+    .action(terraformActivate);
 
   terraform
     .command('destroy')

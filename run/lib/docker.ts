@@ -121,11 +121,23 @@ export async function getDockerImageDigest(arch: any, component: any) {
 ////////////////////////////////////////////////////////////////////////////////
 // DOCKER BUILD UNIT
 ////////////////////////////////////////////////////////////////////////////////
-export async function dockerBuildUnit(component?: any, options?: any) {
+export async function dockerRegister(
+  componentOrOptions?: string | DockerRegisterOptions,
+  options?: DockerRegisterOptions
+) {
+  // verify id componentOrOptions is a string or an object
+
+  if (typeof componentOrOptions === 'string') {
+    options = options || {};
+    options.component = componentOrOptions;
+  } else {
+    options = componentOrOptions || {};
+  }
+
   const { amd64, arm64, argument, cache } = options;
 
   const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(
-    component
+    options.component
   );
 
   Deno.env.set('BUILDX_NO_DEFAULT_ATTESTATIONS', '1');
@@ -440,20 +452,24 @@ export default async function commandDocker(program: any) {
   const docker = program.command('docker');
   docker.description('docker commands');
 
-  const dockerBuild = docker.command('build');
-  dockerBuild.description('Build docker image');
-  dockerBuild.option('-a, --all', 'Build all docker images');
-  dockerBuild.option(
+  const dockerRegister = docker.command('register');
+  dockerRegister.description('build and push docker image');
+  dockerRegister.option('-a, --all', 'Build all docker images');
+  dockerRegister.option(
     '-arg, --argument <arguments...>',
     'Build docker image with arguments'
   );
-  dockerBuild.option('--amd64', 'Build amd64 docker image');
+  dockerRegister.option('--amd64', 'build amd64 docker image');
   // add a --no-cache option with true as default
-  dockerBuild.option('--no-cache', 'Build docker image without cache');
+  dockerRegister.option('--no-cache', 'build docker image without cache');
 
-  dockerBuild.option('--arm64', 'Build arm64 docker image');
-  dockerBuild.argument('[component]', 'Component to build');
-  dockerBuild.action(dockerBuildUnit);
+  dockerRegister.option('--arm64', 'build arm64 docker image');
+  dockerRegister.option('--component', 'component to build');
+  dockerRegister.argument(
+    '[component]',
+    'component to build. It has priority over --component'
+  );
+  dockerRegister.action(dockerRegister);
 
   const dockerCompose = docker.command('compose');
   dockerCompose.description('docker compose commands');
