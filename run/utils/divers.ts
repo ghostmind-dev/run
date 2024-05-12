@@ -110,14 +110,19 @@ export async function setSecretsOnLocal(target: string) {
     const SRC = Deno.env.get('SRC') || '';
     const { name } = await verifyIfMetaJsonExists(SRC);
     // add the project name to the .env file
+    const PROJECT = await getProjectName();
+    Deno.env.set('PROJECT', PROJECT);
     prefixedVars += `\nTF_VAR_PROJECT=${name}`;
   }
   if (!appNameHasBeenDefined) {
     const { name } = await verifyIfMetaJsonExists(currentPath);
+    const APP = await getAppName();
+    Deno.env.set('APP', APP);
     prefixedVars += `\nTF_VAR_APP=${name}`;
   }
   if (!gcpProjectIdhAsBeenDefined) {
     const GCP_PROJECT_ID = Deno.env.get('GCP_PROJECT_ID') || '';
+
     prefixedVars += `\nTF_VAR_GCP_PROJECT_ID=${GCP_PROJECT_ID}`;
   }
   await $`rm -rf /tmp/.env.${APP_NAME}`;
