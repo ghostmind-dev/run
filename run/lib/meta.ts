@@ -370,6 +370,37 @@ export async function metaAddTerraform() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// ADD
+////////////////////////////////////////////////////////////////////////////////
+
+export async function metaAddProperty() {
+  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+  const prompt = inquirer.createPromptModule();
+
+  const availableProperties = ['docker', 'compose', 'tunnel', 'terraform'];
+
+  const { property } = await prompt({
+    type: 'list',
+    name: 'property',
+    choices: availableProperties,
+    message: 'What property do you want to add?',
+  });
+
+  if (property === 'docker') {
+    return metaAddDocker();
+  } else if (property === 'compose') {
+    return metaAddCompose();
+  } else if (property === 'tunnel') {
+    return metaAddTunnel();
+  } else if (property === 'terraform') {
+    return metaAddTerraform();
+  }
+
+  Deno.exit();
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -387,7 +418,8 @@ export default async function meta(program: any) {
     .action(metaChangeProperty);
 
   const metaAdd = meta.command('add');
-  metaChange.description('add a new property to a meta.json file');
+  metaAdd.description('add a new property to a meta.json file');
+  metaAdd.action(metaAddProperty);
 
   metaAdd
     .command('docker')
