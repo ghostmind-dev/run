@@ -121,7 +121,7 @@ export async function getDockerImageDigest(arch: any, component: any) {
 ////////////////////////////////////////////////////////////////////////////////
 // DOCKER BUILD UNIT
 ////////////////////////////////////////////////////////////////////////////////
-export async function dockerBuildUnit(component: any, options: any) {
+export async function dockerBuildUnit(component?: any, options?: any) {
   const { amd64, arm64, argument, cache } = options;
 
   const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(
@@ -260,7 +260,7 @@ export async function dockerBuildUnit(component: any, options: any) {
 // DOCKER COMPOSE UP
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerComposeUp(component: any, options: any) {
+export async function dockerComposeUp(component?: any, options?: any) {
   let { file, forceRecreate, detach } = options;
 
   if (file === undefined) {

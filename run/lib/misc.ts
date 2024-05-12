@@ -67,6 +67,20 @@ export default async function misc(program: any) {
       uuid = await createUUID();
       console.log(uuid);
     });
+
+  ////////////////////////////////////////////////////////////////////////////
+  // GENERATE A UUID
+  ////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('pain')
+    .description('generate a random UUID')
+    .argument('[length]', 'length of the UUID')
+    .action(miscDuPain);
+}
+
+export async function miscDuPain(length: number) {
+  console.log('du pain');
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -1,8 +1,5 @@
 import * as zx from 'npm:zx';
-import {
-  verifyIfMetaJsonExists,
-  setSecretsUptoProject,
-} from '../utils/divers.ts';
+import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import _ from 'npm:lodash';
 import * as main from '../main.ts';
 

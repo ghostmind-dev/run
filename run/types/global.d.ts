@@ -48,7 +48,7 @@ interface ModuleActions {
   createShortUUID(): Promise<void>;
   devInstallDependencies(): Promise<void>;
   dockerBuildUnit(component: any, options: any): Promise<void>;
-  dockerComposeBuild(component: any, options: any): Promise<void>;
+  dockerComposeBuild(component?: any, options?: any): Promise<void>;
   dockerComposeDown(component: any, options: any): Promise<void>;
   dockerComposeExec(
     instructions: any,
@@ -56,7 +56,7 @@ interface ModuleActions {
     component: any,
     options: any
   ): Promise<void>;
-  dockerComposeUp(component: any, options: any): Promise<void>;
+  dockerComposeUp(component?: any, options?: any): Promise<void>;
   getDockerImageDigest(arch: any, component: any): Promise<void>;
   getDockerfileAndImageName(
     component: any
