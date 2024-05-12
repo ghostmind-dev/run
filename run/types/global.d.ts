@@ -21,7 +21,7 @@ interface CustomOptionsEnv {
 interface CustomOptions {
   env: CustomOptionsEnv;
   run?: string;
-  url?: CustomOptionsUrl;
+  url: CustomOptionsUrl;
   main: ModuleActions; // Updated to use ModuleActions type
   utils: CustomOptionsUtils;
   input?: string[];
