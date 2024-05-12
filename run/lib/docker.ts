@@ -273,6 +273,8 @@ export async function dockerComposeUp(component: any, options: any) {
 
   component = component || 'default';
 
+  await dockerComposeDown(component, { file, forceRecreate });
+
   let { root } = compose[component];
 
   const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'up'];
