@@ -77,7 +77,7 @@ export async function createMetaFile() {
 // CHANGE ALL IDS IN A META.JSON FILE
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function metaChange(options: any) {
+export async function metaChangeProperty(options: any) {
   // ask the user if they want to change all ids
 
   const prompt = inquirer.createPromptModule();
@@ -382,8 +382,9 @@ export default async function meta(program: any) {
   metaCreate.action(createMetaFile);
 
   const metaChange = meta.command('change');
-  metaChange.description('make changes to a meta.json file');
-  metaChange.action(metaChange);
+  metaChange
+    .description('make changes to a meta.json file')
+    .action(metaChangeProperty);
 
   const metaAdd = meta.command('add');
   metaChange.description('add a new property to a meta.json file');
