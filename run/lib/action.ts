@@ -57,6 +57,10 @@ const actArgmentsDefault = [
   },
   {
     name: '--secret',
+    value: `GITHUB_TOKEN=${Deno.env.get('GITHUB_TOKEN')}`,
+  },
+  {
+    name: '--secret',
     value: `VAULT_ROOT_TOKEN=${Deno.env.get('VAULT_ROOT_TOKEN')}`,
   },
   { name: '--secret', value: `VAULT_ADDR=${Deno.env.get('VAULT_ADDR')}` },
