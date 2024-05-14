@@ -4,7 +4,7 @@ import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
-import { getAppName } from '../utils/divers.ts';
+import { getAppName, getProjectName } from '../utils/divers.ts';
 import { join, extname } from 'https://deno.land/std@0.221.0/path/mod.ts';
 import yaml from 'npm:js-yaml';
 import { parse } from 'npm:dotenv';
@@ -308,34 +308,35 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
       await $`echo ${keyValue}=${expandedConfig.parsed[keyValue]} >> ${gitEnvPath}`;
     }
   } else {
-    const APP_NAME = await getAppName();
+    const APP = await getAppName();
+    const PROJECT = await getProjectName();
     const target = Deno.env.get('ENV');
 
-    await $`rm -rf /tmp/.env.${APP_NAME}`;
+    await $`rm -rf /tmp/.env.${APP}`;
 
     const { secrets } = await verifyIfMetaJsonExists(currentPath);
 
-    let env_file = `/tmp/.env.${APP_NAME}`;
+    let env_file = `/tmp/.env.${APP}`;
 
     if (secrets?.base) {
-      let base_file = `/tmp/.env.base.${APP_NAME}`;
-      let target_file = `/tmp/.env.target${APP_NAME}`;
+      let base_file = `/tmp/.env.base.${APP}`;
+      let target_file = `/tmp/.env.target${APP}`;
 
-      await $`rm -rf /tmp/.env.base.${APP_NAME}`;
-      await $`rm -rf /tmp/.env.target.${APP_NAME}`;
+      await $`rm -rf /tmp/.env.base.${APP}`;
+      await $`rm -rf /tmp/.env.target.${APP}`;
 
-      await $`run vault kv export --target=base --envfile=/tmp/.env.base.${APP_NAME}`;
-      await $`run vault kv export --target=${target} --envfile=/tmp/.env.target.${APP_NAME}`;
+      await $`run vault kv export --target=base --envfile=/tmp/.env.base.${APP}`;
+      await $`run vault kv export --target=${target} --envfile=/tmp/.env.target.${APP}`;
 
       // merge base and target files in /tmp/.env.APP_NAME
 
-      await $`rm -rf /tmp/.env.${APP_NAME}`;
+      await $`rm -rf /tmp/.env.${APP}`;
 
-      await $`cat ${base_file} ${target_file} > /tmp/.env.${APP_NAME}`;
+      await $`cat ${base_file} ${target_file} > /tmp/.env.${APP}`;
     } else {
-      await $`rm -rf /tmp/.env.${APP_NAME}`;
+      await $`rm -rf /tmp/.env.${APP}`;
 
-      await $`run vault kv export --target=${target} --envfile=/tmp/.env.${APP_NAME}`;
+      await $`run vault kv export --target=${target} --envfile=/tmp/.env.${APP}`;
 
       // Read the .env file
     }
@@ -380,15 +381,12 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
       prefixedVars += `\nTF_VAR_GCP_PROJECT_ID=${GCP_PROJECT_ID}`;
     }
 
-    await $`rm -rf /tmp/.env.${APP_NAME}`;
+    await $`rm -rf /tmp/.env.${APP}`;
     // write content to /tmp/.env.APP_NAME and addd prefixedVars at the end
 
-    await fsZX.writeFile(
-      `/tmp/.env.${APP_NAME}`,
-      `${content}\n${prefixedVars}`
-    );
+    await fsZX.writeFile(`/tmp/.env.${APP}`, `${content}\n${prefixedVars}`);
 
-    const originalEnvContent = fs.readFileSync(`/tmp/.env.${APP_NAME}`, 'utf8');
+    const originalEnvContent = fs.readFileSync(`/tmp/.env.${APP}`, 'utf8');
 
     const envConfig = parse(originalEnvContent);
 
