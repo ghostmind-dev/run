@@ -422,7 +422,11 @@ export async function actionEnvSet() {
     // trim the trailing newline
     const currentBranch = currentBranchRaw.stdout.trim();
 
-    environement = currentBranch;
+    if (currentBranch === 'main') {
+      environement = 'prod';
+    } else {
+      environement = currentBranch;
+    }
 
     Deno.env.set('ENV', environement);
   }

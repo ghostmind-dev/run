@@ -103,7 +103,7 @@ export async function vaultKvLocalToVault(options: any) {
 // Export remote vault credentials to .env file
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function vaultKvVaultToLocalUnit({
+export async function vaultKvVaultToLocal({
   currentPathNew,
   options = {},
 }: any) {
@@ -175,5 +175,5 @@ export default async function vault(program: any) {
     .description('from remote vault to .env')
     .option('--envfile <path>', 'path to .env file')
     .option('--target <environment>', 'environment target')
-    .action(vaultKvVaultToLocalUnit);
+    .action(vaultKvVaultToLocal);
 }

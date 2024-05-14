@@ -47,9 +47,13 @@ export async function setEnvOnLocal() {
   try {
     const currentBranchRaw = await $`git branch --show-current`;
 
-    const currentBranch = currentBranchRaw.stdout.trim();
+    let environmment = currentBranchRaw.stdout.trim();
 
-    Deno.env.set('ENV', currentBranch);
+    if (environmment === 'main') {
+      environmment = 'prod';
+    }
+
+    Deno.env.set('ENV', environmment);
   } catch (err) {
     return;
   }
