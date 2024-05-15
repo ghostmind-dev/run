@@ -43,19 +43,36 @@ export async function getProjectName() {
 // SET ENV ON LOCAL
 ////////////////////////////////////////////////////////////////////////////////
 
+import { exists } from 'https://deno.land/std/fs/mod.ts';
+
 export async function setEnvOnLocal() {
+  const gitDirExists = await exists('.git');
+
+  if (!gitDirExists) {
+    return;
+  }
+
   try {
+    // Get the current branch
     const currentBranchRaw = await $`git branch --show-current`;
+    let environment = currentBranchRaw.stdout.trim();
 
-    let environmment = currentBranchRaw.stdout.trim();
-
-    if (environmment === 'main') {
-      environmment = 'prod';
+    // Map 'main' branch to 'prod'
+    if (environment === 'main') {
+      environment = 'prod';
     }
 
-    Deno.env.set('ENV', environmment);
+    // Set the environment variable
+    Deno.env.set('ENV', environment);
   } catch (err) {
-    return;
+    // Log the error for debugging purposes
+    console.error(
+      "Failed to determine Git branch. Ensure you're in a Git repository.",
+      err.message
+    );
+
+    // Optionally, you can set a default environment or handle the error as needed
+    Deno.env.set('ENV', 'default');
   }
 }
 
@@ -69,6 +86,7 @@ export async function setSecretsOnLocal(target: string) {
   const fsZX: any = fs;
   // let baseUrl = null;
   const { secrets } = await verifyIfMetaJsonExists(currentPath);
+
   let env_file = `/tmp/.env.${APP_NAME}`;
   if (secrets?.base) {
     let base_file = `${currentPath}/${secrets.base}`;
@@ -99,6 +117,7 @@ export async function setSecretsOnLocal(target: string) {
   const nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
   // Extract all variable names that don't start with TF_VAR
   // remove element TF_VAR_PORT
+
   let prefixedVars = nonTfVarNames
     .map((varName: any) => {
       const value = content.match(new RegExp(`^${varName}=(.*)$`, 'm'))[1];
