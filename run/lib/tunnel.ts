@@ -73,7 +73,7 @@ export default async function act(program: any) {
           hostname = `${CLOUDFLARED_TUNNEL_URL}`;
         }
 
-        // await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${hostname}`;
+        await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${hostname}`;
 
         ingress.push({
           hostname,
@@ -94,6 +94,8 @@ export default async function act(program: any) {
       } else {
         hostname = `${CLOUDFLARED_TUNNEL_URL}`;
       }
+
+      $.verbose = true;
 
       await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${hostname}`;
       ingress.push({ hostname, service: tunnel.service });
