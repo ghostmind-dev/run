@@ -106,6 +106,9 @@ export async function setSecretsOnLocal(target: string) {
     try {
       await fs.access(target_file, fsZX.constants.R_OK);
     } catch (err) {
+      expand(
+        config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
+      );
       return;
     }
     // Read the .env file
