@@ -146,6 +146,34 @@ type CustomArgs = string | string[];
 // DOCKER
 ////////////////////////////////////////////////////////////////////////////////
 
+// dockerCompose
+//   .command('build')
+//   .description('docker compose build')
+//   .argument('[component]', 'Component to build')
+//   .action(dockerComposeBuild)
+//   .option('-f, --file [file]', 'docker compose file')
+//   .option('--cache', 'enable cache');
+
+interface DockerComposeBuildOptions {
+  component?: string;
+  file?: string;
+  cache?: boolean;
+}
+
+interface DockerComposeBuildOptionsComponent extends DockerComposeBuildOptions {
+  component?: string;
+}
+
+interface DockerComposeUpOptions {
+  file?: string;
+  forceRecreate?: boolean;
+  detach?: boolean;
+}
+
+interface DockerComposeUpOptionsComponent extends DockerComposeUpOptions {
+  component?: string;
+}
+
 interface DockerRegisterOptions {
   all?: boolean;
   argument?: string[];
@@ -160,7 +188,10 @@ interface DockerModuleActions {
     componentOrOptions: string | DockerRegisterOptions,
     options?: DockerRegisterOptions
   ): Promise<void>;
-  dockerComposeBuild(component?: any, options?: any): Promise<void>;
+  dockerComposeBuild(
+    componentOrOptions?: DockerComposeBuildOptionsComponent,
+    options?: DockerComposeBuildOptions
+  ): Promise<void>;
   dockerComposeDown(component: any, options: any): Promise<void>;
   dockerComposeExec(
     instructions: any,
@@ -168,7 +199,10 @@ interface DockerModuleActions {
     component: any,
     options: any
   ): Promise<void>;
-  dockerComposeUp(component?: any, options?: any): Promise<void>;
+  dockerComposeUp(
+    componentOrOptions?: string | DockerComposeUpOptionsComponent,
+    options?: DockerComposeUpOptions
+  ): Promise<void>;
   getDockerImageDigest(arch: any, component: any): Promise<void>;
   getDockerfileAndImageName(
     component: any

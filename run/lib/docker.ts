@@ -272,34 +272,44 @@ export async function dockerRegister(
 // DOCKER COMPOSE UP
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerComposeUp(component?: any, options?: any) {
-  let { file, forceRecreate, detach } = options;
+export async function dockerComposeUp(
+  componentOrOptions?: string | DockerComposeUpOptionsComponent,
+  options?: DockerComposeUpOptions
+) {
+  let component: string;
+
+  if (typeof componentOrOptions === 'string') {
+    component = componentOrOptions;
+    options = options || {};
+  } else {
+    if (componentOrOptions === undefined) {
+      component = 'default';
+    } else {
+      component = componentOrOptions.component || 'default';
+    }
+
+    options = componentOrOptions;
+  }
+
+  let { file, forceRecreate, detach } = options || {};
 
   if (file === undefined) {
     file = 'compose.yaml';
   }
 
   let metaConfig = await fs.readJsonSync('meta.json');
-
   let { compose } = metaConfig;
-
   component = component || 'default';
-
   await dockerComposeDown(component, { file, forceRecreate });
-
   let { root } = compose[component];
-
   const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'up'];
   if (forceRecreate) {
     baseCommand.push('--force-recreate');
   }
-
   if (detach) {
     baseCommand.push('--detach');
   }
-
   $.verbose = true;
-
   await $`${baseCommand}`;
 }
 
@@ -418,7 +428,24 @@ export async function dockerComposeExec(
 // DOCKER COMPOSE BUILD
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerComposeBuild(component: any, options: any) {
+export async function dockerComposeBuild(
+  componentOrOptions: DockerComposeBuildOptionsComponent,
+  options: DockerComposeBuildOptions
+) {
+  let component: string;
+
+  if (typeof componentOrOptions === 'string') {
+    component = componentOrOptions;
+    options = options || {};
+  } else {
+    if (componentOrOptions === undefined) {
+      component = 'default';
+      options = {};
+    } else {
+      component = componentOrOptions.component || 'default';
+      options = componentOrOptions;
+    }
+  }
   let { file, cache } = options;
 
   if (file === undefined) {
@@ -477,12 +504,12 @@ export default async function commandDocker(program: any) {
   dockerCompose
     .command('up')
     .description('docker compose up')
-    .action(dockerComposeUp)
     .argument('[component]', 'Component to build')
-    .option('-f, --file <file>', 'docker compose file')
+    .option('-f, --file [file]', 'docker compose file')
     .option('--force-recreate', 'force recreate')
-    .option('-e, --envfile <file>', 'env filename')
-    .option('-d, --detach', 'detach');
+    .option('-e, --envfile [file]', 'env filename')
+    .option('-d, --detach', 'detach')
+    .action(dockerComposeUp);
 
   dockerCompose
     .command('down')
@@ -509,6 +536,6 @@ export default async function commandDocker(program: any) {
     .description('docker compose build')
     .argument('[component]', 'Component to build')
     .action(dockerComposeBuild)
-    .option('-f, --file <file>', 'docker compose file')
+    .option('-f, --file [file]', 'docker compose file')
     .option('--cache', 'enable cache');
 }
