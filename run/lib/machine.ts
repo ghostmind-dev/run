@@ -1,5 +1,5 @@
 import { $, cd, fs } from 'npm:zx';
-import { detectScriptsDirectory } from '../utils/divers.ts';
+import { detectScriptsDirectory, createUUID } from '../utils/divers.ts';
 import inquirer from 'npm:inquirer';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -85,6 +85,7 @@ export async function machineInit() {
 
   meta = JSON.parse(meta);
 
+  meta.id = await createUUID();
   meta.name = projectName;
 
   await fs.writeFile(
