@@ -48,7 +48,7 @@ export async function createMetaFile() {
   const { global } = await prompt({
     type: 'confirm',
     name: 'global',
-    message: 'Is this a environment-based app  d?',
+    message: 'Is this a environment-based app ?',
   });
 
   interface TypeMetaJson {
@@ -77,10 +77,10 @@ export async function createMetaFile() {
 // CHANGE ALL IDS IN A META.JSON FILE
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function metaChangeProperty(options: any) {
+export async function metaChangeProperty(propertyArg: string) {
   // ask the user if they want to change all ids
 
-  const prompt = inquirer.createPromptModule();
+  let propertyTarget;
 
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -89,20 +89,28 @@ export async function metaChangeProperty(options: any) {
 
   let properties = Object.keys(metaConfig);
 
-  const { property } = await prompt({
-    // type needs to allow the choice of 3 types
+  if (!propertyArg) {
+    const prompt = inquirer.createPromptModule();
 
-    type: 'list',
-    name: 'property',
-    choices: properties,
-    message: 'What property do you want to change?',
-  });
+    let { property } = await prompt({
+      // type needs to allow the choice of 3 types
+
+      type: 'list',
+      name: 'property',
+      choices: properties,
+      message: 'What property do you want to change?',
+    });
+
+    propertyTarget = property;
+  } else {
+    propertyTarget = propertyArg;
+  }
 
   ////////////////////////////////////////////////////////////////////////////////
   // CHANGE ID
   ////////////////////////////////////////////////////////////////////////////////
 
-  if (property === 'id') {
+  if (propertyTarget === 'id') {
     metaConfig.id = nanoid(12);
 
     await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
@@ -113,7 +121,7 @@ export async function metaChangeProperty(options: any) {
   ////////////////////////////////////////////////////////////////////////////////
   // CHANGE NAME
   ////////////////////////////////////////////////////////////////////////////////
-  else if (property === 'name') {
+  else if (propertyTarget === 'name') {
     const { name } = await prompt({
       type: 'input',
       name: 'name',
@@ -130,7 +138,7 @@ export async function metaChangeProperty(options: any) {
   ////////////////////////////////////////////////////////////////////////////////
   // CHANGE TYPE
   ////////////////////////////////////////////////////////////////////////////////
-  else if (property === 'type') {
+  else if (propertyTarget === 'type') {
     const { type } = await prompt({
       type: 'list',
       name: 'type',
@@ -148,7 +156,7 @@ export async function metaChangeProperty(options: any) {
   ////////////////////////////////////////////////////////////////////////////////
   // CHANGE GLOBAL
   ////////////////////////////////////////////////////////////////////////////////
-  else if (property === 'global') {
+  else if (propertyTarget === 'global') {
     const { global } = await prompt({
       type: 'confirm',
       name: 'global',
@@ -415,6 +423,7 @@ export default async function meta(program: any) {
   const metaChange = meta.command('change');
   metaChange
     .description('make changes to a meta.json file')
+    .argument('[property]', 'property to change')
     .action(metaChangeProperty);
 
   const metaAdd = meta.command('add');
