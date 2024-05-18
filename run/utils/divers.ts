@@ -306,10 +306,14 @@ export async function verifyIfMetaJsonExists(path: string) {
             for (let match of matches) {
               const envVariable = match.replace('${', '').replace('}', '');
 
-              updatedMetaConfig[key] = updatedMetaConfig[key].replace(
-                match,
-                Deno.env.get(envVariable)
-              );
+              // ignore if if match ${this.whatver}
+
+              if (!envVariable.includes('this.')) {
+                updatedMetaConfig[key] = updatedMetaConfig[key].replace(
+                  match,
+                  Deno.env.get(envVariable)
+                );
+              }
             }
           }
         } else if (typeof obj[key] === 'object') {
@@ -320,9 +324,51 @@ export async function verifyIfMetaJsonExists(path: string) {
       return updatedMetaConfig;
     };
 
-    return replaceEnvVariables(metaconfig);
+    const envReplacedUpdatedConfig = replaceEnvVariables(metaconfig);
 
-    return;
+    // replace the field that containers ${this.} with the value of the field
+
+    type AnyObject = { [key: string]: any };
+
+    const getProperty = (object: AnyObject, path: string) => {
+      return path
+        .split('.')
+        .reduce(
+          (acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined),
+          object
+        );
+    };
+
+    const updatedMetaConfigAction = (obj: AnyObject): AnyObject => {
+      const resolveTemplateString = (
+        value: string,
+        context: AnyObject
+      ): string => {
+        return value.replace(/\${this\.(.*?)}/g, (_: any, path: any): any => {
+          const resolvedValue = getProperty(context, path);
+          return resolvedValue !== undefined ? resolvedValue : '';
+        });
+      };
+
+      const updateProperties = (object: AnyObject, context: AnyObject) => {
+        for (let key in object) {
+          if (typeof object[key] === 'string') {
+            const matches = object[key].match(/\${this\.(.*?)}/g);
+            if (matches) {
+              object[key] = resolveTemplateString(object[key], context);
+            }
+          } else if (typeof object[key] === 'object') {
+            updateProperties(object[key], context);
+          }
+        }
+      };
+
+      let updatedMetaConfig = { ...obj };
+      updateProperties(updatedMetaConfig, updatedMetaConfig);
+      return updatedMetaConfig;
+    };
+
+    return updatedMetaConfigAction(envReplacedUpdatedConfig);
   } catch (error) {
     return false;
   }
