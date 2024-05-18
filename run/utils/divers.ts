@@ -85,7 +85,7 @@ export async function setSecretsOnLocal(target: string) {
   const APP_NAME = await getAppName();
   const fsZX: any = fs;
   // let baseUrl = null;
-  const { secrets } = await verifyIfMetaJsonExists(currentPath);
+  const { secrets, port } = await verifyIfMetaJsonExists(currentPath);
 
   let env_file = `/tmp/.env.${APP_NAME}`;
   if (secrets?.base) {
@@ -121,6 +121,8 @@ export async function setSecretsOnLocal(target: string) {
   // Extract all variable names that don't start with TF_VAR
   // remove element TF_VAR_PORT
 
+  // verify if PORT is in the nonTfVarNames array
+
   let prefixedVars = nonTfVarNames
     .map((varName: any) => {
       const value = content.match(new RegExp(`^${varName}=(.*)$`, 'm'))[1];
@@ -129,6 +131,8 @@ export async function setSecretsOnLocal(target: string) {
     .join('\n');
   const projectHasBeenDefined = prefixedVars.match(/^TF_VAR_PROJECT=(.*)$/m);
   const appNameHasBeenDefined = prefixedVars.match(/^TF_VAR_APP=(.*)$/m);
+  const portHasBeenDefined = prefixedVars.match(/^TF_VAR_PORT=(.*)$/m);
+
   const gcpProjectIdhAsBeenDefined = prefixedVars.match(
     /^TF_VAR_GCP_PROJECT_ID=(.*)$/m
   );
@@ -151,6 +155,15 @@ export async function setSecretsOnLocal(target: string) {
 
     prefixedVars += `\nTF_VAR_GCP_PROJECT_ID=${GCP_PROJECT_ID}`;
   }
+
+  if (!portHasBeenDefined) {
+    if (port) {
+      const PORT = port;
+      Deno.env.set('PORT', `${PORT}`);
+      prefixedVars += `\nTF_VAR_PORT=${PORT}`;
+    }
+  }
+
   await $`rm -rf /tmp/.env.${APP_NAME}`;
   // write content to /tmp/.env.APP_NAME and addd prefixedVars at the end
   await fsZX.writeFile(`/tmp/.env.${APP_NAME}`, `${content}\n${prefixedVars}`);

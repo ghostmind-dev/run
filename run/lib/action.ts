@@ -309,8 +309,11 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
     }
   } else {
     const APP = await getAppName();
-    const PROJECT = await getProjectName();
     const target = Deno.env.get('ENV');
+
+    const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
+
+    const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
 
     await $`rm -rf /tmp/.env.${APP}`;
 
@@ -360,6 +363,7 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
     const projectHasBeenDefined = prefixedVars.match(/^TF_VAR_PROJECT=(.*)$/m);
     const appNameHasBeenDefined = prefixedVars.match(/^TF_VAR_APP=(.*)$/m);
+    const portHasBeenDefined = prefixedVars.match(/^TF_VAR_PORT=(.*)$/m);
     const gcpProjectIdhAsBeenDefined = prefixedVars.match(
       /^TF_VAR_GCP_PROJECT_ID=(.*)$/m
     );
@@ -367,22 +371,31 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
     if (!projectHasBeenDefined) {
       const SRC = Deno.env.get('SRC') || '';
       const { name } = await verifyIfMetaJsonExists(SRC);
+      await $`echo PROJECT=${name} >> ${gitEnvPath}`;
       // add the project name to the .env file
       prefixedVars += `\nTF_VAR_PROJECT=${name}`;
     }
 
     if (!appNameHasBeenDefined) {
       const { name } = await verifyIfMetaJsonExists(currentPath);
+      await $`echo APP=${name} >> ${gitEnvPath}`;
       prefixedVars += `\nTF_VAR_APP=${name}`;
     }
 
     if (!gcpProjectIdhAsBeenDefined) {
       const GCP_PROJECT_ID = Deno.env.get('GCP_PROJECT_ID') || '';
+      await $`echo GCP_PROJECT_ID=${GCP_PROJECT_ID} >> ${gitEnvPath}`;
       prefixedVars += `\nTF_VAR_GCP_PROJECT_ID=${GCP_PROJECT_ID}`;
     }
 
+    if (!portHasBeenDefined) {
+      const { port } = await verifyIfMetaJsonExists(currentPath);
+      await $`echo PORT=${port} >> ${gitEnvPath}`;
+      prefixedVars += `\nTF_VAR_PORT=${port}`;
+    }
+
     await $`rm -rf /tmp/.env.${APP}`;
-    // write content to /tmp/.env.APP_NAME and addd prefixedVars at the end
+    // write content to /tmp/.env.APP_NAME and add prefixedVars at the end
 
     await fsZX.writeFile(`/tmp/.env.${APP}`, `${content}\n${prefixedVars}`);
 
@@ -394,10 +407,6 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
     const expandedConfig: any = expand({
       parsed: envConfig,
     });
-
-    const gitEnvPathRaw = await $`echo $GITHUB_ENV`;
-
-    const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
 
     for (let keyValue in expandedConfig.parsed) {
       console.log(expandedConfig.parsed[keyValue]);
