@@ -1,7 +1,8 @@
-import { fs, $ } from 'npm:zx';
+import { fs, $, cd } from 'npm:zx';
 import { config } from 'npm:dotenv';
 import { expand } from 'npm:dotenv-expand';
 import { nanoid } from 'npm:nanoid';
+import { exists } from 'https://deno.land/std/fs/mod.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // CREATE A SHORT UUID
@@ -43,8 +44,6 @@ export async function getProjectName() {
 // SET ENV ON LOCAL
 ////////////////////////////////////////////////////////////////////////////////
 
-import { exists } from 'https://deno.land/std/fs/mod.ts';
-
 export async function setEnvOnLocal() {
   const gitDirExists = await exists('.git');
 
@@ -85,9 +84,13 @@ export async function setSecretsOnLocal(target: string) {
   const APP_NAME = await getAppName();
   const fsZX: any = fs;
   // let baseUrl = null;
-  const { secrets, port } = await verifyIfMetaJsonExists(currentPath);
+  const { secrets, port }: any = await verifyIfMetaJsonExists(currentPath);
 
-  let env_file = `/tmp/.env.${APP_NAME}`;
+  // create a random file nunber
+
+  const randomFileNumber = await createUUID(12);
+
+  let env_file = `/tmp/.env.${randomFileNumber}.${APP_NAME}`;
   if (secrets?.base) {
     let base_file = `${currentPath}/${secrets.base}`;
     let target_file = `${currentPath}/.env.${target}`;
@@ -98,11 +101,11 @@ export async function setSecretsOnLocal(target: string) {
       return;
     }
     // merge base and target files in /tmp/.env.APP_NAME
-    await $`rm -rf /tmp/.env.${APP_NAME}`;
-    await $`cat ${base_file} ${target_file} > /tmp/.env.${APP_NAME}`;
+    await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
+    await $`cat ${base_file} ${target_file} > /tmp/.env.${randomFileNumber}.${APP_NAME}`;
   } else {
     let target_file = `${currentPath}/.env.${target}`;
-    await $`rm -rf /tmp/.env.${APP_NAME}`;
+    await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
     try {
       await fs.access(target_file, fsZX.constants.R_OK);
     } catch (err) {
@@ -112,7 +115,7 @@ export async function setSecretsOnLocal(target: string) {
       return;
     }
     // Read the .env file
-    await $`cp ${target_file} /tmp/.env.${APP_NAME}`;
+    await $`cp ${target_file} /tmp/.env.${randomFileNumber}.${APP_NAME}`;
   }
   //
   // // Read the .env file
@@ -164,10 +167,18 @@ export async function setSecretsOnLocal(target: string) {
     }
   }
 
-  await $`rm -rf /tmp/.env.${APP_NAME}`;
+  await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
   // write content to /tmp/.env.APP_NAME and addd prefixedVars at the end
-  await fsZX.writeFile(`/tmp/.env.${APP_NAME}`, `${content}\n${prefixedVars}`);
-  expand(config({ path: `/tmp/.env.${APP_NAME}`, override: true }));
+  await fsZX.writeFile(
+    `/tmp/.env.${randomFileNumber}.${APP_NAME}`,
+    `${content}\n${prefixedVars}`
+  );
+  expand(
+    config({
+      path: `/tmp/.env.${randomFileNumber}.${APP_NAME}`,
+      override: true,
+    })
+  );
   expand(
     config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
   );
@@ -245,10 +256,11 @@ export async function getDirectories(path: string) {
   });
 
   const directories = directoriesWithFiles
-    .filter((dirent) => dirent.isDirectory())
-    .filter((dirent) => dirent.name !== 'node_modules')
-    .filter((dirent) => dirent.name !== '.git')
-    .map((dirent) => dirent.name);
+    .filter((dirent: any) => dirent.isDirectory())
+    .filter((dirent: any) => dirent.name !== 'node_modules')
+    .filter((dirent: any) => dirent.name !== '.git')
+    .filter((dirent: any) => dirent.name !== '.terraform')
+    .map((dirent: any) => dirent.name);
 
   return directories;
 }
@@ -278,10 +290,24 @@ export async function recursiveDirectoriesDiscovery(
 // GET META.JSON UPDATED
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function verifyIfMetaJsonExists(path: string) {
+export async function verifyIfMetaJsonExists(
+  path: string,
+  existsDetecty: boolean = false
+) {
+  if (existsDetecty) {
+    try {
+      await fs.access(`${path}/meta.json`);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   try {
     await fs.access(`${path}/meta.json`);
     let metaconfig = fs.readJsonSync(`${path}/meta.json`);
+
+    // replace the field that containers ${} with the value of the field
 
     // {
     //   id: "ic9ETB7juz3g",
@@ -392,19 +418,18 @@ export async function withMetaMatching({ property, value, path }: any) {
   let directories = [];
 
   for (let directory of allDirectories) {
-    const metaConfig = await verifyIfMetaJsonExists(directory);
+    const metaConfigExists: any = await verifyIfMetaJsonExists(directory, true);
 
-    if (metaConfig) {
+    if (metaConfigExists) {
       let metaConfigProperty;
+
+      const metaConfig: any = await verifyIfMetaJsonExists(directory);
 
       if (property.includes('.')) {
         const propertyArray = property.split('.');
-
         metaConfigProperty = metaConfig;
-
         for (let propertyComponent of propertyArray) {
           metaConfigProperty = metaConfigProperty[propertyComponent];
-
           if (metaConfigProperty === undefined) {
             break;
           }
@@ -414,9 +439,9 @@ export async function withMetaMatching({ property, value, path }: any) {
       }
 
       if (value === undefined && metaConfigProperty) {
-        directories.push({ directory, config: metaConfig });
+        directories.push(directory);
       } else if (metaConfigProperty === value && metaConfigProperty) {
-        directories.push({ directory, config: metaConfig });
+        directories.push(directory);
       }
     }
   }

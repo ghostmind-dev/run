@@ -3,6 +3,7 @@ import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
   withMetaMatching,
+  setSecretsOnLocal,
 } from '../utils/divers.ts';
 import yaml from 'npm:js-yaml';
 
@@ -60,30 +61,32 @@ export default async function act(program: any) {
     let ingress = [];
 
     if (options.all) {
-      const services = await withMetaMatching({ property: 'tunnel' });
+      const directories = await withMetaMatching({ property: 'tunnel' });
 
-      for (const service of services) {
-        const subdomain = service.config.tunnel.subdomain;
+      for (const directory of directories) {
+        cd(directory);
+        await setSecretsOnLocal('local');
+        const metaConfig: any = await verifyIfMetaJsonExists(directory);
+
+        const subdomain = metaConfig.tunnel.subdomain;
 
         let hostname = '';
-
         if (subdomain) {
           hostname = `${subdomain}.${CLOUDFLARED_TUNNEL_URL}`;
         } else {
           hostname = `${CLOUDFLARED_TUNNEL_URL}`;
         }
-
-        await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${hostname}`;
+        // await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${hostname}`;
 
         ingress.push({
           hostname,
-          service: service.config.tunnel.service,
+          service: metaConfig.tunnel.service,
         });
       }
 
       config.ingress = ingress;
     } else {
-      let { tunnel } = await verifyIfMetaJsonExists(currentPath);
+      let { tunnel }: any = await verifyIfMetaJsonExists(currentPath);
 
       let hostname = '';
 
@@ -103,6 +106,8 @@ export default async function act(program: any) {
     }
 
     config.ingress.push({ service: 'http_status:404' });
+
+    console.log(config);
 
     await $`rm -f /home/vscode/.cloudflared/config.yaml`;
 
