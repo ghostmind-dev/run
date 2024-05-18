@@ -262,13 +262,54 @@ export async function recursiveDirectoriesDiscovery(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// VERIFY IF THERE IS A META.JSON FILE IN THE CURRENT PATH
+// GET META.JSON UPDATED
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function verifyIfMetaJsonExists(path: string) {
   try {
     await fs.access(`${path}/meta.json`);
-    return fs.readJsonSync(`${path}/meta.json`);
+    let metaconfig = fs.readJsonSync(`${path}/meta.json`);
+
+    // {
+    //   id: "ic9ETB7juz3g",
+    //   type: "project",
+    //   name: "run",
+    //   schema: { structure: "${VARIABLE}" }
+    // }
+
+    // iterate overt the json
+    // if the property value is a string and it includes ${ANYTHING} pattern
+    // replace the value with Deno.env.get('ANYTHING')
+    // if the property value is an object, iterate over the object and do the same
+
+    const replaceEnvVariables = (obj: any) => {
+      let updatedMetaConfig = obj;
+
+      for (let key in obj) {
+        if (typeof updatedMetaConfig[key] === 'string') {
+          const matches = updatedMetaConfig[key].match(/\${(.*?)}/g);
+
+          if (matches) {
+            for (let match of matches) {
+              const envVariable = match.replace('${', '').replace('}', '');
+
+              updatedMetaConfig[key] = updatedMetaConfig[key].replace(
+                match,
+                Deno.env.get(envVariable)
+              );
+            }
+          }
+        } else if (typeof obj[key] === 'object') {
+          replaceEnvVariables(obj[key]);
+        }
+      }
+
+      return updatedMetaConfig;
+    };
+
+    return replaceEnvVariables(metaconfig);
+
+    return;
   } catch (error) {
     return false;
   }
