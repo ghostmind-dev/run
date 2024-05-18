@@ -37,7 +37,7 @@ export default async function misc(program: any) {
 
       try {
         await $`git add .`;
-        await $`git commit -m "${message}"`;
+        await $`git commit -m ${message}`;
         await $`git push origin ${branch}`;
       } catch (e) {
         Deno.exit(0);

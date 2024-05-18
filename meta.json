@@ -1,12 +1,5 @@
 {
   "id": "ic9ETB7juz3g",
   "type": "project",
-  "name": "run",
-  "schema": { "structure": "${VARIABLE}" },
-  "application": {
-    "air": {
-      "type": "run",
-      "command": "echo ${TERRE}"
-    }
-  }
+  "name": "run"
 }
