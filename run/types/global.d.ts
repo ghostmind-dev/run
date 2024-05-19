@@ -108,7 +108,6 @@ interface ActionsModuleActions {
 ////////////////////////////////////////////////////////////////////////////////
 
 interface CustomOptionsUtils {
-  detect: (value: string) => boolean;
   extract: (inputName: string) => string | undefined;
   has: (argument: string | string[]) => (arg: string) => boolean;
 }

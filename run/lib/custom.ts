@@ -136,14 +136,6 @@ async function runScript(
   }
 
   ////////////////////////////////////////////////////////////////////////////////
-  // VERIFY IF VALUE EXISTS
-  ////////////////////////////////////////////////////////////////////////////////
-
-  function detect(value: string) {
-    return _.some(input, (x: string) => x === `${value}`);
-  }
-
-  ////////////////////////////////////////////////////////////////////////////////
   // CUSTOM CONFIG
   ////////////////////////////////////////////////////////////////////////////////
 
@@ -192,15 +184,9 @@ async function runScript(
     cd(currentPath);
 
     const utils = {
-      detect,
       extract,
       has: has(argument),
     };
-
-    interface mdsods {
-      keokeosd: string;
-      kdosocdks: string;
-    }
 
     let env = Deno.env.toObject();
 
