@@ -291,7 +291,7 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
     fsZX.writeFileSync('/tmp/.env.global', CREDS, 'utf8');
 
-    const originalEnvContent = fs.readFileSync(`/tmp/.env.global`, 'utf8');
+    const originalEnvContent = fsZX.readFileSync(`/tmp/.env.global`, 'utf8');
 
     const envConfig = parse(originalEnvContent);
 
@@ -304,8 +304,17 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
     const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
 
-    for (let keyValue in expandedConfig.parsed) {
-      await $`echo ${keyValue}=${expandedConfig.parsed[keyValue]} >> ${gitEnvPath}`;
+    for (let [key, value] of Object.entries(expandedConfig.parsed)) {
+      // Set secrets in GitHub Actions context
+      $.verbose = false;
+      let secret: any = value;
+      core.setSecret(secret);
+
+      $.verbose = true;
+      core.setOutput(key, value);
+      await $`echo ${key}=${value} >> ${gitEnvPath}`;
+
+      console.log(`Secrets set for ${key}`);
     }
   } else {
     const APP = await getAppName();
@@ -317,7 +326,7 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
     await $`rm -rf /tmp/.env.${APP}`;
 
-    const { secrets } = await verifyIfMetaJsonExists(currentPath);
+    const { secrets }: any = await verifyIfMetaJsonExists(currentPath);
 
     let env_file = `/tmp/.env.${APP}`;
 
@@ -339,7 +348,11 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
     } else {
       await $`rm -rf /tmp/.env.${APP}`;
 
+      $.verbose = false;
+
       await $`run vault kv export --target=${target} --envfile=/tmp/.env.${APP}`;
+
+      $.verbose = true;
 
       // Read the .env file
     }
@@ -389,7 +402,7 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
     }
 
     if (!portHasBeenDefined) {
-      const { port } = await verifyIfMetaJsonExists(currentPath);
+      const { port }: any = await verifyIfMetaJsonExists(currentPath);
       await $`echo PORT=${port} >> ${gitEnvPath}`;
       prefixedVars += `\nTF_VAR_PORT=${port}`;
     }
@@ -397,9 +410,11 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
     await $`rm -rf /tmp/.env.${APP}`;
     // write content to /tmp/.env.APP_NAME and add prefixedVars at the end
 
-    await fsZX.writeFile(`/tmp/.env.${APP}`, `${content}\n${prefixedVars}`);
+    const tempEnvPath = `/tmp/.env.${APP}`;
 
-    const originalEnvContent = fs.readFileSync(`/tmp/.env.${APP}`, 'utf8');
+    await fsZX.writeFile(tempEnvPath, `${content}\n${prefixedVars}`);
+
+    const originalEnvContent = fs.readFileSync(tempEnvPath, 'utf8');
 
     const envConfig = parse(originalEnvContent);
 
@@ -408,10 +423,23 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
       parsed: envConfig,
     });
 
-    for (let keyValue in expandedConfig.parsed) {
-      console.log(expandedConfig.parsed[keyValue]);
-      await $`echo ${keyValue}=${expandedConfig.parsed[keyValue]} >> ${gitEnvPath}`;
+    for (let [key, value] of Object.entries(expandedConfig.parsed)) {
+      // Set secrets in GitHub Actions context
+
+      $.verbose = false;
+
+      let secret: any = value;
+      core.setSecret(secret);
+
+      $.verbose = true;
+      core.setOutput(key, value);
+      await $`echo ${key}=${value} >> ${gitEnvPath}`;
+
+      console.log(`Secrets set for ${key}`);
     }
+
+    // Clean up the temporary env file
+    await fs.promises.unlink(tempEnvPath);
   }
 }
 
@@ -442,7 +470,6 @@ export async function actionEnvSet() {
 
   const gitEnvPath = `${gitEnvPathRaw}`.replace(/(\r\n|\n|\r)/gm, '');
 
-  core.setSecret(environement);
   core.setOutput('ENV', environement);
   await $`echo ENV=${environement} >> ${gitEnvPath}`;
 }
