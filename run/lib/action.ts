@@ -323,7 +323,7 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
     if (secrets?.base) {
       let base_file = `/tmp/.env.base.${APP}`;
-      let target_file = `/tmp/.env.target${APP}`;
+      let target_file = `/tmp/.env.target.${APP}`;
 
       await $`rm -rf /tmp/.env.base.${APP}`;
       await $`rm -rf /tmp/.env.target.${APP}`;

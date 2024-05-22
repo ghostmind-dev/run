@@ -32,9 +32,9 @@ export async function getDockerfileAndImageName(
   $.verbose = true;
   const ENV = `${Deno.env.get('ENV')}`;
 
-  const SRC = Deno.env.get('SRC') || '';
+  let currentPath = await detectScriptsDirectory(Deno.cwd());
 
-  const metaConfig = await verifyIfMetaJsonExists(SRC);
+  const metaConfig = await verifyIfMetaJsonExists(currentPath);
 
   let docker = metaConfig?.docker;
 

@@ -62,6 +62,7 @@ commandDocker(program);
 commandHasura(program);
 commandMachine(program);
 commandMeta(program);
+commandMisc(program);
 commandRoutine(program);
 commandTerraform(program);
 commandTunnel(program);
