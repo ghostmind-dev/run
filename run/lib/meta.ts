@@ -134,9 +134,13 @@ export async function metaChangeProperty(propertyArg: string) {
       message: 'What is the new name?',
     });
 
-    await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
-      spaces: 2,
-    });
+    if (metaConfig) {
+      metaConfig.name = name;
+
+      await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+        spaces: 2,
+      });
+    }
   }
 
   ////////////////////////////////////////////////////////////////////////////////
