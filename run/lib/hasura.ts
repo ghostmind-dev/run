@@ -1,5 +1,6 @@
-import { $, cd, fs } from 'npm:zx';
+import { $, cd } from 'npm:zx';
 import { detectScriptsDirectory } from '../utils/divers.ts';
+import fs from 'npm:fs-extra';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT

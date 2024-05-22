@@ -7,6 +7,7 @@
       "npm:commander": "npm:commander@12.0.0",
       "npm:dotenv": "npm:dotenv@16.4.5",
       "npm:dotenv-expand": "npm:dotenv-expand@11.0.6",
+      "npm:fs-extra": "npm:fs-extra@11.2.0",
       "npm:inquirer": "npm:inquirer@9.2.20",
       "npm:js-yaml": "npm:js-yaml@4.1.0",
       "npm:jsonfile": "npm:jsonfile@6.1.0",
@@ -366,6 +367,14 @@
           "asynckit": "asynckit@0.4.0",
           "combined-stream": "combined-stream@1.0.8",
           "mime-types": "mime-types@2.1.35"
+        }
+      },
+      "fs-extra@11.2.0": {
+        "integrity": "sha512-PmDi3uwK5nFuXh7XDTlVnS17xJS7vW36is2+w3xcv8SVxiB4NyATf4ctkVY5bkSjX0Y4nbvZCq1/EjtEyr9ktw==",
+        "dependencies": {
+          "graceful-fs": "graceful-fs@4.2.11",
+          "jsonfile": "jsonfile@6.1.0",
+          "universalify": "universalify@2.0.1"
         }
       },
       "function-bind@1.1.2": {

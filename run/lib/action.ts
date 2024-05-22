@@ -1,11 +1,12 @@
-import { $, sleep, cd, fs } from 'npm:zx';
+import { $, sleep, cd } from 'npm:zx';
 import core from 'npm:@actions/core';
+import fs from 'npm:fs-extra';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
-import { getAppName, getProjectName } from '../utils/divers.ts';
-import { join, extname } from 'https://deno.land/std@0.221.0/path/mod.ts';
+import { getAppName } from '../utils/divers.ts';
+import { join, extname } from 'jsr:@std/path';
 import yaml from 'npm:js-yaml';
 import { parse } from 'npm:dotenv';
 import { expand } from 'npm:dotenv-expand';
@@ -15,12 +16,6 @@ import { expand } from 'npm:dotenv-expand';
 ////////////////////////////////////////////////////////////////////////////////
 
 $.verbose = false;
-
-////////////////////////////////////////////////////////////////////////////////
-// TYPE
-////////////////////////////////////////////////////////////////////////////////
-
-const fsZX: any = fs;
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONSTANTS
@@ -249,7 +244,7 @@ export async function actionRunLocalEntry(target: any, options: any) {
     // add these properties to the /tmp/inputs.json file
 
     const currentInputs = JSON.parse(
-      fsZX.readFileSync('/tmp/inputs.json', 'utf8')
+      fs.readFileSync('/tmp/inputs.json', 'utf8')
     );
     const eventFileJson = JSON.parse(eventFile);
 
@@ -289,9 +284,9 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
     await $`rm -rf /tmp/.env.global`;
 
-    fsZX.writeFileSync('/tmp/.env.global', CREDS, 'utf8');
+    fs.writeFileSync('/tmp/.env.global', CREDS, 'utf8');
 
-    const originalEnvContent = fsZX.readFileSync(`/tmp/.env.global`, 'utf8');
+    const originalEnvContent = fs.readFileSync(`/tmp/.env.global`, 'utf8');
 
     const envConfig = parse(originalEnvContent);
 
@@ -358,7 +353,7 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
     }
 
     // Read the .env file
-    const content: any = fsZX.readFileSync(env_file, 'utf-8');
+    const content: any = fs.readFileSync(env_file, 'utf-8');
     // Extract all variable names that don't start with TF_VAR
 
     const nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
@@ -383,14 +378,21 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
     if (!projectHasBeenDefined) {
       const SRC = Deno.env.get('SRC') || '';
-      const { name } = await verifyIfMetaJsonExists(SRC);
+
+      const metaconfig = await verifyIfMetaJsonExists(SRC);
+
+      let name = metaconfig?.name || '';
+
       await $`echo PROJECT=${name} >> ${gitEnvPath}`;
       // add the project name to the .env file
       prefixedVars += `\nTF_VAR_PROJECT=${name}`;
     }
 
     if (!appNameHasBeenDefined) {
-      const { name } = await verifyIfMetaJsonExists(currentPath);
+      const metaconfig = await verifyIfMetaJsonExists(currentPath);
+
+      let name = metaconfig?.name;
+
       await $`echo APP=${name} >> ${gitEnvPath}`;
       prefixedVars += `\nTF_VAR_APP=${name}`;
     }
@@ -412,7 +414,7 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
     const tempEnvPath = `/tmp/.env.${APP}`;
 
-    await fsZX.writeFile(tempEnvPath, `${content}\n${prefixedVars}`);
+    await fs.writeFile(tempEnvPath, `${content}\n${prefixedVars}`);
 
     const originalEnvContent = fs.readFileSync(tempEnvPath, 'utf8');
 

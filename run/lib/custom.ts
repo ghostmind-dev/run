@@ -1,13 +1,8 @@
-import * as zx from 'npm:zx';
+import { $, cd } from 'npm:zx';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import _ from 'npm:lodash';
+import { fs } from 'npm:fs-extra';
 import * as main from '../main.ts';
-
-////////////////////////////////////////////////////////////////////////////////
-//  SETTING UP ZX
-////////////////////////////////////////////////////////////////////////////////
-
-const { $, cd, fs } = zx;
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -43,6 +38,10 @@ async function runScript(
   ////////////////////////////////////////////////////////////////////////////////
 
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+  if (metaConfig === undefined) {
+    return;
+  }
 
   let testMode = test === undefined ? {} : { root: 'test' };
 

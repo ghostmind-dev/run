@@ -2,6 +2,13 @@
 // WELOME TO THE GLOBAL TYPES FILE
 ////////////////////////////////////////////////////////////////////////////////
 
+interface MetaJson {
+  id: string;
+  type: string;
+  name: string;
+  [key: string]: any;
+}
+
 interface UtilsModuleActions {
   createUUID(): Promise<void>;
 
@@ -64,8 +71,10 @@ interface UtilsModuleActions {
    * Verifies if a `meta.json` file exists in the current directory.
    * @param path - The directory path.
    * @returns The parsed `meta.json` content or `false` if not found.
+   *
    */
-  verifyIfMetaJsonExists(path: string): Promise<any>;
+
+  verifyIfMetaJsonExists(path: string): Promise<MetaJson | undefined>;
 
   /**
    * Matches directories based on the specified `meta.json` property condition.

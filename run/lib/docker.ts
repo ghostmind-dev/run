@@ -1,11 +1,12 @@
-import { $, sleep, cd, fs } from 'npm:zx';
+import { $, sleep, cd } from 'npm:zx';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
 import _ from 'npm:lodash';
 import { parse } from 'npm:yaml';
-import { readFileSync } from 'https://deno.land/std@0.112.0/node/fs.ts';
+import { readFileSync } from 'npm:fs-extra';
+import fs from 'npm:fs-extra';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -25,15 +26,17 @@ cd(currentPath);
 // GET DOCKERFILE NAME AND IMAGE NAME
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDockerfileAndImageName(component: any) {
+export async function getDockerfileAndImageName(
+  component: any
+): Promise<{ dockerfile: string; dockerContext: string; image: string }> {
   $.verbose = true;
   const ENV = `${Deno.env.get('ENV')}`;
 
   const SRC = Deno.env.get('SRC') || '';
 
-  let currentPath = await detectScriptsDirectory(Deno.cwd());
+  const metaConfig = await verifyIfMetaJsonExists(SRC);
 
-  let { docker } = await verifyIfMetaJsonExists(currentPath);
+  let docker = metaConfig?.docker;
 
   component = component || 'default';
 
@@ -54,7 +57,8 @@ export async function getDockerfileAndImageName(component: any) {
 
   // $.verbose = true;
 
-  const { name: PROJECT_NAME } = await verifyIfMetaJsonExists(SRC);
+  // need other solution to get the project name
+  const { name: PROJECT_NAME } = metaConfig || { name: '' };
 
   if (image.includes('gcr.io') || image.includes('ghcr.io')) {
     image = `${image}:${ENV}`;
@@ -71,7 +75,10 @@ export async function getDockerfileAndImageName(component: any) {
 // GET LATEST IMAGE DIGEST
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDockerImageDigest(arch: any, component: any) {
+export async function getDockerImageDigest(
+  arch: any,
+  component: any
+): Promise<string> {
   let { image } = await getDockerfileAndImageName(component);
 
   // rempcve the tag from the image name
@@ -115,6 +122,7 @@ export async function getDockerImageDigest(arch: any, component: any) {
   } else {
     const imageDigestRaw =
       await $`docker inspect --format='{{index .RepoDigests 0}}' ${image}`;
+    return imageDigestRaw.toString();
   }
 }
 

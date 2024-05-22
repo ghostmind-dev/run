@@ -1,22 +1,11 @@
-import { $, cd, fs } from 'npm:zx';
-import {
-  detectScriptsDirectory,
-  verifyIfMetaJsonExists,
-} from '../utils/divers.ts';
-
-import { setEnvOnLocal } from '../utils/divers.ts';
-
+import { $, cd } from 'npm:zx';
+import { detectScriptsDirectory } from '../utils/divers.ts';
+import fs from 'npm:fs-extra';
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
 
 $.verbose = false;
-
-////////////////////////////////////////////////////////////////////////////////
-// TYPE
-////////////////////////////////////////////////////////////////////////////////
-
-const fsZX: any = fs;
 
 ////////////////////////////////////////////////////////////////////////////////
 // RUNNING COMMAND LOCATION
@@ -70,13 +59,13 @@ export async function vaultKvLocalToVault(options: any) {
   $.verbose = false;
 
   try {
-    await fsZX.access(envfilePath);
+    await fs.access(envfilePath);
   } catch (e) {
     console.error(`File ${envfilePath} not found`);
     return;
   }
 
-  const envFileRaw = await fsZX.readFileSync(envfilePath, 'utf8');
+  const envFileRaw = await fs.readFileSync(envfilePath, 'utf8');
 
   let secretPath = await defineSecretNamespace();
 

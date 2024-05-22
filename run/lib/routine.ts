@@ -1,8 +1,9 @@
-import { $, cd, fs } from 'npm:zx';
+import { $, cd } from 'npm:zx';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
+import fs from 'npm:fs-extra';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -38,7 +39,7 @@ export default async function npm(program: any) {
       $.verbose = false;
 
       if (!fs.existsSync('package.json')) {
-        const { routines } = metaConfig;
+        const routines = metaConfig?.rtoutines;
 
         if (routines) {
           if (routines && routines[script]) {

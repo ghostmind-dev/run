@@ -1,6 +1,7 @@
-import { $, cd, fs } from 'npm:zx';
+import { $, cd } from 'npm:zx';
 import { detectScriptsDirectory, createUUID } from '../utils/divers.ts';
 import inquirer from 'npm:inquirer';
+import fs from 'npm:fs-extra';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT

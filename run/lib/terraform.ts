@@ -1,4 +1,5 @@
-import { $, cd, fs } from 'npm:zx';
+import { $, cd } from 'npm:zx';
+import fs from 'npm:fs-extra';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
@@ -14,12 +15,6 @@ import { Storage } from 'npm:@google-cloud/storage';
 ////////////////////////////////////////////////////////////////////////////////
 
 $.verbose = false;
-
-////////////////////////////////////////////////////////////////////////////////
-// TYPE
-////////////////////////////////////////////////////////////////////////////////
-
-const fsZX: any = fs;
 
 ////////////////////////////////////////////////////////////////////////////////
 // RUNNING COMMAND LOCATION
@@ -61,19 +56,26 @@ export async function terraformDestroy(
 ) {
   try {
     let metaConfig = await verifyIfMetaJsonExists(currentPath);
-    let { terraform, id } = metaConfig;
 
-    let { path, global } = terraform[component];
+    if (metaConfig) {
+      let { terraform, id } = metaConfig;
 
-    const { bcBucket, bcPrefix } = await getBucketConfig(id, global, component);
+      let { path, global } = terraform[component];
 
-    Deno.env.set('TF_VAR_IMAGE_DIGEST', '');
+      const { bcBucket, bcPrefix } = await getBucketConfig(
+        id,
+        global,
+        component
+      );
 
-    cd(`${currentPath}/${path}`);
+      Deno.env.set('TF_VAR_IMAGE_DIGEST', '');
 
-    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
-    await $`terraform plan -destroy`;
-    await $`terraform destroy -auto-approve`;
+      cd(`${currentPath}/${path}`);
+
+      await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
+      await $`terraform plan -destroy`;
+      await $`terraform destroy -auto-approve`;
+    }
   } catch (error) {
     console.error(error.message);
   }
@@ -99,6 +101,10 @@ export async function terraformActivate(
 
   try {
     let metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+    if (metaConfig === undefined) {
+      return;
+    }
 
     let dockerAppName = options.docker || 'default';
 
@@ -132,7 +138,13 @@ export async function terraformVariables(component: any, options: any) {
 
   // read meta.json
 
-  const { terraform } = await verifyIfMetaJsonExists(currentPath);
+  const metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+  if (metaConfig === undefined) {
+    return;
+  }
+
+  const { terraform } = metaConfig;
 
   const { path } = terraform[component];
 
@@ -150,7 +162,7 @@ export async function terraformVariables(component: any, options: any) {
   };
 
   // Read the .env file
-  const content: any = fsZX.readFileSync(env_file, 'utf-8');
+  const content: any = fs.readFileSync(env_file, 'utf-8');
   // Extract all variable names that don't start with TF_VAR
   let nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
   // Generate the prefixed variable declarations for non-TF_VAR variables
@@ -173,13 +185,18 @@ export async function terraformVariables(component: any, options: any) {
 
   if (!projectHasBeenDefined) {
     const SRC = Deno.env.get('SRC') || '';
-    const { name } = await verifyIfMetaJsonExists(SRC);
+    const metaConfig = await verifyIfMetaJsonExists(SRC);
+
+    const name = metaConfig || '';
+
     // add the project name to the .env file
     prefixedVars += `\nTF_VAR_PROJECT=${name}`;
   }
 
   if (!appNameHasBeenDefined) {
-    const { name } = await verifyIfMetaJsonExists(currentPath);
+    const metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+    const name = metaConfig || '';
     prefixedVars += `\nTF_VAR_APP=${name}`;
   }
 
@@ -193,10 +210,10 @@ export async function terraformVariables(component: any, options: any) {
   await $`rm -rf /tmp/.env.${APP_NAME}`;
   // write content to /tmp/.env.APP_NAME and addd prefixedVars at the end
 
-  await fsZX.writeFile(`/tmp/.env.${APP_NAME}`, `${content}\n${prefixedVars}`);
+  await fs.writeFile(`/tmp/.env.${APP_NAME}`, `${content}\n${prefixedVars}`);
 
   // // Read the .env file
-  const envContent = fsZX.readFileSync(`/tmp/.env.${APP_NAME}`, 'utf-8');
+  const envContent = fs.readFileSync(`/tmp/.env.${APP_NAME}`, 'utf-8');
 
   // Extract all variable names that start with TF_VAR
   let tfVarNames = envContent.match(/^TF_VAR_[A-Z_]+(?==)/gm);
@@ -234,26 +251,26 @@ export async function terraformVariables(component: any, options: any) {
   const endMainComment = `        ##########################################\n        # END ENV\n        ##########################################\n`;
   const mainTfPath = `${currentPath}/${path}/main.tf`;
 
-  const mainTfContent = fsZX.readFileSync(mainTfPath, 'utf-8');
+  const mainTfContent = fs.readFileSync(mainTfPath, 'utf-8');
   const updatedMainTfContent = replaceContentBetweenComments(
     mainTfContent,
     startMainComment,
     endMainComment,
     envDeclarations
   );
-  fsZX.writeFileSync(mainTfPath, updatedMainTfContent);
+  fs.writeFileSync(mainTfPath, updatedMainTfContent);
   // Update variables.tf
   const startVariablesComment = `##########################################\n# START ENV\n##########################################\n`;
   const endVariablesComment = `##########################################\n# END ENV\n##########################################\n`;
   const variablesTfPath = `${currentPath}/${path}/variables.tf`;
-  const variablesTfContent = fsZX.readFileSync(variablesTfPath, 'utf-8');
+  const variablesTfContent = fs.readFileSync(variablesTfPath, 'utf-8');
   const updatedVariablesTfContent = replaceContentBetweenComments(
     variablesTfContent,
     startVariablesComment,
     endVariablesComment,
     varDeclarations
   );
-  fsZX.writeFileSync(variablesTfPath, updatedVariablesTfContent);
+  fs.writeFileSync(variablesTfPath, updatedVariablesTfContent);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -282,7 +299,13 @@ export async function terraformUnlock(component: string, options: any) {
 
   // read the meta.json file
 
-  let { id } = await verifyIfMetaJsonExists(currentPath);
+  const metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+  if (metaConfig === undefined) {
+    return;
+  }
+
+  const { id } = metaConfig;
 
   if (env === undefined) {
     env = Deno.env.get('ENV');
