@@ -10,7 +10,7 @@ interface MetaJson {
 }
 
 interface UtilsModuleActions {
-  createUUID(): Promise<void>;
+  createUUID(): Promise<string>;
 
   /**
    * Retrieves the application name.

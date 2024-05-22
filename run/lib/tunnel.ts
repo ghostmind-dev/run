@@ -1,11 +1,11 @@
-import { $, cd, fs } from 'npm:zx';
+import { $, cd, fs } from 'npm:zx@8.1.0';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
   withMetaMatching,
   setSecretsOnLocal,
 } from '../utils/divers.ts';
-import yaml from 'npm:js-yaml';
+import yaml from 'npm:js-yaml@4.1.0';
 
 ///////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -25,7 +25,7 @@ cd(currentPath);
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function act(program: any) {
+export default function tunnel(program: any) {
   const tunnel = program.command('tunnel');
   tunnel.description('Run a cloudflared tunnel to a local service');
 

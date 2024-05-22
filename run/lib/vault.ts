@@ -1,6 +1,10 @@
-import { $, cd } from 'npm:zx';
-import { detectScriptsDirectory } from '../utils/divers.ts';
-import fs from 'npm:fs-extra';
+import { $, cd } from 'npm:zx@8.1.0';
+import {
+  detectScriptsDirectory,
+  verifyIfMetaJsonExists,
+} from '../utils/divers.ts';
+import fs from 'npm:fs-extra@11.2.0';
+import { readFileSync } from 'node:fs';
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
 ////////////////////////////////////////////////////////////////////////////////
@@ -22,8 +26,13 @@ cd(currentPath);
 async function defineSecretNamespace(target?: string) {
   let currentPath = await detectScriptsDirectory(Deno.cwd());
   cd(currentPath);
-  let metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+  if (metaConfig === undefined) {
+    return;
+  }
   let { id, global } = metaConfig;
+
   let secretNamespace;
   if (target) {
     secretNamespace = `${id}/${target}`;
@@ -67,7 +76,7 @@ export async function vaultKvLocalToVault(options: any) {
 
   const envFileRaw = await fs.readFileSync(envfilePath, 'utf8');
 
-  let secretPath = await defineSecretNamespace();
+  let secretPath = await defineSecretNamespace(targetSet);
 
   secretPath = `${secretPath}/secrets`;
 
@@ -123,7 +132,7 @@ export async function vaultKvVaultToLocal(options: any) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function vault(program: any) {
+export default function vault(program: any) {
   const vault = program.command('vault');
 
   vault.description('manage project secrets');

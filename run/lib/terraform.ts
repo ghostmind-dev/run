@@ -1,5 +1,6 @@
-import { $, cd } from 'npm:zx';
-import fs from 'npm:fs-extra';
+import { $, cd } from 'npm:zx@8.1.0';
+import fs from 'npm:fs-extra@11.2.0';
+import { readFileSync } from 'node:fs';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
@@ -7,8 +8,8 @@ import {
 } from '../utils/divers.ts';
 import { getAppName } from '../utils/divers.ts';
 import { getDockerImageDigest } from '../main.ts';
-import _ from 'npm:lodash';
-import { Storage } from 'npm:@google-cloud/storage';
+import _ from 'npm:lodash@4.17.21';
+import { Storage } from 'npm:@google-cloud/storage@7.11.1';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -28,7 +29,7 @@ cd(currentPath);
 // GET BACKEND BUCKET NAME AND DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
-async function getBucketConfig(id: any, global: any, component: any) {
+export async function getBucketConfig(id: any, global: any, component: any) {
   const ENV = `${Deno.env.get('ENV')}`;
   let bucketDirectory;
 
@@ -162,7 +163,7 @@ export async function terraformVariables(component: any, options: any) {
   };
 
   // Read the .env file
-  const content: any = fs.readFileSync(env_file, 'utf-8');
+  const content: any = readFileSync(env_file, 'utf-8');
   // Extract all variable names that don't start with TF_VAR
   let nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
   // Generate the prefixed variable declarations for non-TF_VAR variables
@@ -213,7 +214,7 @@ export async function terraformVariables(component: any, options: any) {
   await fs.writeFile(`/tmp/.env.${APP_NAME}`, `${content}\n${prefixedVars}`);
 
   // // Read the .env file
-  const envContent = fs.readFileSync(`/tmp/.env.${APP_NAME}`, 'utf-8');
+  const envContent = readFileSync(`/tmp/.env.${APP_NAME}`, 'utf-8');
 
   // Extract all variable names that start with TF_VAR
   let tfVarNames = envContent.match(/^TF_VAR_[A-Z_]+(?==)/gm);
@@ -251,7 +252,7 @@ export async function terraformVariables(component: any, options: any) {
   const endMainComment = `        ##########################################\n        # END ENV\n        ##########################################\n`;
   const mainTfPath = `${currentPath}/${path}/main.tf`;
 
-  const mainTfContent = fs.readFileSync(mainTfPath, 'utf-8');
+  const mainTfContent = readFileSync(mainTfPath, 'utf-8');
   const updatedMainTfContent = replaceContentBetweenComments(
     mainTfContent,
     startMainComment,
@@ -263,7 +264,7 @@ export async function terraformVariables(component: any, options: any) {
   const startVariablesComment = `##########################################\n# START ENV\n##########################################\n`;
   const endVariablesComment = `##########################################\n# END ENV\n##########################################\n`;
   const variablesTfPath = `${currentPath}/${path}/variables.tf`;
-  const variablesTfContent = fs.readFileSync(variablesTfPath, 'utf-8');
+  const variablesTfContent = readFileSync(variablesTfPath, 'utf-8');
   const updatedVariablesTfContent = replaceContentBetweenComments(
     variablesTfContent,
     startVariablesComment,
@@ -333,7 +334,7 @@ export async function terraformUnlock(component: string, options: any) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function commandTerraform(program: any) {
+export default function commandTerraform(program: any) {
   Deno.env.set('GOOGLE_APPLICATION_CREDENTIALS', '/tmp/gsa_key.json');
 
   const terraform = program.command('terraform');

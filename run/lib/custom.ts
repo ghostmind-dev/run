@@ -1,7 +1,7 @@
-import { $, cd } from 'npm:zx';
+import { $, cd } from 'npm:zx@8.1.0';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
-import _ from 'npm:lodash';
-import { fs } from 'npm:fs-extra';
+import _ from 'npm:lodash@4.17.21';
+import fs from 'npm:fs-extra@11.2.0';
 import * as main from '../main.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -27,8 +27,6 @@ async function runScript(
   argument: string[] | string,
   options: any
 ) {
-  let { custom_script } = await fs.readJsonSync('meta.json');
-
   let currentPath = Deno.cwd();
 
   let { test, input, dev } = options;
@@ -42,6 +40,8 @@ async function runScript(
   if (metaConfig === undefined) {
     return;
   }
+
+  let { custom_script } = metaConfig;
 
   let testMode = test === undefined ? {} : { root: 'test' };
 
@@ -214,7 +214,7 @@ async function runScript(
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function commandScript(program: any) {
+export default function commandScript(program: any) {
   const custom = program.command('custom');
   custom
     .description('run custom script')

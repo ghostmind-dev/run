@@ -1,12 +1,12 @@
-import { $, cd } from 'npm:zx';
+import { $, cd } from 'npm:zx@8.1.0';
 import {
   verifyIfMetaJsonExists,
   detectScriptsDirectory,
 } from '../utils/divers.ts';
-import { nanoid } from 'npm:nanoid';
-import jsonfile from 'npm:jsonfile';
-import * as inquirer from 'npm:inquirer';
-import { join } from 'jsr:@std/path';
+import { nanoid } from 'npm:nanoid@5.0.7';
+import jsonfile from 'npm:jsonfile@6.1.0';
+import * as inquirer from 'npm:inquirer@9.2.22';
+import { join } from 'jsr:@std/path@0.225.1';
 import { createUUID } from '../utils/divers.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -427,7 +427,7 @@ export async function metaAddProperty(): Promise<void> {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function meta(program: any) {
+export default function meta(program: any) {
   const meta = program.command('meta');
   meta.description('manage meta.json files');
 

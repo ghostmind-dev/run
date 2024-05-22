@@ -1,12 +1,12 @@
-import { $, sleep, cd } from 'npm:zx';
+import { $, sleep, cd } from 'npm:zx@8.1.0';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
-import _ from 'npm:lodash';
-import { parse } from 'npm:yaml';
-import { readFileSync } from 'npm:fs-extra';
-import fs from 'npm:fs-extra';
+import _ from 'npm:lodash@4.17.21';
+import { parse } from 'npm:yaml@2.4.2';
+import { readFileSync } from 'node:fs';
+import fs from 'npm:fs-extra@11.2.0';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -305,7 +305,12 @@ export async function dockerComposeUp(
     file = 'compose.yaml';
   }
 
-  let metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
+
+  if (metaConfig === undefined) {
+    return;
+  }
+
   let { compose } = metaConfig;
   component = component || 'default';
   await dockerComposeDown(component, { file, forceRecreate });
@@ -332,7 +337,11 @@ export async function dockerComposeDown(component: any, options: any) {
     file = 'compose.yaml';
   }
 
-  let metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
+
+  if (metaConfig === undefined) {
+    return;
+  }
 
   let { compose } = metaConfig;
 
@@ -371,7 +380,11 @@ export async function dockerComposeExec(
   if (file === undefined) {
     file = 'compose.yaml';
   }
-  let metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
+
+  if (metaConfig === undefined) {
+    return;
+  }
   let { compose } = metaConfig;
 
   component = component || 'default';
@@ -460,7 +473,11 @@ export async function dockerComposeBuild(
     file = 'compose.yaml';
   }
 
-  let metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
+
+  if (metaConfig === undefined) {
+    return;
+  }
 
   let { compose } = metaConfig;
 
@@ -483,7 +500,7 @@ export async function dockerComposeBuild(
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function commandDocker(program: any) {
+export default function commandDocker(program: any) {
   const docker = program.command('docker');
   docker.description('docker commands');
 

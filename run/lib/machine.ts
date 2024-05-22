@@ -1,7 +1,7 @@
-import { $, cd } from 'npm:zx';
+import { $, cd } from 'npm:zx@8.1.0';
 import { detectScriptsDirectory, createUUID } from '../utils/divers.ts';
-import inquirer from 'npm:inquirer';
-import fs from 'npm:fs-extra';
+import inquirer from 'npm:inquirer@9.2.22';
+import fs from 'npm:fs-extra@11.2.0';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -116,7 +116,7 @@ export async function machineInit() {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function machine(program: any) {
+export default function machine(program: any) {
   const machine = program.command('machine');
   machine.description('create a devcontainer for the project');
 

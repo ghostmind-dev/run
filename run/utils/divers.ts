@@ -1,9 +1,10 @@
-import { $ } from 'npm:zx';
-import { config } from 'npm:dotenv';
-import { expand } from 'npm:dotenv-expand';
-import fs from 'npm:fs-extra';
-import { nanoid } from 'npm:nanoid';
-import { exists } from 'npm:fs-extra';
+import { $ } from 'npm:zx@8.1.0';
+import { config } from 'npm:dotenv@16.4.5';
+import { expand } from 'npm:dotenv-expand@11.0.6';
+import fs from 'npm:fs-extra@11.2.0';
+import { nanoid } from 'npm:nanoid@5.0.7';
+import { exists } from 'npm:fs-extra@11.2.0';
+import { readFileSync } from 'node:fs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // CREATE A SHORT UUID
@@ -81,24 +82,29 @@ export async function setEnvOnLocal(): Promise<void> {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function setSecretsOnLocal(target: string): Promise<void> {
-  const currentPath = await detectScriptsDirectory(Deno.cwd());
+  const currentPath = detectScriptsDirectory(Deno.cwd());
+
+  const metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+  if (metaConfig === undefined) {
+    expand(
+      config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
+    );
+    return;
+  }
 
   const APP_NAME = await getAppName();
-  const fsZX: any = fs;
-  // let baseUrl = null;
-  const { secrets, port }: any = await verifyIfMetaJsonExists(currentPath);
 
+  const { secrets, port } = metaConfig;
   // create a random file nunber
-
   const randomFileNumber = await createUUID(12);
-
   let env_file = `/tmp/.env.${randomFileNumber}.${APP_NAME}`;
   if (secrets?.base) {
     let base_file = `${currentPath}/${secrets.base}`;
     let target_file = `${currentPath}/.env.${target}`;
     try {
-      await fs.access(target_file, fsZX.constants.R_OK);
-      await fs.access(base_file, fsZX.constants.R_OK);
+      await fs.access(target_file, fs.constants.R_OK);
+      await fs.access(base_file, fs.constants.R_OK);
     } catch (err) {
       return;
     }
@@ -109,7 +115,7 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
     let target_file = `${currentPath}/.env.${target}`;
     await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
     try {
-      await fs.access(target_file, fsZX.constants.R_OK);
+      await fs.access(target_file, fs.constants.R_OK);
     } catch (err) {
       expand(
         config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
@@ -121,13 +127,11 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
   }
   //
   // // Read the .env file
-  const content: any = fsZX.readFileSync(env_file, 'utf-8');
+  const content: any = readFileSync(env_file, 'utf-8');
   const nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
   // Extract all variable names that don't start with TF_VAR
   // remove element TF_VAR_PORT
-
   // verify if PORT is in the nonTfVarNames array
-
   let prefixedVars = nonTfVarNames
     .map((varName: any) => {
       const value = content.match(new RegExp(`^${varName}=(.*)$`, 'm'))[1];
@@ -137,21 +141,16 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
   const projectHasBeenDefined = prefixedVars.match(/^TF_VAR_PROJECT=(.*)$/m);
   const appNameHasBeenDefined = prefixedVars.match(/^TF_VAR_APP=(.*)$/m);
   const portHasBeenDefined = prefixedVars.match(/^TF_VAR_PORT=(.*)$/m);
-
   const gcpProjectIdhAsBeenDefined = prefixedVars.match(
     /^TF_VAR_GCP_PROJECT_ID=(.*)$/m
   );
   if (!projectHasBeenDefined) {
     const SRC = Deno.env.get('SRC') || '';
-
     const metaConfig = await verifyIfMetaJsonExists(SRC);
-
     let name = '';
-
     if (metaConfig) {
       name = metaConfig.name;
     }
-
     // add the project name to the .env file
     const PROJECT = await getProjectName();
     Deno.env.set('PROJECT', PROJECT);
@@ -159,23 +158,18 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
   }
   if (!appNameHasBeenDefined) {
     const metaConfig = await verifyIfMetaJsonExists(currentPath);
-
     let name = '';
-
     if (metaConfig) {
       name = metaConfig.name;
     }
-
     const APP = await getAppName();
     Deno.env.set('APP', APP);
     prefixedVars += `\nTF_VAR_APP=${name}`;
   }
   if (!gcpProjectIdhAsBeenDefined) {
     const GCP_PROJECT_ID = Deno.env.get('GCP_PROJECT_ID') || '';
-
     prefixedVars += `\nTF_VAR_GCP_PROJECT_ID=${GCP_PROJECT_ID}`;
   }
-
   if (!portHasBeenDefined) {
     if (port) {
       const PORT = port;
@@ -183,10 +177,9 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
       prefixedVars += `\nTF_VAR_PORT=${PORT}`;
     }
   }
-
   await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
   // write content to /tmp/.env.APP_NAME and addd prefixedVars at the end
-  await fsZX.writeFile(
+  await fs.writeFile(
     `/tmp/.env.${randomFileNumber}.${APP_NAME}`,
     `${content}\n${prefixedVars}`
   );
@@ -196,7 +189,6 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
       override: true,
     })
   );
-
   expand(
     config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
   );
