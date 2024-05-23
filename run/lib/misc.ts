@@ -8,6 +8,7 @@ import { createUUID } from '../utils/divers.ts';
 
 export default async function misc(program: any) {
   const misc = program.command('misc');
+  misc.description('miscellaneous commands');
 
   ////////////////////////////////////////////////////////////////////////////
   // GIT AWAYE

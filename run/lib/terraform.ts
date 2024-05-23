@@ -29,7 +29,11 @@ cd(currentPath);
 // GET BACKEND BUCKET NAME AND DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getBucketConfig(id: any, global: any, component: any) {
+export async function getBucketConfig(
+  id: string,
+  global: any,
+  component: string
+): Promise<{ bcBucket: string; bcPrefix: string }> {
   const ENV = `${Deno.env.get('ENV')}`;
   let bucketDirectory;
 
