@@ -1,12 +1,12 @@
-import { $, cd } from 'npm:zx';
+import { $, cd } from 'npm:zx@8.1.0';
 import {
   verifyIfMetaJsonExists,
   detectScriptsDirectory,
 } from '../utils/divers.ts';
-import { nanoid } from 'npm:nanoid';
-import jsonfile from 'npm:jsonfile';
-import * as inquirer from 'npm:inquirer';
-import { join } from 'https://deno.land/std@0.221.0/path/mod.ts';
+import { nanoid } from 'npm:nanoid@5.0.7';
+import jsonfile from 'npm:jsonfile@6.1.0';
+import * as inquirer from 'npm:inquirer@9.2.22';
+import { join } from 'jsr:@std/path@0.225.1';
 import { createUUID } from '../utils/divers.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -84,14 +84,18 @@ export async function metaChangeProperty(propertyArg: string) {
 
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
+  const prompt = inquirer.createPromptModule();
+
   // get the name of all properties in the meta.json file
   // and ask the user if they want to change them
 
-  let properties = Object.keys(metaConfig);
+  let properties: string[] = [];
+
+  if (metaConfig) {
+    properties = Object.keys(metaConfig);
+  }
 
   if (!propertyArg) {
-    const prompt = inquirer.createPromptModule();
-
     let { property } = await prompt({
       // type needs to allow the choice of 3 types
 
@@ -111,11 +115,13 @@ export async function metaChangeProperty(propertyArg: string) {
   ////////////////////////////////////////////////////////////////////////////////
 
   if (propertyTarget === 'id') {
-    metaConfig.id = nanoid(12);
+    if (metaConfig) {
+      metaConfig.id = nanoid(12);
 
-    await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
-      spaces: 2,
-    });
+      await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+        spaces: 2,
+      });
+    }
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -128,11 +134,13 @@ export async function metaChangeProperty(propertyArg: string) {
       message: 'What is the new name?',
     });
 
-    metaConfig.name = name;
+    if (metaConfig) {
+      metaConfig.name = name;
 
-    await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
-      spaces: 2,
-    });
+      await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+        spaces: 2,
+      });
+    }
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -146,11 +154,13 @@ export async function metaChangeProperty(propertyArg: string) {
       message: 'What is the new type?',
     });
 
-    metaConfig.type = type;
+    if (metaConfig) {
+      metaConfig.type = type;
 
-    await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
-      spaces: 2,
-    });
+      await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+        spaces: 2,
+      });
+    }
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -163,17 +173,18 @@ export async function metaChangeProperty(propertyArg: string) {
       message: 'Is this a environment-based app  d?',
     });
 
-    if (global) {
-      metaConfig.global = 'true';
-    } else {
-      delete metaConfig.global;
+    if (metaConfig) {
+      if (global) {
+        metaConfig.global = 'true';
+      } else {
+        delete metaConfig.global;
+      }
+
+      await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+        spaces: 2,
+      });
     }
-
-    await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
-      spaces: 2,
-    });
   }
-
   Deno.exit();
 }
 
@@ -225,19 +236,21 @@ export async function metaAddDocker() {
   // ADD DOCKER CONFIG
   ////////////////////////////////////////////////////////////////////////////////
 
-  if (!metaConfig.docker) {
-    metaConfig.docker = {};
+  if (metaConfig) {
+    if (!metaConfig.docker) {
+      metaConfig.docker = {};
+    }
+
+    metaConfig.docker[name] = {
+      root,
+      image,
+      context_dockerfile,
+    };
+
+    await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+      spaces: 2,
+    });
   }
-
-  metaConfig.docker[name] = {
-    root,
-    image,
-    context_dockerfile,
-  };
-
-  await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
-    spaces: 2,
-  });
 
   Deno.exit();
 }
@@ -271,17 +284,19 @@ export async function metaAddCompose() {
     default: 'container',
   });
 
-  if (!metaConfig.compose) {
-    metaConfig.compose = {};
+  if (metaConfig) {
+    if (!metaConfig.compose) {
+      metaConfig.compose = {};
+    }
+
+    metaConfig.compose[name] = {
+      root,
+    };
+
+    await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+      spaces: 2,
+    });
   }
-
-  metaConfig.compose[name] = {
-    root,
-  };
-
-  await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
-    spaces: 2,
-  });
 
   Deno.exit();
 }
@@ -312,14 +327,16 @@ export async function metaAddTunnel() {
     message: 'What is the service of the tunnel?',
   });
 
-  metaConfig.tunnel = {
-    subdomain,
-    service,
-  };
+  if (metaConfig) {
+    metaConfig.tunnel = {
+      subdomain,
+      service,
+    };
 
-  await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
-    spaces: 2,
-  });
+    await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+      spaces: 2,
+    });
+  }
 
   Deno.exit();
 }
@@ -361,18 +378,20 @@ export async function metaAddTerraform() {
     default: false,
   });
 
-  if (!metaConfig.terraform) {
-    metaConfig.terraform = {};
+  if (metaConfig) {
+    if (!metaConfig.terraform) {
+      metaConfig.terraform = {};
+    }
+
+    metaConfig.terraform[name] = {
+      path,
+      global,
+    };
+
+    await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
+      spaces: 2,
+    });
   }
-
-  metaConfig.terraform[name] = {
-    path,
-    global,
-  };
-
-  await jsonfile.writeFile(join(currentPath, 'meta.json'), metaConfig, {
-    spaces: 2,
-  });
 
   Deno.exit();
 }
@@ -381,7 +400,7 @@ export async function metaAddTerraform() {
 // ADD
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function metaAddProperty() {
+export async function metaAddProperty(): Promise<void> {
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
   const prompt = inquirer.createPromptModule();
@@ -412,7 +431,7 @@ export async function metaAddProperty() {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function meta(program: any) {
+export default function meta(program: any) {
   const meta = program.command('meta');
   meta.description('manage meta.json files');
 

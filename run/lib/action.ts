@@ -1,14 +1,16 @@
-import { $, sleep, cd, fs } from 'npm:zx';
-import core from 'npm:@actions/core';
+import { $, sleep, cd } from 'npm:zx@8.1.0';
+import core from 'npm:@actions/core@1.10.1';
+import fs from 'npm:fs-extra@11.2.0';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
-import { getAppName, getProjectName } from '../utils/divers.ts';
-import { join, extname } from 'https://deno.land/std@0.221.0/path/mod.ts';
-import yaml from 'npm:js-yaml';
-import { parse } from 'npm:dotenv';
-import { expand } from 'npm:dotenv-expand';
+import { getAppName } from '../utils/divers.ts';
+import { join, extname } from 'jsr:@std/path@0.225.1';
+import yaml from 'npm:js-yaml@4.1.0';
+import { parse } from 'npm:dotenv@16.4.5';
+import { expand } from 'npm:dotenv-expand@11.0.6';
+import { readFileSync } from 'node:fs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -17,19 +19,10 @@ import { expand } from 'npm:dotenv-expand';
 $.verbose = false;
 
 ////////////////////////////////////////////////////////////////////////////////
-// TYPE
-////////////////////////////////////////////////////////////////////////////////
-
-const fsZX: any = fs;
-
-////////////////////////////////////////////////////////////////////////////////
 // CONSTANTS
 ////////////////////////////////////////////////////////////////////////////////
 
-const LOCALHOST_SRC =
-  Deno.env.get('CODESPACES') === 'true'
-    ? Deno.env.get('SRC')
-    : Deno.env.get('LOCALHOST_SRC');
+const LOCALHOST_SRC = Deno.env.get('LOCALHOST_SRC');
 
 ////////////////////////////////////////////////////////////////////////////////
 // RUNNING COMMAND LOCATION
@@ -248,9 +241,7 @@ export async function actionRunLocalEntry(target: any, options: any) {
     // this push has 3 properties: ref, before, after
     // add these properties to the /tmp/inputs.json file
 
-    const currentInputs = JSON.parse(
-      fsZX.readFileSync('/tmp/inputs.json', 'utf8')
-    );
+    const currentInputs = JSON.parse(readFileSync('/tmp/inputs.json', 'utf8'));
     const eventFileJson = JSON.parse(eventFile);
 
     fs.writeJsonSync('/tmp/inputs.json', {
@@ -289,9 +280,9 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
     await $`rm -rf /tmp/.env.global`;
 
-    fsZX.writeFileSync('/tmp/.env.global', CREDS, 'utf8');
+    fs.writeFileSync('/tmp/.env.global', CREDS, 'utf8');
 
-    const originalEnvContent = fsZX.readFileSync(`/tmp/.env.global`, 'utf8');
+    const originalEnvContent = readFileSync(`/tmp/.env.global`, 'utf8');
 
     const envConfig = parse(originalEnvContent);
 
@@ -332,7 +323,7 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
     if (secrets?.base) {
       let base_file = `/tmp/.env.base.${APP}`;
-      let target_file = `/tmp/.env.target${APP}`;
+      let target_file = `/tmp/.env.target.${APP}`;
 
       await $`rm -rf /tmp/.env.base.${APP}`;
       await $`rm -rf /tmp/.env.target.${APP}`;
@@ -358,7 +349,7 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
     }
 
     // Read the .env file
-    const content: any = fsZX.readFileSync(env_file, 'utf-8');
+    const content: any = readFileSync(env_file, 'utf-8');
     // Extract all variable names that don't start with TF_VAR
 
     const nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
@@ -383,14 +374,21 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
     if (!projectHasBeenDefined) {
       const SRC = Deno.env.get('SRC') || '';
-      const { name } = await verifyIfMetaJsonExists(SRC);
+
+      const metaconfig = await verifyIfMetaJsonExists(SRC);
+
+      let name = metaconfig?.name || '';
+
       await $`echo PROJECT=${name} >> ${gitEnvPath}`;
       // add the project name to the .env file
       prefixedVars += `\nTF_VAR_PROJECT=${name}`;
     }
 
     if (!appNameHasBeenDefined) {
-      const { name } = await verifyIfMetaJsonExists(currentPath);
+      const metaconfig = await verifyIfMetaJsonExists(currentPath);
+
+      let name = metaconfig?.name;
+
       await $`echo APP=${name} >> ${gitEnvPath}`;
       prefixedVars += `\nTF_VAR_APP=${name}`;
     }
@@ -412,9 +410,9 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
 
     const tempEnvPath = `/tmp/.env.${APP}`;
 
-    await fsZX.writeFile(tempEnvPath, `${content}\n${prefixedVars}`);
+    await fs.writeFile(tempEnvPath, `${content}\n${prefixedVars}`);
 
-    const originalEnvContent = fs.readFileSync(tempEnvPath, 'utf8');
+    const originalEnvContent = readFileSync(tempEnvPath, 'utf8');
 
     const envConfig = parse(originalEnvContent);
 
@@ -478,7 +476,7 @@ export async function actionEnvSet() {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function act(program: any) {
+export default function act(program: any) {
   const act = program.command('action');
   act.description('run a github action');
 

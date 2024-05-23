@@ -1,12 +1,12 @@
-import { $ } from 'npm:zx';
-import * as inquirer from 'npm:inquirer';
+import { $ } from 'npm:zx@8.1.0';
+import * as inquirer from 'npm:inquirer@9.2.22';
 import { createUUID } from '../utils/divers.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function misc(program: any) {
+export default function misc(program: any) {
   const misc = program.command('misc');
 
   ////////////////////////////////////////////////////////////////////////////
@@ -67,20 +67,6 @@ export default async function misc(program: any) {
       uuid = await createUUID();
       console.log(uuid);
     });
-
-  ////////////////////////////////////////////////////////////////////////////
-  // GENERATE A UUID
-  ////////////////////////////////////////////////////////////////////////////
-
-  misc
-    .command('pain')
-    .description('generate a random UUID')
-    .argument('[length]', 'length of the UUID')
-    .action(miscDuPain);
-}
-
-export async function miscDuPain(length: number) {
-  console.log('du pain');
 }
 
 ////////////////////////////////////////////////////////////////////////////////

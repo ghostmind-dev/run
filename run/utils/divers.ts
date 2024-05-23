@@ -1,14 +1,16 @@
-import { fs, $, cd } from 'npm:zx';
-import { config } from 'npm:dotenv';
-import { expand } from 'npm:dotenv-expand';
-import { nanoid } from 'npm:nanoid';
-import { exists } from 'https://deno.land/std/fs/mod.ts';
+import { $ } from 'npm:zx@8.1.0';
+import { config } from 'npm:dotenv@16.4.5';
+import { expand } from 'npm:dotenv-expand@11.0.6';
+import fs from 'npm:fs-extra@11.2.0';
+import { nanoid } from 'npm:nanoid@5.0.7';
+import { exists } from 'npm:fs-extra@11.2.0';
+import { readFileSync } from 'node:fs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // CREATE A SHORT UUID
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function createUUID(length: number = 12) {
+export async function createUUID(length: number = 12): Promise<string> {
   const id = nanoid(length);
 
   return id;
@@ -18,7 +20,7 @@ export async function createUUID(length: number = 12) {
 // GET APP NAME
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getAppName() {
+export async function getAppName(): Promise<string> {
   const currentPath = await detectScriptsDirectory(Deno.cwd());
   const { name }: any = await verifyIfMetaJsonExists(
     Deno.env.get(currentPath) || currentPath
@@ -31,7 +33,7 @@ export async function getAppName() {
 // GET PROJECT NAME
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getProjectName() {
+export async function getProjectName(): Promise<string> {
   const currentPath = await detectScriptsDirectory(Deno.cwd());
   const { name }: any = await verifyIfMetaJsonExists(
     Deno.env.get('SRC') || currentPath
@@ -44,7 +46,7 @@ export async function getProjectName() {
 // SET ENV ON LOCAL
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function setEnvOnLocal() {
+export async function setEnvOnLocal(): Promise<void> {
   const gitDirExists = await exists('.git');
 
   if (!gitDirExists) {
@@ -79,24 +81,30 @@ export async function setEnvOnLocal() {
 // SET ENVIRONMENT .ENV VARIABLES
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function setSecretsOnLocal(target: string) {
-  const currentPath = await detectScriptsDirectory(Deno.cwd());
+export async function setSecretsOnLocal(target: string): Promise<void> {
+  const currentPath = detectScriptsDirectory(Deno.cwd());
+
+  const metaConfig = await verifyIfMetaJsonExists(currentPath);
+
+  if (metaConfig === undefined) {
+    expand(
+      config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
+    );
+    return;
+  }
+
   const APP_NAME = await getAppName();
-  const fsZX: any = fs;
-  // let baseUrl = null;
-  const { secrets, port }: any = await verifyIfMetaJsonExists(currentPath);
 
+  const { secrets, port } = metaConfig;
   // create a random file nunber
-
   const randomFileNumber = await createUUID(12);
-
   let env_file = `/tmp/.env.${randomFileNumber}.${APP_NAME}`;
   if (secrets?.base) {
     let base_file = `${currentPath}/${secrets.base}`;
     let target_file = `${currentPath}/.env.${target}`;
     try {
-      await fs.access(target_file, fsZX.constants.R_OK);
-      await fs.access(base_file, fsZX.constants.R_OK);
+      await fs.access(target_file, fs.constants.R_OK);
+      await fs.access(base_file, fs.constants.R_OK);
     } catch (err) {
       return;
     }
@@ -107,7 +115,7 @@ export async function setSecretsOnLocal(target: string) {
     let target_file = `${currentPath}/.env.${target}`;
     await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
     try {
-      await fs.access(target_file, fsZX.constants.R_OK);
+      await fs.access(target_file, fs.constants.R_OK);
     } catch (err) {
       expand(
         config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
@@ -119,13 +127,11 @@ export async function setSecretsOnLocal(target: string) {
   }
   //
   // // Read the .env file
-  const content: any = fsZX.readFileSync(env_file, 'utf-8');
+  const content: any = readFileSync(env_file, 'utf-8');
   const nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
   // Extract all variable names that don't start with TF_VAR
   // remove element TF_VAR_PORT
-
   // verify if PORT is in the nonTfVarNames array
-
   let prefixedVars = nonTfVarNames
     .map((varName: any) => {
       const value = content.match(new RegExp(`^${varName}=(.*)$`, 'm'))[1];
@@ -135,30 +141,35 @@ export async function setSecretsOnLocal(target: string) {
   const projectHasBeenDefined = prefixedVars.match(/^TF_VAR_PROJECT=(.*)$/m);
   const appNameHasBeenDefined = prefixedVars.match(/^TF_VAR_APP=(.*)$/m);
   const portHasBeenDefined = prefixedVars.match(/^TF_VAR_PORT=(.*)$/m);
-
   const gcpProjectIdhAsBeenDefined = prefixedVars.match(
     /^TF_VAR_GCP_PROJECT_ID=(.*)$/m
   );
   if (!projectHasBeenDefined) {
     const SRC = Deno.env.get('SRC') || '';
-    const { name } = await verifyIfMetaJsonExists(SRC);
+    const metaConfig = await verifyIfMetaJsonExists(SRC);
+    let name = '';
+    if (metaConfig) {
+      name = metaConfig.name;
+    }
     // add the project name to the .env file
     const PROJECT = await getProjectName();
     Deno.env.set('PROJECT', PROJECT);
     prefixedVars += `\nTF_VAR_PROJECT=${name}`;
   }
   if (!appNameHasBeenDefined) {
-    const { name } = await verifyIfMetaJsonExists(currentPath);
+    const metaConfig = await verifyIfMetaJsonExists(currentPath);
+    let name = '';
+    if (metaConfig) {
+      name = metaConfig.name;
+    }
     const APP = await getAppName();
     Deno.env.set('APP', APP);
     prefixedVars += `\nTF_VAR_APP=${name}`;
   }
   if (!gcpProjectIdhAsBeenDefined) {
     const GCP_PROJECT_ID = Deno.env.get('GCP_PROJECT_ID') || '';
-
     prefixedVars += `\nTF_VAR_GCP_PROJECT_ID=${GCP_PROJECT_ID}`;
   }
-
   if (!portHasBeenDefined) {
     if (port) {
       const PORT = port;
@@ -166,10 +177,9 @@ export async function setSecretsOnLocal(target: string) {
       prefixedVars += `\nTF_VAR_PORT=${PORT}`;
     }
   }
-
   await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
   // write content to /tmp/.env.APP_NAME and addd prefixedVars at the end
-  await fsZX.writeFile(
+  await fs.writeFile(
     `/tmp/.env.${randomFileNumber}.${APP_NAME}`,
     `${content}\n${prefixedVars}`
   );
@@ -189,7 +199,9 @@ export async function setSecretsOnLocal(target: string) {
 // DETECT SCRIPS DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function detectScriptsDirectory(currentPath: string) {
+export async function detectScriptsDirectory(
+  currentPath: string
+): Promise<string> {
   // verify if the current path ends with scripts
 
   if (currentPath.includes('scripts')) {
@@ -205,7 +217,7 @@ export async function detectScriptsDirectory(currentPath: string) {
 // GET FILES IN A DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getFilesInDirectory(path: string) {
+export async function getFilesInDirectory(path: string): Promise<string[]> {
   const filesInFolder: any = await fs.readdir(path, {
     withFileTypes: true,
   });
@@ -250,7 +262,7 @@ export async function getFilesInDirectory(path: string) {
 // RETURN ALL THE DIRECTORIES IN A PATH
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDirectories(path: string) {
+export async function getDirectories(path: string): Promise<string[]> {
   const directoriesWithFiles = await fs.readdir(`${path}`, {
     withFileTypes: true,
   });
@@ -290,19 +302,16 @@ export async function recursiveDirectoriesDiscovery(
 // GET META.JSON UPDATED
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function verifyIfMetaJsonExists(
-  path: string,
-  existsDetecty: boolean = false
-) {
-  if (existsDetecty) {
-    try {
-      await fs.access(`${path}/meta.json`);
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
+interface MetaJson {
+  id: string;
+  type: string;
+  name: string;
+  [key: string]: any;
+}
 
+export async function verifyIfMetaJsonExists(
+  path: string
+): Promise<MetaJson | undefined> {
   try {
     await fs.access(`${path}/meta.json`);
     let metaconfig = fs.readJsonSync(`${path}/meta.json`);
@@ -365,7 +374,7 @@ export async function verifyIfMetaJsonExists(
         );
     };
 
-    const updatedMetaConfigAction = (obj: AnyObject): AnyObject => {
+    const updatedMetaConfigAction = (obj: MetaJson): MetaJson => {
       const resolveTemplateString = (
         value: string,
         context: AnyObject
@@ -376,7 +385,7 @@ export async function verifyIfMetaJsonExists(
         });
       };
 
-      const updateProperties = (object: AnyObject, context: AnyObject) => {
+      const updateProperties = (object: MetaJson, context: AnyObject) => {
         for (let key in object) {
           if (typeof object[key] === 'string') {
             const matches = object[key].match(/\${this\.(.*?)}/g);
@@ -396,7 +405,7 @@ export async function verifyIfMetaJsonExists(
 
     return updatedMetaConfigAction(envReplacedUpdatedConfig);
   } catch (error) {
-    return false;
+    return undefined;
   }
 }
 
@@ -408,7 +417,11 @@ export async function verifyIfMetaJsonExists(
 // return {array} - an array of path that matches the condition
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function withMetaMatching({ property, value, path }: any) {
+export async function withMetaMatching({
+  property,
+  value,
+  path,
+}: any): Promise<any[]> {
   let directoryEntryPath = path || Deno.env.get('SRC');
 
   const allDirectories = await recursiveDirectoriesDiscovery(
@@ -418,12 +431,10 @@ export async function withMetaMatching({ property, value, path }: any) {
   let directories = [];
 
   for (let directory of allDirectories) {
-    const metaConfigExists: any = await verifyIfMetaJsonExists(directory, true);
+    const metaConfig = await verifyIfMetaJsonExists(directory);
 
-    if (metaConfigExists) {
+    if (metaConfig) {
       let metaConfigProperty;
-
-      const metaConfig: any = await verifyIfMetaJsonExists(directory);
 
       if (property.includes('.')) {
         const propertyArray = property.split('.');

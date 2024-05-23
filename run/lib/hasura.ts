@@ -1,5 +1,9 @@
-import { $, cd, fs } from 'npm:zx';
-import { detectScriptsDirectory } from '../utils/divers.ts';
+import { $, cd } from 'npm:zx@8.1.0';
+import {
+  detectScriptsDirectory,
+  verifyIfMetaJsonExists,
+} from '../utils/divers.ts';
+import fs from 'npm:fs-extra@11.2.0';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -36,7 +40,11 @@ cd(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraOpenConsole(options: any) {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
+
+  if (metaConfig === undefined) {
+    return;
+  }
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -104,7 +112,11 @@ export async function hasuraOpenConsole(options: any) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraMigrateSquash(version: any, options: any) {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
+
+  if (metaConfig === undefined) {
+    return;
+  }
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -123,7 +135,11 @@ export async function hasuraMigrateSquash(version: any, options: any) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraMigrateApply(options: any) {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
+
+  if (metaConfig === undefined) {
+    return;
+  }
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -160,7 +176,11 @@ export async function hasuraSchemaExportToLocal() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function metaDataApply(component: any, options: any) {
-  const metaConfig = await fs.readJsonSync('meta.json');
+  let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
+
+  if (metaConfig === undefined) {
+    return;
+  }
 
   const { hasura: hasuraConfig } = metaConfig;
 
@@ -180,7 +200,7 @@ export async function metaDataApply(component: any, options: any) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function hasura(program: any) {
+export default function hasura(program: any) {
   // config({ path: `${currentPath}/${envFilename}`, override: true });
 
   const hasura = program.command('hasura');

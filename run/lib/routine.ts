@@ -1,8 +1,9 @@
-import { $, cd, fs } from 'npm:zx';
+import { $, cd } from 'npm:zx@8.1.0';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
+import fs from 'npm:fs-extra@11.2.0';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -28,7 +29,7 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function npm(program: any) {
+export default function npm(program: any) {
   $.verbose = false;
   const routine = program.command('routine');
   routine
@@ -38,7 +39,7 @@ export default async function npm(program: any) {
       $.verbose = false;
 
       if (!fs.existsSync('package.json')) {
-        const { routines } = metaConfig;
+        const routines = metaConfig?.routines;
 
         if (routines) {
           if (routines && routines[script]) {
@@ -70,6 +71,8 @@ export default async function npm(program: any) {
           }
 
           return;
+        } else {
+          console.log('no routine found');
         }
       }
     });

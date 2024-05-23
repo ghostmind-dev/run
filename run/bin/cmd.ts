@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno run --allow-all
 
-import { $ } from 'npm:zx';
-import { Command } from 'npm:commander';
+import { $ } from 'npm:zx@8.1.0';
+import { Command } from 'npm:commander@12.1.0';
 import { setSecretsOnLocal, setEnvOnLocal } from '../utils/divers.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -56,17 +56,17 @@ program
 // GIT COMMAND
 ////////////////////////////////////////////////////////////////////////////////
 
-await commandAction(program);
-await commandCustom(program);
-await commandDocker(program);
-await commandHasura(program);
-await commandMachine(program);
-await commandMeta(program);
-await commandMisc(program);
-await commandRoutine(program);
-await commandTerraform(program);
-await commandTunnel(program);
-await commmandVault(program);
+commandAction(program);
+commandCustom(program);
+commandDocker(program);
+commandHasura(program);
+commandMachine(program);
+commandMeta(program);
+commandMisc(program);
+commandRoutine(program);
+commandTerraform(program);
+commandTunnel(program);
+commmandVault(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // PROGRAM EXIT

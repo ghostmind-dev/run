@@ -1,5 +1,5 @@
-import { config } from 'npm:dotenv';
-import { expand } from 'npm:dotenv-expand';
+import { config } from 'npm:dotenv@16.4.5';
+import { expand } from 'npm:dotenv-expand@11.0.6';
 
 ////////////////////////////////////////////////////////////////////////////////
 // DOTEN

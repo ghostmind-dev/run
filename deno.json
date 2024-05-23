@@ -1,4 +1,10 @@
 {
+  "name": "@ghostmind/run",
+  "version": "0.1.5",
+  "exports": {
+    ".": "./run/main.ts",
+    "./cmd": "./run/bin/cmd.ts"
+  },
   "lint": {
     "include": ["**/run/**", "**/.devcontainer/**"],
     "rules": {
