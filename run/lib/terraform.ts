@@ -334,7 +334,7 @@ export async function terraformUnlock(component: string, options: any) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default function commandTerraform(program: any) {
+export default async function commandTerraform(program: any) {
   Deno.env.set('GOOGLE_APPLICATION_CREDENTIALS', '/tmp/gsa_key.json');
 
   const terraform = program.command('terraform');

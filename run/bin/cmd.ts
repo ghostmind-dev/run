@@ -56,17 +56,17 @@ program
 // GIT COMMAND
 ////////////////////////////////////////////////////////////////////////////////
 
-commandAction(program);
-commandCustom(program);
-commandDocker(program);
-commandHasura(program);
-commandMachine(program);
-commandMeta(program);
-commandMisc(program);
-commandRoutine(program);
-commandTerraform(program);
-commandTunnel(program);
-commmandVault(program);
+await commandAction(program);
+await commandCustom(program);
+await commandDocker(program);
+await commandHasura(program);
+await commandMachine(program);
+await commandMeta(program);
+await commandMisc(program);
+await commandRoutine(program);
+await commandTerraform(program);
+await commandTunnel(program);
+await commmandVault(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // PROGRAM EXIT

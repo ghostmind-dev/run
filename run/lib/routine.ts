@@ -29,7 +29,7 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default function npm(program: any) {
+export default async function npm(program: any) {
   $.verbose = false;
   const routine = program.command('routine');
   routine

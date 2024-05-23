@@ -132,7 +132,7 @@ export async function vaultKvVaultToLocal(options: any) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default function vault(program: any) {
+export default async function vault(program: any) {
   const vault = program.command('vault');
 
   vault.description('manage project secrets');

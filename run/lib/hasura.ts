@@ -200,7 +200,7 @@ export async function metaDataApply(component: any, options: any) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default function hasura(program: any) {
+export default async function hasura(program: any) {
   // config({ path: `${currentPath}/${envFilename}`, override: true });
 
   const hasura = program.command('hasura');

@@ -214,7 +214,7 @@ async function runScript(
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default function commandScript(program: any) {
+export default async function commandScript(program: any) {
   const custom = program.command('custom');
   custom
     .description('run custom script')

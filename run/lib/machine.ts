@@ -116,7 +116,7 @@ export async function machineInit() {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default function machine(program: any) {
+export default async function machine(program: any) {
   const machine = program.command('machine');
   machine.description('create a devcontainer for the project');
 
