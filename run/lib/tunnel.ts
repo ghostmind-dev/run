@@ -25,7 +25,7 @@ cd(currentPath);
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default function tunnel(program: any) {
+export default async function tunnel(program: any) {
   const tunnel = program.command('tunnel');
   tunnel.description('Run a cloudflared tunnel to a local service');
 

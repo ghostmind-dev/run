@@ -431,7 +431,7 @@ export async function metaAddProperty(): Promise<void> {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default function meta(program: any) {
+export default async function meta(program: any) {
   const meta = program.command('meta');
   meta.description('manage meta.json files');
 

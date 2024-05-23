@@ -500,7 +500,7 @@ export async function dockerComposeBuild(
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default function commandDocker(program: any) {
+export default async function commandDocker(program: any) {
   const docker = program.command('docker');
   docker.description('docker commands');
 

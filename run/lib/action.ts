@@ -476,7 +476,7 @@ export async function actionEnvSet() {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default function act(program: any) {
+export default async function act(program: any) {
   const act = program.command('action');
   act.description('run a github action');
 
