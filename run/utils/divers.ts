@@ -82,7 +82,7 @@ export async function setEnvOnLocal(): Promise<void> {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function setSecretsOnLocal(target: string): Promise<void> {
-  const currentPath = detectScriptsDirectory(Deno.cwd());
+  const currentPath = await detectScriptsDirectory(Deno.cwd());
 
   const metaConfig = await verifyIfMetaJsonExists(currentPath);
 
