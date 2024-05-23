@@ -451,7 +451,7 @@ export async function dockerComposeExec(
 
 export async function dockerComposeBuild(
   componentOrOptions: DockerComposeBuildOptionsComponent,
-  options: DockerComposeBuildOptions
+  options?: DockerComposeBuildOptions
 ) {
   let component: string;
 
