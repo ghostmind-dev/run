@@ -116,9 +116,18 @@ interface ActionsModuleActions {
 // CUSTOM SCRIPT TYPES
 ////////////////////////////////////////////////////////////////////////////////
 
+type MyFunctionType = {
+  (str: string): string[];
+  (template: TemplateStringsArray, ...substitutions: any[]): string[];
+};
+
 interface CustomOptionsUtils {
   extract: (inputName: string) => string | undefined;
   has: (argument: string | string[]) => (arg: string) => boolean;
+  cmd: (
+    template: string | TemplateStringsArray,
+    ...substitutions: any[]
+  ) => Promise<string[]>;
 }
 
 interface CustomOptionsUrl {

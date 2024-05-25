@@ -135,6 +135,33 @@ async function runScript(
   }
 
   ////////////////////////////////////////////////////////////////////////////////
+  // cmd
+  ////////////////////////////////////////////////////////////////////////////////
+
+  type MyFunctionType = {
+    (str: string): string[];
+    (template: TemplateStringsArray, ...substitutions: any[]): string[];
+  };
+
+  const cmd: MyFunctionType = (
+    template: string | TemplateStringsArray,
+    ...substitutions: any[]
+  ): string[] => {
+    let result: string;
+
+    if (typeof template === 'string') {
+      result = template;
+    } else {
+      result = template[0];
+      substitutions.forEach((sub, i) => {
+        result += sub + template[i + 1];
+      });
+    }
+
+    return result.split(' ');
+  };
+
+  ////////////////////////////////////////////////////////////////////////////////
   // CUSTOM CONFIG
   ////////////////////////////////////////////////////////////////////////////////
 
@@ -185,6 +212,7 @@ async function runScript(
     const utils = {
       extract,
       has: has(argument),
+      cmd,
     };
 
     let env = Deno.env.toObject();
