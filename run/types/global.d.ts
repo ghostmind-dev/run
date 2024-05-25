@@ -145,7 +145,7 @@ interface CustomOptions {
   utils: CustomOptionsUtils;
   input?: string[];
   metaConfig?: any;
-  currentPath?: string;
+  currentPath: string;
 }
 
 type CustomArgs = string | string[];
