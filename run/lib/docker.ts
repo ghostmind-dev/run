@@ -23,6 +23,41 @@ let currentPath = await detectScriptsDirectory(Deno.cwd());
 cd(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
+// INTERFACE
+////////////////////////////////////////////////////////////////////////////////
+
+export interface DockerComposeBuildOptions {
+  component?: string;
+  file?: string;
+  cache?: boolean;
+}
+
+export interface DockerComposeBuildOptionsComponent
+  extends DockerComposeBuildOptions {
+  component?: string;
+}
+
+export interface DockerComposeUpOptions {
+  file?: string;
+  forceRecreate?: boolean;
+  detach?: boolean;
+}
+
+export interface DockerComposeUpOptionsComponent
+  extends DockerComposeUpOptions {
+  component?: string;
+}
+
+export interface DockerRegisterOptions {
+  all?: boolean;
+  argument?: string[];
+  amd64?: boolean;
+  cache?: boolean;
+  arm64?: boolean;
+  component?: string;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // GET DOCKERFILE NAME AND IMAGE NAME
 ////////////////////////////////////////////////////////////////////////////////
 

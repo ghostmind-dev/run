@@ -114,8 +114,8 @@ export async function actionRunLocal(
   let workflowsPath = LOCALHOST_SRC + '/.github/workflows';
 
   if (custom == true) {
-    actArgmentsArray[0] = '--platform';
-    actArgmentsArray[1] = `ubuntu-latest=ghcr.io/ghostmind-dev/act-base:latest`;
+    actArgmentsArray[0] =
+      '--platform=ubuntu-latest=ghcr.io/ghostmind-dev/act-base:latest';
 
     await $`rm -rf /tmp/.github`;
 
@@ -152,21 +152,17 @@ export async function actionRunLocal(
   $.verbose = true;
 
   if (workaround !== undefined) {
-    actArgmentsArray.push('--workflows');
-    actArgmentsArray.push(`${workflowsPath}/${target}.yaml`);
+    actArgmentsArray.push(`--workflows=${workflowsPath}/${target}.yaml`);
   } else {
-    actArgmentsArray.push('--workflows');
-    actArgmentsArray.push(workflowsPath);
+    actArgmentsArray.push(`--workflows=${workflowsPath}`);
   }
 
   if (event === undefined) {
-    actArgmentsArray.push('--job');
-    actArgmentsArray.push(target);
+    actArgmentsArray.push(`--job=${target}`);
 
     await $`act ${actArgmentsArray}`;
   } else {
-    actArgmentsArray.push('--workflows');
-    actArgmentsArray.push(`${workflowsPath}/${target}.yaml`);
+    actArgmentsArray.push(`--workflows=${workflowsPath}/${target}.yaml`);
 
     if (event === 'push') {
       actArgmentsArray.push('--eventpath');
@@ -237,7 +233,7 @@ export async function actionRunLocalEntry(target: any, options: any) {
 // SET SECRETS IN ACTION STEPS
 ////////////////////////////////////////////////////////////////////////////////
 
-interface ActionSecretsSetOptions {
+export interface ActionSecretsSetOptions {
   global: boolean;
 }
 

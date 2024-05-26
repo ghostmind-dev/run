@@ -26,6 +26,25 @@ let currentPath = await detectScriptsDirectory(Deno.cwd());
 cd(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
+// INTERFACE
+////////////////////////////////////////////////////////////////////////////////
+
+interface TerraformActivateOptions {
+  arch?: string;
+  docker?: string;
+}
+
+interface TerraformActivateOptionsWithComponent
+  extends TerraformActivateOptions {
+  component: string;
+}
+
+interface TerraformDestroyOptions {
+  arch?: string;
+  docker?: string;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // GET BACKEND BUCKET NAME AND DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -226,13 +245,6 @@ export async function terraformVariables(component: any, options: any) {
     console.log('No TF_VAR_ variables found.');
     return;
   }
-  // Generate the env declarations for main.tf
-
-  //remote the TF_VAR_PROJECT
-
-  // tfVarNames = tfVarNames.filter(
-  //   (varName: any) => varName !== 'TF_VAR_PROJECT'
-  // );
 
   const varDeclarations = tfVarNames
     // remove if equal TF_VAR_PROJECT

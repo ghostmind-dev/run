@@ -25,6 +25,69 @@ export interface CustomOptionsEnv {
   [key: string]: string;
 }
 
+export type MyFunctionType = {
+  (str: string): string[];
+  (template: TemplateStringsArray, ...substitutions: any[]): string[];
+};
+
+export interface CustomStartConfig {
+  commands: {
+    [key: string]: string;
+  };
+  groups?: {
+    [key: string]: string[];
+  };
+}
+
+export interface CustomStart {
+  (config: CustomStartConfig): Promise<void>;
+}
+
+export interface CustomOptionsUtils {
+  extract: (inputName: string) => string | undefined;
+  has: (argument: string | string[]) => (arg: string) => boolean;
+  cmd: (
+    template: string | TemplateStringsArray,
+    ...substitutions: any[]
+  ) => Promise<string[]>;
+  // start take a argument of type string or string[]
+  // start return an async function that take a config object
+  // start function being retur a Void Promise
+  // the config object has to property (commands, groups)
+  // the commands property is an object with key value pair
+  // the groups object is an object with key value pair
+  // value is an array of string
+
+  start: (config: any) => Promise<void>;
+}
+
+export interface CustomOptionsUrl {
+  internal: string;
+  local: string;
+  tunnel: string;
+}
+
+export interface CustomOptions {
+  env: CustomOptionsEnv;
+  run?: string;
+  url: CustomOptionsUrl;
+  main: typeof main;
+  utils: CustomOptionsUtils;
+  input?: string[];
+  metaConfig?: any;
+  currentPath: string;
+}
+
+export type CustomArgs = string | string[];
+
+export interface CustomModuleActions {
+  runScript(
+    script: string,
+    argument: string[] | string,
+    options: any
+  ): Promise<void>;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // RUN CUSTOM SCRIPT
 ////////////////////////////////////////////////////////////////////////////////
@@ -153,11 +216,6 @@ export async function runScript(
   ////////////////////////////////////////////////////////////////////////////////
   // cmd
   ////////////////////////////////////////////////////////////////////////////////
-
-  type MyFunctionType = {
-    (str: string): string[];
-    (template: TemplateStringsArray, ...substitutions: any[]): string[];
-  };
 
   const cmd: MyFunctionType = (
     template: string | TemplateStringsArray,
