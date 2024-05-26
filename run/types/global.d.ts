@@ -105,18 +105,6 @@ interface UtilsModuleActions {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// ACTIONS
-////////////////////////////////////////////////////////////////////////////////
-
-interface ActionsModuleActions {
-  actionEnvSet(): Promise<void>;
-  actionRunLocal(): Promise<void>;
-  actionRunLocalEntry(): Promise<void>;
-  actionRunRemote(): Promise<void>;
-  actionSecretsSet(): Promise<void>;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // CUSTOM SCRIPT TYPES
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -171,7 +159,6 @@ interface CustomOptions {
   run?: string;
   url: CustomOptionsUrl;
   main: UtilsModuleActions &
-    ActionsModuleActions &
     CustomModuleActions &
     DockerModuleActions &
     HasuraModuleActions &

@@ -1,6 +1,6 @@
 {
   "name": "@ghostmind/run",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "exports": {
     ".": "./run/main.ts",
     "./cmd": "./run/bin/cmd.ts"
@@ -17,8 +17,5 @@
         "require-await"
       ]
     }
-  },
-  "compilerOptions": {
-    "types": ["./run/types/global.d.ts"]
   }
 }

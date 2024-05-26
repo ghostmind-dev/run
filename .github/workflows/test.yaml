@@ -11,9 +11,7 @@ jobs:
         with:
           deno-version: canary
       - run: |
-          rm -rf $HOME/run
-          git clone https://github.com/ghostmind-dev/run.git $HOME/run
-          deno install --allow-all --force --name run $HOME/run/run/bin/cmd.ts
+          deno install --allow-all --force --name run ./run/bin/cmd.ts
           echo "$HOME/.deno/bin" >> $GITHUB_PATH
       - run: run
 

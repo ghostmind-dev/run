@@ -36,49 +36,33 @@ cd(currentPath);
 // ACT DEFAULT CONFIG
 ////////////////////////////////////////////////////////////////////////////////
 
-const actArgmentsDefault = [
-  {
-    name: '--platform',
-    value: 'ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest',
-  },
-  { name: '--directory', value: LOCALHOST_SRC },
-  { name: '--bind', value: `` },
-  { name: '--use-gitignore', value: '' },
-  {
-    name: '--secret',
-    value: `GH_TOKEN=${Deno.env.get('GITHUB_TOKEN')}`,
-  },
-  {
-    name: '--secret',
-    value: `GITHUB_TOKEN=${Deno.env.get('GITHUB_TOKEN')}`,
-  },
-  {
-    name: '--secret',
-    value: `VAULT_ROOT_TOKEN=${Deno.env.get('VAULT_ROOT_TOKEN')}`,
-  },
-  { name: '--secret', value: `VAULT_ADDR=${Deno.env.get('VAULT_ADDR')}` },
+const actArgmentsDefault: string[] = [
+  '--platform=ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest',
+  `--directory=${LOCALHOST_SRC}`,
+  '--bind',
+  '--use-gitignore',
+  `--secret=GH_TOKEN=${Deno.env.get('GITHUB_TOKEN')}`,
+  `--secret=GITHUB_TOKEN=${Deno.env.get('GITHUB_TOKEN')}`,
+  `--secret=VAULT_ROOT_TOKEN=${Deno.env.get('VAULT_ROOT_TOKEN')}`,
+  `--secret=VAULT_ADDR=${Deno.env.get('VAULT_ADDR')}`,
 ];
 
-////////////////////////////////////////////////////////////////////////////////
-// UTIL: CONVERT ACT ARGUMENTS ARRAY TO STRING
-////////////////////////////////////////////////////////////////////////////////
-
-async function actArgmentsToOneDimensionArray(actArgmentsConstants: any) {
-  let actArgmentsArray = [];
-  for (let i = 0; i < actArgmentsConstants.length; i++) {
-    actArgmentsArray.push(actArgmentsConstants[i].name);
-    if (actArgmentsConstants[i].value !== '') {
-      actArgmentsArray.push(actArgmentsConstants[i].value);
-    }
-  }
-  return actArgmentsArray;
+export interface ActionRunRemoteOptions {
+  watch?: boolean;
+  input?: string[];
+  branch?: string;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// RUN REMOTE ACTIOn
-////////////////////////////////////////////////////////////////////////////////
+/**
+ * Run a remote action
+ * @param {string} workflow - The workflow name
+ * @param {Object} options - The options for the action
+ */
 
-export async function actionRunRemote(workflow: any, options: any) {
+export async function actionRunRemote(
+  workflow: string,
+  options: ActionRunRemoteOptions
+): Promise<void> {
   $.verbose = true;
 
   const { watch, input, branch } = options;
@@ -124,12 +108,8 @@ export async function actionRunLocal(
   event: any,
   custom: any,
   workaround: any
-) {
-  const actArgmentsCombined = [...actArgmentsDefault, ...actArguments];
-
-  const actArgmentsArray = await actArgmentsToOneDimensionArray(
-    actArgmentsCombined
-  );
+): Promise<void> {
+  const actArgmentsArray = [...actArgmentsDefault, ...actArguments];
 
   let workflowsPath = LOCALHOST_SRC + '/.github/workflows';
 
@@ -219,17 +199,14 @@ export async function actionRunLocalEntry(target: any, options: any) {
       ...inputsArguments,
     },
   });
-  let actArgments = [
-    // { name: '--env', value: `ENV=${ENV}` },
-    { name: '--eventpath', value: '/tmp/inputs.json' },
-  ];
+  let actArgments = ['--eventpath=/tmp/inputs.json'];
 
   if (reuse === true) {
-    actArgments.push({ name: '--reuse', value: '' });
+    actArgments.push('--reuse');
   }
 
   if (env) {
-    actArgments.push({ name: '--env', value: `SET_ENV=${env}` });
+    actArgments.push(`--env=SET_ENV=${env}`);
   }
 
   if (event === 'push') {
@@ -250,7 +227,7 @@ export async function actionRunLocalEntry(target: any, options: any) {
     });
   }
   if (!secure) {
-    actArgments.push({ name: '--insecure-secrets', value: '' });
+    actArgments.push('--insecure-secrets');
   }
 
   await actionRunLocal(target, actArgments, event, custom, workaround);
@@ -441,11 +418,14 @@ export async function actionSecretsSet(options: ActionSecretsSetOptions) {
   }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// SET ENVIRONMENT NAME IN ACTION STEPS
-////////////////////////////////////////////////////////////////////////////////
+/**
+ *
+ * Set environment variables for all the next action steps
+ * Only use within a github action step
+ *
+ */
 
-export async function actionEnvSet() {
+export async function actionEnvSet(): Promise<void> {
   let environement = '';
 
   if (Deno.env.get('SET_ENV')) {
@@ -487,7 +467,7 @@ export default async function act(program: any) {
 
   actLocal
     .description('run local action with at')
-    .argument('[target]', 'workflow or job name')
+    .argument('<target>', 'workflow or job name')
     .option('--live', 'run live version on run')
     .option('--push', 'simulate push event')
     .option('--env <string>', "set environment name (ex: 'dev'")
@@ -504,7 +484,7 @@ export default async function act(program: any) {
 
   actRemote
     .description('run local action with at')
-    .argument('[workflow]', 'workflow name')
+    .argument('<workflow>', 'workflow name')
     .option('--watch', 'watch for changes')
     .option('-i, --input [inputs...]', 'action inputs')
     .option('--branch <ref>', 'branch to run workflow on')
