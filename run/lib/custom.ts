@@ -1,5 +1,3 @@
-// @deno-types="../types/global.d.ts"
-
 import { $, cd } from 'npm:zx@8.1.0';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
@@ -22,6 +20,15 @@ const customConfigDefault = {
 ////////////////////////////////////////////////////////////////////////////////
 // RUN CUSTOM SCRIPT
 ////////////////////////////////////////////////////////////////////////////////
+
+// document runScript with JSDoc
+
+/**
+ * Run a custom script
+ * @param {string} script - The script to run
+ * @param {string[]} argument - The arguments for the script
+ * @param {Object} options - The options for the script
+ */
 
 export async function runScript(
   script: string,
