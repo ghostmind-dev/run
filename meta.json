@@ -1,5 +1,8 @@
 {
   "id": "ic9ETB7juz3g",
   "type": "project",
-  "name": "run"
+  "name": "run",
+  "routines": {
+    "publish": "cd $SRC && deno publish --allow-dirty"
+  }
 }

@@ -1,3 +1,5 @@
+// @deno-types="../types/global.d.ts"
+
 import { $, sleep, cd } from 'npm:zx@8.1.0';
 import core from 'npm:@actions/core@1.10.1';
 import fs from 'npm:fs-extra@11.2.0';

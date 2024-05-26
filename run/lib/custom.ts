@@ -1,3 +1,5 @@
+// @deno-types="../types/global.d.ts"
+
 import { $, cd } from 'npm:zx@8.1.0';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
