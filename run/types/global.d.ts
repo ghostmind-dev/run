@@ -121,6 +121,19 @@ type MyFunctionType = {
   (template: TemplateStringsArray, ...substitutions: any[]): string[];
 };
 
+interface CustomStartConfig {
+  commands: {
+    [key: string]: string;
+  };
+  groups?: {
+    [key: string]: string[];
+  };
+}
+
+interface CustomStart {
+  (config: CustomStartConfig): Promise<void>;
+}
+
 interface CustomOptionsUtils {
   extract: (inputName: string) => string | undefined;
   has: (argument: string | string[]) => (arg: string) => boolean;
@@ -128,6 +141,15 @@ interface CustomOptionsUtils {
     template: string | TemplateStringsArray,
     ...substitutions: any[]
   ) => Promise<string[]>;
+  // start take a argument of type string or string[]
+  // start return an async function that take a config object
+  // start function being retur a Void Promise
+  // the config object has to property (commands, groups)
+  // the commands property is an object with key value pair
+  // the groups object is an object with key value pair
+  // value is an array of string
+
+  start: (config: any) => Promise<void>;
 }
 
 interface CustomOptionsUrl {
@@ -146,6 +168,7 @@ interface CustomOptions {
   url: CustomOptionsUrl;
   main: UtilsModuleActions &
     ActionsModuleActions &
+    CustomModuleActions &
     DockerModuleActions &
     HasuraModuleActions &
     MachineModuleActions &
@@ -158,6 +181,14 @@ interface CustomOptions {
 }
 
 type CustomArgs = string | string[];
+
+interface CustomModuleActions {
+  runScript(
+    script: string,
+    argument: string[] | string,
+    options: any
+  ): Promise<void>;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // DOCKER

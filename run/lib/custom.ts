@@ -1,7 +1,6 @@
 import { $, cd } from 'npm:zx@8.1.0';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
-import fs from 'npm:fs-extra@11.2.0';
 import * as main from '../main.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -22,14 +21,14 @@ const customConfigDefault = {
 // RUN CUSTOM SCRIPT
 ////////////////////////////////////////////////////////////////////////////////
 
-async function runScript(
+export async function runScript(
   script: string,
   argument: string[] | string,
   options: any
 ) {
   let currentPath = Deno.cwd();
 
-  let { test, input, dev } = options;
+  let { test, input, dev, all } = options;
 
   ////////////////////////////////////////////////////////////////////////////////
   // CURRENT METADATA
@@ -120,15 +119,15 @@ async function runScript(
   // HAS
   ////////////////////////////////////////////////////////////////////////////////
 
-  function has(argument: any) {
+  function has(argumentation: any) {
     return function (arg: any) {
-      if (argument === undefined) {
+      if (argumentation === undefined) {
         return false;
       }
-      if (typeof argument === 'string') {
-        return argument === arg;
+      if (typeof argumentation === 'string') {
+        return argumentation === arg;
       }
-      if (Array.isArray(argument)) {
+      if (Array.isArray(argumentation)) {
         return argument.includes(arg);
       }
     };
@@ -160,6 +159,73 @@ async function runScript(
 
     return result.split(' ');
   };
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // cmd
+  ////////////////////////////////////////////////////////////////////////////////
+
+  async function start(args: string | string[]): Promise<CustomStart> {
+    return async function (config: CustomStartConfig): Promise<void> {
+      let { commands, groups } = config;
+
+      // the sequnce goes like this
+      // if verify if the args is a string,
+      // if so, it will verify if a group extist with the same name and run the group
+      // if not, it will verify if a command exist with the same name and run the command
+      // if not, it will output a message saying that the command or group does not exist
+
+      let commandsToRun: string[] = [];
+
+      if (args === undefined) {
+        console.log('no args');
+        return;
+      }
+
+      if (all === true) {
+        let allCommands = Object.keys(commands);
+
+        commandsToRun.push(...allCommands);
+      } else if (typeof args === 'string') {
+        console.log('args', args);
+
+        if (groups && groups[args] !== undefined) {
+          commandsToRun.push(...groups[args]);
+        } else if (commands[args] !== undefined) {
+          commandsToRun.push(args);
+        } else {
+          console.log('command or group does not exist');
+          return;
+        }
+      } else if (Array.isArray(args)) {
+        // verify if one of the args is a group
+        // the first group found will be run
+
+        for (let arg of args) {
+          if (groups && groups[arg] !== undefined) {
+            commandsToRun.push(...groups[arg]);
+            break;
+          }
+        }
+
+        // if no group is found
+
+        if (commandsToRun.length === 0) {
+          for (let arg of args) {
+            if (commands[arg] !== undefined) {
+              commandsToRun.push(arg);
+            }
+          }
+        }
+      }
+
+      await Promise.all(
+        commandsToRun.map(async (command) => {
+          const commandToRun = cmd`${commands[command]}`;
+          await $`${commandToRun}`;
+        })
+      );
+    };
+  }
 
   ////////////////////////////////////////////////////////////////////////////////
   // CUSTOM CONFIG
@@ -213,6 +279,7 @@ async function runScript(
       extract,
       has: has(argument),
       cmd,
+      start: await start(argument),
     };
 
     let env = Deno.env.toObject();
@@ -249,6 +316,7 @@ export default async function commandScript(program: any) {
     .argument('[script]', 'script to perform')
     .argument('[argument...]', 'arguments for the script')
     .option('-i, --input <items...>', 'multiple arguments for the script')
+    .option('--all', 'run all start commands')
     .option('--dev', 'run in dev mode')
     .option('--test', 'run in test mode')
     .action(runScript);
