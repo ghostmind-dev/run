@@ -251,32 +251,6 @@ export async function runScript(
   // cmd
   ////////////////////////////////////////////////////////////////////////////////
 
-  // CustomStartConfigCommandFunction fonction only accept
-  // functions options is conditional to the fonction value
-  // if the fonction value is a "dockerComposeBuild", options  will be type DockerComposeBuildOptionsComponent
-
-  // interface FunctionOptions {
-  //   dockferComposeBuild: DockerComposeBuildOptionsComponent;
-  // }
-
-  // type CustomStartConfigCommandFunction<F extends keyof FunctionOptions> = {
-  //   fonction: F;
-  //   options?: FunctionOptions[F];
-  // };
-
-  // type Commands = {
-  //   [C in keyof FunctionOptions]: string | CustomStartConfigCommandFunction<C>;
-  // };
-
-  // interface CustomStartConfig {
-  //   commands: {
-  //     [key: string]: Commands;
-  //   };
-  //   groups?: {
-  //     [key: string]: string[];
-  //   };
-  // }
-
   async function start(args: string | string[]): Promise<CustomStart> {
     return async function (config: CustomStartConfig): Promise<void> {
       let { commands, groups } = config;
@@ -386,8 +360,20 @@ export async function runScript(
           groupedCommandsPerPriority[key].map(
             async (command_from_config: any) => {
               if (typeof commands[command_from_config] === 'string') {
-                const commandToRun = cmd`${commands[command_from_config]}`;
-                await $`${commandToRun}`;
+                let commandToRun: any = commands[command_from_config];
+
+                let function_to_call: any = (main as any)[commandToRun];
+
+                if (function_to_call !== undefined) {
+                  await function_to_call();
+                } else {
+                  const commandToRun = cmd`${commands[command_from_config]}`;
+                  await $`${commandToRun}`;
+                }
+              } else if (typeof commands[command_from_config] === 'function') {
+                const function_to_call: any = commands[command_from_config];
+
+                await function_to_call();
               } else if (typeof commands[command_from_config] === 'object') {
                 const command_to_run = commands[command_from_config];
 
