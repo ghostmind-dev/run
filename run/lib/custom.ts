@@ -2,6 +2,8 @@ import { $, cd } from 'npm:zx@8.1.0';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
 import * as main from '../main.ts';
+import type { DockerComposeBuildOptionsComponent } from './docker.ts';
+import { group } from 'node:console';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -29,19 +31,6 @@ export type MyFunctionType = {
   (str: string): string[];
   (template: TemplateStringsArray, ...substitutions: any[]): string[];
 };
-
-export interface CustomStartConfig {
-  commands: {
-    [key: string]: string;
-  };
-  groups?: {
-    [key: string]: string[];
-  };
-}
-
-export interface CustomStart {
-  (config: CustomStartConfig): Promise<void>;
-}
 
 export interface CustomOptionsUtils {
   extract: (inputName: string) => string | undefined;
@@ -239,6 +228,62 @@ export async function runScript(
   // cmd
   ////////////////////////////////////////////////////////////////////////////////
 
+  // CustomStartConfigCommandFunction fonction only accept
+  // functions options is conditional to the fonction value
+  // if the fonction value is a "dockerComposeBuild", options  will be type DockerComposeBuildOptionsComponent
+
+  // interface FunctionOptions {
+  //   dockferComposeBuild: DockerComposeBuildOptionsComponent;
+  // }
+
+  // type CustomStartConfigCommandFunction<F extends keyof FunctionOptions> = {
+  //   fonction: F;
+  //   options?: FunctionOptions[F];
+  // };
+
+  // type Commands = {
+  //   [C in keyof FunctionOptions]: string | CustomStartConfigCommandFunction<C>;
+  // };
+
+  // interface CustomStartConfig {
+  //   commands: {
+  //     [key: string]: Commands;
+  //   };
+  //   groups?: {
+  //     [key: string]: string[];
+  //   };
+  // }
+
+  interface CustomStartConfigCommandFunction {
+    fonction: string | typeof main;
+    options?: any;
+    priority?: number;
+    groups?: string[];
+  }
+
+  interface CustomStartConfigCommandCommand {
+    command: string;
+    variables: any;
+    priority?: number;
+    groups?: string[];
+  }
+
+  interface CustomStartConfig {
+    commands: {
+      [key: string]:
+        | string
+        | CustomStartConfigCommandFunction
+        | CustomStartConfigCommandCommand;
+    };
+    groups?: {
+      [key: string]: string[];
+    };
+  }
+
+  interface CustomStart {
+    (config: CustomStartConfig): Promise<void>;
+  }
+
   async function start(args: string | string[]): Promise<CustomStart> {
     return async function (config: CustomStartConfig): Promise<void> {
       let { commands, groups } = config;
@@ -256,15 +301,35 @@ export async function runScript(
         return;
       }
 
+      let group_from_command = [];
+
+      for (let command in commands) {
+        let { groups = [] } = commands[
+          command
+        ] as CustomStartConfigCommandCommand;
+
+        if (groups.length > 0) {
+          group_from_command.push(...groups);
+        }
+      }
+
       if (all === true) {
         let allCommands = Object.keys(commands);
 
         commandsToRun.push(...allCommands);
       } else if (typeof args === 'string') {
-        console.log('args', args);
-
         if (groups && groups[args] !== undefined) {
           commandsToRun.push(...groups[args]);
+        } else if (group_from_command.includes(args)) {
+          for (let command in commands) {
+            let { groups = [] } = commands[
+              command
+            ] as CustomStartConfigCommandCommand;
+
+            if (groups.includes(args)) {
+              commandsToRun.push(command);
+            }
+          }
         } else if (commands[args] !== undefined) {
           commandsToRun.push(args);
         } else {
@@ -293,12 +358,97 @@ export async function runScript(
         }
       }
 
-      await Promise.all(
-        commandsToRun.map(async (command) => {
-          const commandToRun = cmd`${commands[command]}`;
-          await $`${commandToRun}`;
-        })
+      // for each command to run, group them by priority
+
+      let groupedCommandsPerPriority: any = {};
+
+      for (let command of commandsToRun) {
+        let { priority } = commands[command] as CustomStartConfigCommandCommand;
+
+        if (priority === undefined) {
+          groupedCommandsPerPriority[999] =
+            groupedCommandsPerPriority[999] === undefined
+              ? []
+              : groupedCommandsPerPriority[999];
+          groupedCommandsPerPriority[999].push(command);
+        } else {
+          groupedCommandsPerPriority[priority] =
+            groupedCommandsPerPriority[priority] === undefined
+              ? []
+              : groupedCommandsPerPriority[priority];
+          groupedCommandsPerPriority[priority].push(command);
+        }
+      }
+      // sort the groupedCommandsPerPriority by priority
+
+      let sortedKeys = Object.keys(groupedCommandsPerPriority).sort(
+        (a, b) => parseInt(a) - parseInt(b)
       );
+
+      // run the commands by priority order from the lowest to the highest
+      // run in Promise.all
+
+      for await (let key of sortedKeys) {
+        await Promise.all(
+          groupedCommandsPerPriority[key].map(
+            async (command_from_config: any) => {
+              if (typeof commands[command_from_config] === 'string') {
+                const commandToRun = cmd`${commands[command_from_config]}`;
+                await $`${commandToRun}`;
+              } else if (typeof commands[command_from_config] === 'object') {
+                const command_to_run = commands[command_from_config];
+
+                const { fonction, options } =
+                  command_to_run as CustomStartConfigCommandFunction;
+
+                if (fonction !== undefined) {
+                  if (typeof fonction === 'string') {
+                    const function_to_call = (main as any)[fonction];
+
+                    let options_to_pass = options === undefined ? {} : options;
+
+                    await function_to_call(options_to_pass);
+                  } else if (typeof fonction === 'function') {
+                    let options_to_pass = options === undefined ? {} : options;
+                    const function_to_call: any = fonction;
+                    await function_to_call(options_to_pass);
+                  }
+                }
+
+                const { command, variables } =
+                  command_to_run as CustomStartConfigCommandCommand;
+
+                if (command !== undefined) {
+                  const commandToRun = cmd`${command}`;
+
+                  // variables is an object with key value pair
+                  // the command might need variable substitution
+                  // as an example, the command might be "echo ${this}"
+
+                  if (variables !== undefined) {
+                    for (let variable in variables) {
+                      const value = variables[variable];
+
+                      // in the example, we need to replace ${this} by the value of the variable this
+
+                      const variableToReplace = '${' + variable + '}';
+
+                      const indexOfVariable =
+                        commandToRun.indexOf(variableToReplace);
+
+                      if (indexOfVariable !== -1) {
+                        commandToRun[indexOfVariable] = value;
+                      }
+                    }
+                  }
+
+                  await $`${commandToRun}`;
+                }
+              }
+            }
+          )
+        );
+      }
     };
   }
 
