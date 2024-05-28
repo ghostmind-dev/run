@@ -2,8 +2,6 @@ import { $, cd } from 'npm:zx@8.1.0';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
 import * as main from '../main.ts';
-import type { DockerComposeBuildOptionsComponent } from './docker.ts';
-import { group } from 'node:console';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -27,11 +25,6 @@ export interface CustomOptionsEnv {
   [key: string]: string;
 }
 
-export type MyFunctionType = {
-  (str: string): string[];
-  (template: TemplateStringsArray, ...substitutions: any[]): string[];
-};
-
 export interface CustomOptionsUtils {
   extract: (inputName: string) => string | undefined;
   has: (argument: string | string[]) => (arg: string) => boolean;
@@ -47,7 +40,7 @@ export interface CustomOptionsUtils {
   // the groups object is an object with key value pair
   // value is an array of string
 
-  start: (config: any) => Promise<void>;
+  start: (config: CustomStartConfig) => Promise<void>;
 }
 
 export interface CustomOptionsUrl {
@@ -75,6 +68,36 @@ export interface CustomModuleActions {
     argument: string[] | string,
     options: any
   ): Promise<void>;
+}
+
+export interface CustomStartConfigCommandFunction {
+  fonction: any;
+  options?: any;
+  priority?: number;
+  groups?: string[];
+}
+
+export interface CustomStartConfigCommandCommand {
+  command: string;
+  variables: any;
+  priority?: number;
+  groups?: string[];
+}
+
+export interface CustomStartConfig {
+  commands: {
+    [key: string]:
+      | string
+      | CustomStartConfigCommandFunction
+      | CustomStartConfigCommandCommand;
+  };
+  groups?: {
+    [key: string]: string[];
+  };
+}
+
+export interface CustomStart {
+  (config: CustomStartConfig): Promise<void>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -206,10 +229,10 @@ export async function runScript(
   // cmd
   ////////////////////////////////////////////////////////////////////////////////
 
-  const cmd: MyFunctionType = (
+  function cmd(
     template: string | TemplateStringsArray,
     ...substitutions: any[]
-  ): string[] => {
+  ): string[] {
     let result: string;
 
     if (typeof template === 'string') {
@@ -222,7 +245,7 @@ export async function runScript(
     }
 
     return result.split(' ');
-  };
+  }
 
   ////////////////////////////////////////////////////////////////////////////////
   // cmd
@@ -253,36 +276,6 @@ export async function runScript(
   //     [key: string]: string[];
   //   };
   // }
-
-  interface CustomStartConfigCommandFunction {
-    fonction: string | typeof main;
-    options?: any;
-    priority?: number;
-    groups?: string[];
-  }
-
-  interface CustomStartConfigCommandCommand {
-    command: string;
-    variables: any;
-    priority?: number;
-    groups?: string[];
-  }
-
-  interface CustomStartConfig {
-    commands: {
-      [key: string]:
-        | string
-        | CustomStartConfigCommandFunction
-        | CustomStartConfigCommandCommand;
-    };
-    groups?: {
-      [key: string]: string[];
-    };
-  }
-
-  interface CustomStart {
-    (config: CustomStartConfig): Promise<void>;
-  }
 
   async function start(args: string | string[]): Promise<CustomStart> {
     return async function (config: CustomStartConfig): Promise<void> {
