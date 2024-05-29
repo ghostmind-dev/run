@@ -299,44 +299,43 @@ export async function start(
 
 /**
  * Extract the value of an input
- * @param {string} inputName - The name of the input
- * @returns {string | undefined} - The value of the input
- * @example
- * const value = extract('INPUT_NAME');
- * if (value) {
- *  console.log(value);
- * }
+ * @param {string[]} input - The input to extract
+ * @param {string | string[]} argument - The argument to extract
+ * @returns {function(string): any} - A function that extract the value of an input
+ * @returns {Promise<any>} - The value of the input
  */
 
-export async function extract(inputName: string) {
-  // return the value of the input
-  // format of each input is: INPUT_NAME=INPUT_VALUE
-  let foundElement = _.find(input, (element: any) => {
-    // if the element is not a string
-    // return false
-    if (typeof element !== 'string') {
-      return false;
+export async function extract(input: string[]): Promise<any> {
+  return async function extract(inputName: string) {
+    // return the value of the input
+    // format of each input is: INPUT_NAME=INPUT_VALUE
+    let foundElement = _.find(input, (element: any) => {
+      // if the element is not a string
+      // return false
+      if (typeof element !== 'string') {
+        return false;
+      }
+
+      // if the element does not contain the inputName
+      // return false
+      if (!element.includes(`${inputName}=`)) {
+        return false;
+      }
+
+      // if the element contains the inputName
+      // return true
+      return true;
+    });
+    // remove inputName=- from the element
+
+    if (foundElement === undefined) {
+      return undefined;
     }
 
-    // if the element does not contain the inputName
-    // return false
-    if (!element.includes(`${inputName}=`)) {
-      return false;
-    }
+    foundElement = foundElement.replace(`${inputName}=`, '');
 
-    // if the element contains the inputName
-    // return true
-    return true;
-  });
-  // remove inputName=- from the element
-
-  if (foundElement === undefined) {
-    return undefined;
-  }
-
-  foundElement = foundElement.replace(`${inputName}=`, '');
-
-  return foundElement;
+    return foundElement;
+  };
 }
 
 /**
@@ -354,7 +353,7 @@ export function has(argumentation: any) {
       return argumentation === arg;
     }
     if (Array.isArray(argumentation)) {
-      return argument.includes(arg);
+      return argumentation.includes(arg);
     }
   };
 }
@@ -493,7 +492,7 @@ export async function runScript(
     cd(currentPath);
 
     const utils = {
-      extract,
+      extract: await extract(input),
       has: has(argument),
       cmd,
       start: await start(argument, options),
