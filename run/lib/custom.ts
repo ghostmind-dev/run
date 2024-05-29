@@ -344,8 +344,8 @@ export async function extract(input: string[]): Promise<any> {
  * @returns {function(string): boolean} - A function that verify if the argumentation is equal to the argument
  */
 
-export function has(argumentation: any) {
-  return function (arg: any) {
+export function has(argumentation: any): (arg: string) => boolean {
+  return function (arg: string): boolean {
     if (argumentation === undefined) {
       return false;
     }
