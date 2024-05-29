@@ -355,6 +355,8 @@ export function has(argumentation: any): (arg: string) => boolean {
     if (Array.isArray(argumentation)) {
       return argumentation.includes(arg);
     }
+
+    return false;
   };
 }
 
