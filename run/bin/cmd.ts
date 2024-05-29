@@ -21,6 +21,7 @@ const program = new Command();
 ////////////////////////////////////////////////////////////////////////////////
 
 import commandAction from '../lib/action.ts';
+import commandApp from '../lib/app.ts';
 import commandCustom from '../lib/custom.ts';
 import commandDocker from '../lib/docker.ts';
 import commandHasura from '../lib/hasura.ts';
@@ -57,6 +58,7 @@ program
 ////////////////////////////////////////////////////////////////////////////////
 
 await commandAction(program);
+await commandApp(program);
 await commandCustom(program);
 await commandDocker(program);
 await commandHasura(program);
