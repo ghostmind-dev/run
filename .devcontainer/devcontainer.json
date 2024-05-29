@@ -18,17 +18,6 @@
     "VAULT_ROOT_TOKEN": "${localEnv:VAULT_ROOT_TOKEN}",
     "VAULT_ADDR": "${localEnv:VAULT_ADDR}"
   },
-  "containerEnv": {
-    "INIT_EXPORT_ENV_PROJECT": "false",
-    "INIT_EXPORT_ENV_ALL": "false",
-    "INIT_DEV_INSTALL_DEPENDENCIES": "false",
-    "INIT_DEV_RESET_LIVE": "false",
-    "INIT_LOGIN_NPM": "false",
-    "INIT_LOGIN_GCP": "true",
-    "INIT_LOGIN_GAM": "false",
-    "INIT_LOGIN_VAULT": "true",
-    "INIT_LOGIN_CLOUDFLARED": "true"
-  },
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind",
     "source=ghostmind-run-history,target=/commandhistory,type=volume",
