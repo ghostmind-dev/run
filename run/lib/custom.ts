@@ -71,7 +71,7 @@ export interface CustomModuleActions {
 }
 
 export interface CustomStartConfigCommandFunction {
-  fonction: any | 'this';
+  fonction: any;
   options?: any;
   priority?: number;
   groups?: string[];
