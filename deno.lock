@@ -6,6 +6,7 @@
       "jsr:@std/path@0.225.1": "jsr:@std/path@0.225.1",
       "npm:@actions/core@1.10.1": "npm:@actions/core@1.10.1",
       "npm:@google-cloud/storage@7.11.1": "npm:@google-cloud/storage@7.11.1",
+      "npm:cli-table3@0.6.5": "npm:cli-table3@0.6.5",
       "npm:commander@12.1.0": "npm:commander@12.1.0",
       "npm:dotenv-expand@11.0.6": "npm:dotenv-expand@11.0.6",
       "npm:dotenv@16.4.5": "npm:dotenv@16.4.5",
@@ -44,6 +45,10 @@
           "tunnel": "tunnel@0.0.6",
           "undici": "undici@5.28.4"
         }
+      },
+      "@colors/colors@1.5.0": {
+        "integrity": "sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==",
+        "dependencies": {}
       },
       "@fastify/busboy@2.1.1": {
         "integrity": "sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==",
@@ -251,6 +256,13 @@
       "cli-spinners@2.9.2": {
         "integrity": "sha512-ywqV+5MmyL4E7ybXgKys4DugZbX0FC6LnwrhjuykIjnK9k8OQacQ7axGKnjDXWNhns0xot3bZI5h55H8yo9cJg==",
         "dependencies": {}
+      },
+      "cli-table3@0.6.5": {
+        "integrity": "sha512-+W/5efTR7y5HRD7gACw9yQjqMVvEMLBHmboM/kPWam+H+Hmyrgjh6YncVKK122YZkXrLudzTuAukUw9FnMf7IQ==",
+        "dependencies": {
+          "@colors/colors": "@colors/colors@1.5.0",
+          "string-width": "string-width@4.2.3"
+        }
       },
       "cli-width@4.1.0": {
         "integrity": "sha512-ouuZd4/dm2Sw5Gmqy6bGyNNNe1qt9RpmxveLSO7KcgsTnU7RXfsw+/bukWGo1abgBiMAic068rclZsO4IWmmxQ==",

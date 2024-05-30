@@ -1,9 +1,14 @@
 name: Test module installation
 on:
   push:
+    branches:
+      - main
 jobs:
-  test:
+  publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # The OIDC ID token is used for authentication with JSR.   
     steps:
       - name: "Check out repository"
         uses: actions/checkout@v3
@@ -13,6 +18,12 @@ jobs:
       - run: |
           deno install --allow-all --force --name run ./run/bin/cmd.ts
           echo "$HOME/.deno/bin" >> $GITHUB_PATH
-      - run: run
+          run
+        if: ${{ github.event.inputs.LOCAL }}
+      - run: npx jsr publish
+        if: ${{ !github.event.inputs.LOCAL }}
+  
 
      
+
+
