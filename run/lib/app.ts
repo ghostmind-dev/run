@@ -1,4 +1,4 @@
-import { $, cd } from 'npm:zx@8.1.0';
+import { $, cd, spinner, sleep, question } from 'npm:zx@8.1.0';
 import Table from 'npm:cli-table3@0.6.5';
 import {
   detectScriptsDirectory,
@@ -27,9 +27,13 @@ export async function appClone(app: string) {
   // git@github.com:ghostmind-dev/templates.git
   // clone this repo in /tmp/templates
 
-  await $`rm -rf /tmp/templates`;
+  await spinner('Cloning templates', async () => {
+    await $`rm -rf /tmp/templates`;
 
-  await $`git clone git@github.com:ghostmind-dev/templates.git /tmp/templates`;
+    await $`git clone git@github.com:ghostmind-dev/templates.git /tmp/templates`;
+
+    await sleep(1000);
+  });
 
   // read all meta.json in all folders contains in  /tmp/templates/templates
   // pull the name and description
@@ -56,13 +60,17 @@ export async function appClone(app: string) {
 
   // copy the folder to the current directory
 
-  await $`cp -r /tmp/templates/templates/${app} .`;
+  const name = await question('Name of the app: ');
+
+  await $`cp -r /tmp/templates/templates/${app} ${name}`;
 
   console.log(`App ${app} has been cloned`);
 
   // remove the /tmp/templates
 
   await $`rm -rf /tmp/templates`;
+
+  Deno.exit(0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
