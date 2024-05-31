@@ -46,7 +46,7 @@ export interface CustomOptionsUtils {
 export interface CustomOptionsUrl {
   internal: string;
   local: string;
-  tunnel: string;
+  tunnel?: string;
 }
 
 export interface CustomOptions {
@@ -428,9 +428,9 @@ export async function runScript(
 
   const PORT = Deno.env.get('PORT');
 
-  let url: any = {
-    internal: `http://host.docker.internal:${PORT}`,
-    local: `http://localhost:${PORT}`,
+  let url: CustomOptionsUrl = {
+    docker: `http://host.docker.internal`,
+    local: `http://localhost`,
   };
 
   if (metaConfig.tunnel) {
