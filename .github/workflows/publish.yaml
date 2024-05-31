@@ -20,7 +20,7 @@ jobs:
           echo "$HOME/.deno/bin" >> $GITHUB_PATH
           run
         if: ${{ github.event.inputs.LOCAL }}
-      - run: npx jsr publish
+      - run: deno publish --allow-dirty
         if: ${{ !github.event.inputs.LOCAL }}
   
 
