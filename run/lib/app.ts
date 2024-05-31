@@ -64,6 +64,12 @@ export async function appClone(app: string) {
 
   await $`cp -r /tmp/templates/templates/${app} ${name}`;
 
+  cd(name);
+
+  //  change id in meta.json
+
+  await $`run meta change id`;
+
   console.log(`App ${app} has been cloned`);
 
   // remove the /tmp/templates
