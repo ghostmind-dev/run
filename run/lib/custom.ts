@@ -44,7 +44,7 @@ export interface CustomOptionsUtils {
 }
 
 export interface CustomOptionsUrl {
-  internal: string;
+  docker: string;
   local: string;
   tunnel?: string;
 }
