@@ -62,14 +62,6 @@ export interface CustomOptions {
 
 export type CustomArgs = string | string[];
 
-export interface CustomModuleActions {
-  runScript(
-    script: string,
-    argument: string[] | string,
-    options: any
-  ): Promise<void>;
-}
-
 export interface CustomStartConfigCommandFunction {
   fonction: any;
   options?: any;
@@ -398,7 +390,7 @@ export function cmd(
  * @param {Object} options - The options for the script
  */
 
-export async function runScript(
+async function runScript(
   script: string,
   argument: string[] | string,
   options: any
