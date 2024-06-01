@@ -3,7 +3,7 @@ import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
-import fs from 'npm:fs-extra@11.2.0';
+import { cmd } from './custom.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -25,6 +25,34 @@ cd(currentPath);
 
 let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
+// JSDOC
+
+/**
+ * Run a command
+ * @param {string} command - command to run
+ */
+
+export async function runCommand(command: string) {
+  if (command.includes('&&')) {
+    const commands = command.split('&&').map((cmd) => cmd.trim());
+    for (const cmd_to_run of commands) {
+      $.verbose = true;
+      await $`${cmd`${cmd_to_run}`}`;
+    }
+  } else if (command.includes('&')) {
+    const commands = command.split('&').map((cmd) => cmd.trim());
+    await Promise.all(
+      commands.map(async (command_to_run) => {
+        $.verbose = true;
+        await $`${cmd`${command_to_run}`}`;
+      })
+    );
+  } else {
+    $.verbose = true;
+    await $`${cmd`${command}`}`;
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
@@ -33,47 +61,41 @@ export default async function npm(program: any) {
   $.verbose = false;
   const routine = program.command('routine');
   routine
-    .description('run npm scxripts')
+    .description('run npm scripts')
     .argument('<script>', 'script to run')
     .action(async (script: any) => {
       $.verbose = false;
 
-      if (!fs.existsSync('package.json')) {
-        const routines = metaConfig?.routines;
+      const routines = metaConfig?.routines;
 
-        if (routines) {
-          if (routines && routines[script]) {
-            // create a tmp package.json with the scripts
-            const packageJson = {
-              scripts: { ...routines },
-            };
+      if (routines) {
+        if (routines[script]) {
+          const routineCommand = routines[script];
 
-            const randomFolder = Math.random().toString(36).substring(7);
+          if (routineCommand.startsWith('parallel')) {
+            const tasks = routineCommand.split(' ').slice(1);
 
-            await $`rm -rf /tmp/${randomFolder}`;
-
-            await $`mkdir -p /tmp/${randomFolder}`;
-
-            fs.writeFileSync(
-              `/tmp/${randomFolder}/package.json`,
-              JSON.stringify(packageJson, null, 2)
+            await Promise.all(
+              tasks.map(async (task: any) => {
+                $.verbose = true;
+                await $`/workspaces/orchestrator/dev/run/bin/cmd.ts routine ${task}`;
+              })
             );
+          } else if (routineCommand.startsWith('sequence')) {
+            const tasks = routineCommand.split(' ').slice(1);
 
-            cd(`/tmp/${randomFolder}`);
-
-            $.verbose = true;
-
-            await $`npm run ${script}`;
-
-            $.verbose = false;
-
-            await $`rm -rf /tmp/${randomFolder}`;
+            for (const task of tasks) {
+              $.verbose = true;
+              await $`/workspaces/orchestrator/dev/run/bin/cmd.ts routine ${task}`;
+            }
+          } else {
+            await runCommand(routineCommand);
           }
-
-          return;
-        } else {
-          console.log('no routine found');
         }
       }
     });
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// THE END
+////////////////////////////////////////////////////////////////////////////////
