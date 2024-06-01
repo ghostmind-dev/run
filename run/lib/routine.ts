@@ -80,7 +80,10 @@ export default async function routine(program: any) {
         if (routines[script]) {
           const routineCommand = routines[script];
 
-          if (routineCommand.startsWith('parallel')) {
+          if (
+            routineCommand.startsWith('parallel') ||
+            routineCommand.startsWith('&')
+          ) {
             const tasks = routineCommand.split(' ').slice(1);
 
             await Promise.all(
@@ -89,7 +92,10 @@ export default async function routine(program: any) {
                 await $`${routine(task)}`;
               })
             );
-          } else if (routineCommand.startsWith('sequence')) {
+          } else if (
+            routineCommand.startsWith('sequence') ||
+            routineCommand.startsWith('&&')
+          ) {
             const tasks = routineCommand.split(' ').slice(1);
 
             for (const task of tasks) {
