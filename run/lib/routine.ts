@@ -3,7 +3,7 @@ import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
-import { cmd } from './custom.ts';
+import fs from 'npm:fs-extra@11.2.0';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -25,91 +25,57 @@ cd(currentPath);
 
 let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
-// JSDOC
-
-/**
- * Run a command
- * @param {string} command - command to run
- */
-
-export async function runCommand(command: string) {
-  if (command.includes('&&')) {
-    const commands = command.split('&&').map((cmd) => cmd.trim());
-    for await (const cmd_to_run of commands) {
-      $.verbose = true;
-
-      if (cmd_to_run.includes('cd')) {
-        const path = cmd_to_run.split('cd')[1].trim();
-        cd(`${currentPath}/${path}`);
-        // go to the next iteration
-        continue;
-      }
-
-      await $`${cmd`${cmd_to_run}`}`;
-    }
-  } else if (command.includes('&')) {
-    const commands = command.split('&').map((cmd) => cmd.trim());
-    await Promise.all(
-      commands.map(async (command_to_run) => {
-        $.verbose = true;
-        await $`${cmd`${command_to_run}`}`;
-      })
-    );
-  } else {
-    $.verbose = true;
-    await $`${cmd`${command}`}`;
-  }
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function routine(program: any) {
+export default async function npm(program: any) {
   $.verbose = false;
   const routine = program.command('routine');
   routine
-    .description('run npm scripts')
+    .description('run npm scxripts')
     .argument('<script>', 'script to run')
     .action(async (script: any) => {
       $.verbose = false;
 
-      const routines = metaConfig?.routines;
+      if (!fs.existsSync('package.json')) {
+        const routines = metaConfig?.routines;
 
-      if (routines) {
-        if (routines[script]) {
-          const routineCommand = routines[script];
+        if (routines) {
+          if (routines && routines[script]) {
+            // create a tmp package.json with the scripts
+            const packageJson = {
+              scripts: { ...routines },
+            };
 
-          if (
-            routineCommand.startsWith('parallel') ||
-            routineCommand.startsWith('&')
-          ) {
-            const tasks = routineCommand.split(' ').slice(1);
+            console.log(3829);
 
-            await Promise.all(
-              tasks.map(async (task: any) => {
-                $.verbose = true;
-                await $`run custom ${task}`;
-              })
+            const randomFolder = Math.random().toString(36).substring(7);
+
+            await $`rm -rf /tmp/${randomFolder}`;
+
+            await $`mkdir -p /tmp/${randomFolder}`;
+
+            fs.writeFileSync(
+              `/tmp/${randomFolder}/package.json`,
+              JSON.stringify(packageJson, null, 2)
             );
-          } else if (
-            routineCommand.startsWith('sequence') ||
-            routineCommand.startsWith('&&')
-          ) {
-            const tasks = routineCommand.split(' ').slice(1);
 
-            for (const task of tasks) {
-              $.verbose = true;
-              await $`run custom ${task}`;
-            }
-          } else {
-            await runCommand(routineCommand);
+            cd(`/tmp/${randomFolder}`);
+
+            $.verbose = true;
+
+            await $` npm run ${script}`;
+
+            $.verbose = false;
+
+            await $`rm -rf /tmp/${randomFolder}`;
           }
+
+          return;
+        } else {
+          console.log('no routine found');
         }
       }
     });
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// THE END
-////////////////////////////////////////////////////////////////////////////////
