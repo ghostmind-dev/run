@@ -65,7 +65,7 @@ export async function runCommand(command: string) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function npm(program: any) {
+export default async function routine(program: any) {
   $.verbose = false;
   const routine = program.command('routine');
   routine
@@ -86,7 +86,7 @@ export default async function npm(program: any) {
             await Promise.all(
               tasks.map(async (task: any) => {
                 $.verbose = true;
-                await $`/workspaces/orchestrator/dev/run/bin/cmd.ts routine ${task}`;
+                await $`${routine(task)}`;
               })
             );
           } else if (routineCommand.startsWith('sequence')) {
@@ -94,7 +94,7 @@ export default async function npm(program: any) {
 
             for (const task of tasks) {
               $.verbose = true;
-              await $`/workspaces/orchestrator/dev/run/bin/cmd.ts routine ${task}`;
+              await $`${routine(task)}`;
             }
           } else {
             await runCommand(routineCommand);
