@@ -35,8 +35,16 @@ let metaConfig = await verifyIfMetaJsonExists(currentPath);
 export async function runCommand(command: string) {
   if (command.includes('&&')) {
     const commands = command.split('&&').map((cmd) => cmd.trim());
-    for (const cmd_to_run of commands) {
+    for await (const cmd_to_run of commands) {
       $.verbose = true;
+
+      if (cmd_to_run.includes('cd')) {
+        const path = cmd_to_run.split('cd')[1].trim();
+        cd(`${currentPath}/${path}`);
+        // go to the next iteration
+        continue;
+      }
+
       await $`${cmd`${cmd_to_run}`}`;
     }
   } else if (command.includes('&')) {
