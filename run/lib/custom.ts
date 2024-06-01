@@ -62,30 +62,33 @@ export interface CustomOptions {
 
 export type CustomArgs = string | string[];
 
-export interface CustomStartConfigCommandFunction {
-  fonction: any;
-  options?: any;
+export interface CommandOptions {
   priority?: number;
   groups?: string[];
 }
 
-export interface CustomStartConfigCommandCommand {
-  command: string;
-  variables: any;
-  priority?: number;
-  groups?: string[];
+export interface CustomStartConfigCommandFunction extends CommandOptions {
+  command: CustomFunction;
+  options?: any;
+  variables?: never;
 }
+
+export interface CustomStartConfigCommandCommand extends CommandOptions {
+  command: string;
+  variables?: any;
+  options?: never;
+}
+
+// create a type function that take a config object
+
+export type CustomFunction = (options: any) => Promise<void>;
 
 export interface CustomStartConfig {
-  commands: {
-    [key: string]:
-      | string
-      | CustomStartConfigCommandFunction
-      | CustomStartConfigCommandCommand;
-  };
-  groups?: {
-    [key: string]: string[];
-  };
+  [key: string]:
+    | string
+    | CustomFunction
+    | CustomStartConfigCommandFunction
+    | CustomStartConfigCommandCommand;
 }
 
 export interface CustomStart {
@@ -114,9 +117,7 @@ export async function start(
   args: string | string[],
   options: CustomCommanderOptions
 ): Promise<CustomStart> {
-  return async function (config: CustomStartConfig): Promise<void> {
-    let { commands, groups } = config;
-
+  return async function (commands: CustomStartConfig): Promise<void> {
     let { all } = options;
 
     let commandsToRun: string[] = [];
@@ -143,9 +144,7 @@ export async function start(
 
       commandsToRun.push(...allCommands);
     } else if (typeof args === 'string') {
-      if (groups && groups[args] !== undefined) {
-        commandsToRun.push(...groups[args]);
-      } else if (group_from_command.includes(args)) {
+      if (group_from_command.includes(args)) {
         for (let command in commands) {
           let { groups = [] } = commands[
             command
@@ -164,13 +163,6 @@ export async function start(
     } else if (Array.isArray(args)) {
       // verify if one of the args is a group
       // the first group found will be run
-
-      for (let arg of args) {
-        if (groups && groups[arg] !== undefined) {
-          commandsToRun.push(...groups[arg]);
-          break;
-        }
-      }
 
       // if no group is found
 
@@ -218,16 +210,8 @@ export async function start(
         groupedCommandsPerPriority[key].map(
           async (command_from_config: any) => {
             if (typeof commands[command_from_config] === 'string') {
-              let commandToRun: any = commands[command_from_config];
-
-              let function_to_call: any = (main as any)[commandToRun];
-
-              if (function_to_call !== undefined) {
-                await function_to_call();
-              } else {
-                const commandToRun = cmd`${commands[command_from_config]}`;
-                await $`${commandToRun}`;
-              }
+              const commandToRun = cmd`${commands[command_from_config]}`;
+              await $`${commandToRun}`;
             } else if (typeof commands[command_from_config] === 'function') {
               const function_to_call: any = commands[command_from_config];
 
@@ -238,18 +222,10 @@ export async function start(
               const { fonction, options } =
                 command_to_run as CustomStartConfigCommandFunction;
 
-              if (fonction !== undefined) {
-                if (typeof fonction === 'string') {
-                  const function_to_call = (main as any)[fonction];
-
-                  let options_to_pass = options === undefined ? {} : options;
-
-                  await function_to_call(options_to_pass);
-                } else if (typeof fonction === 'function') {
-                  let options_to_pass = options === undefined ? {} : options;
-                  const function_to_call: any = fonction;
-                  await function_to_call(options_to_pass);
-                }
+              if (fonction !== undefined && typeof fonction === 'function') {
+                let options_to_pass = options === undefined ? {} : options;
+                const function_to_call: any = fonction;
+                await function_to_call(options_to_pass);
               }
 
               const { command, variables } =
