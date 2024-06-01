@@ -89,7 +89,7 @@ export default async function routine(program: any) {
             await Promise.all(
               tasks.map(async (task: any) => {
                 $.verbose = true;
-                await $`${routine(task)}`;
+                await $`run custom ${task}`;
               })
             );
           } else if (
@@ -100,7 +100,7 @@ export default async function routine(program: any) {
 
             for (const task of tasks) {
               $.verbose = true;
-              await $`${routine(task)}`;
+              await $`run custom ${task}`;
             }
           } else {
             await runCommand(routineCommand);
