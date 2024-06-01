@@ -219,19 +219,17 @@ export async function start(
             } else if (typeof commands[command_from_config] === 'object') {
               const command_to_run = commands[command_from_config];
 
-              const { fonction, options } =
-                command_to_run as CustomStartConfigCommandFunction;
+              const { command, options, variables } = command_to_run as
+                | CustomStartConfigCommandFunction
+                | CustomStartConfigCommandCommand;
 
-              if (fonction !== undefined && typeof fonction === 'function') {
+              if (command !== undefined && typeof command === 'function') {
                 let options_to_pass = options === undefined ? {} : options;
-                const function_to_call: any = fonction;
+                const function_to_call: any = command;
                 await function_to_call(options_to_pass);
               }
 
-              const { command, variables } =
-                command_to_run as CustomStartConfigCommandCommand;
-
-              if (command !== undefined) {
+              if (command !== undefined && typeof command === 'string') {
                 const commandToRun = cmd`${command}`;
 
                 // variables is an object with key value pair
