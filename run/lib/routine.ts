@@ -48,8 +48,6 @@ export default async function npm(program: any) {
               scripts: { ...routines },
             };
 
-            console.log(3829);
-
             const randomFolder = Math.random().toString(36).substring(7);
 
             await $`rm -rf /tmp/${randomFolder}`;
