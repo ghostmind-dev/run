@@ -3,6 +3,6 @@
   "type": "project",
   "name": "run",
   "routines": {
-    "publish": "cd $SRC && deno publish --allow-dirty"
+    "test": "echo 'test'"
   }
 }
