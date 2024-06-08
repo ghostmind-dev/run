@@ -1,8 +1,9 @@
-import { $, cd } from 'npm:zx@8.1.0';
+import { $, cd, within } from 'npm:zx@8.1.0';
 import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
+import { cmd } from './custom.ts';
 import fs from 'npm:fs-extra@11.2.0';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -26,6 +27,90 @@ cd(currentPath);
 let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////////////
+export async function generateTreeCommands(
+  scripts: string[],
+  routineMap: any
+): Promise<any> {
+  function resolveRoutine(task: string, routines: any): any {
+    const command = routines[task];
+
+    if (!command) {
+      return task; // If it's not a routine, return the task itself
+    }
+
+    // If the command starts with 'parallel ' or 'sequence ', handle them specially
+    if (command.startsWith('parallel ')) {
+      const parallelTasks = command
+        .slice(9)
+        .split(' ')
+        .map((task) => task.trim());
+      return {
+        tasks: parallelTasks.map((task) => resolveRoutine(task, routines)),
+        mode: 'parallel',
+      };
+    }
+
+    if (command.startsWith('sequence ')) {
+      const sequenceTasks = command
+        .slice(9)
+        .split(' ')
+        .map((task) => task.trim());
+      return {
+        tasks: sequenceTasks.map((task) => resolveRoutine(task, routines)),
+        mode: 'sequence',
+      };
+    }
+
+    // Split the command string by && for sequence
+    const sequenceParts = command.split('&&').map((part) => part.trim());
+    if (sequenceParts.length > 1) {
+      return {
+        tasks: sequenceParts.map((part) => resolveRoutine(part, routines)),
+        mode: 'sequence',
+      };
+    }
+
+    // Split the command string by & for parallel
+    const parallelParts = command.split('&').map((part) => part.trim());
+    if (parallelParts.length > 1) {
+      return {
+        tasks: parallelParts.map((part) => resolveRoutine(part, routines)),
+        mode: 'parallel',
+      };
+    }
+
+    // If the command does not contain any of the above patterns, return the command itself
+    return command;
+  }
+
+  function buildTaskTree(tasks: string[], routines: any) {
+    return tasks.map((task) => {
+      if (routines[task]) {
+        return resolveRoutine(task, routines);
+      } else {
+        return task;
+      }
+    });
+  }
+
+  function generateObjectTree(
+    tasks: string[],
+    routines: any,
+    initialMode = 'parallel'
+  ) {
+    const taskTree = buildTaskTree(tasks, routines);
+    return {
+      tasks: taskTree,
+      mode: initialMode,
+    };
+  }
+
+  return generateObjectTree(scripts, routineMap);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -33,47 +118,77 @@ export default async function npm(program: any) {
   $.verbose = false;
   const routine = program.command('routine');
   routine
-    .description('run npm scxripts')
-    .argument('<script>', 'script to run')
-    .action(async (script: any) => {
+    .description('run npm scripts')
+    .argument('<script...>', 'script to run')
+    .option('--parallel', 'Run scripts in parallel')
+    .option('--sequence', 'Run scripts in sequence')
+    .action(async (scripts: string[], options: any) => {
       $.verbose = false;
 
-      if (!fs.existsSync('package.json')) {
-        const routines = metaConfig?.routines;
+      Deno.env.set('FORCE_COLOR', '1');
 
-        if (routines) {
-          if (routines && routines[script]) {
-            // create a tmp package.json with the scripts
-            const packageJson = {
-              scripts: { ...routines },
-            };
+      const routines = metaConfig?.routines;
 
-            const randomFolder = Math.random().toString(36).substring(7);
+      if (!routines) {
+        console.log('No routines found');
+        Deno.exit(0);
+      }
 
-            await $`rm -rf /tmp/${randomFolder}`;
+      const result = await generateTreeCommands(scripts, routines);
 
-            await $`mkdir -p /tmp/${randomFolder}`;
 
-            fs.writeFileSync(
-              `/tmp/${randomFolder}/package.json`,
-              JSON.stringify(packageJson, null, 2)
-            );
+      async function executeCommand(command) {
+        $.verbose = true;
 
-            cd(`/tmp/${randomFolder}`);
+        // if command start with cd then change directory
 
-            $.verbose = true;
-
-            await $` npm run ${script}`;
-
-            $.verbose = false;
-
-            await $`rm -rf /tmp/${randomFolder}`;
-          }
-
+        if (command.startsWith('cd ')) {
+          const directory = command.slice(3);
+          await cd(directory);
           return;
         } else {
-          console.log('no routine found');
+          const isCustomCommand = cmd`${command}`;
+          await $`${isCustomCommand}`;
         }
       }
+
+      /**
+       * Recursively execute tasks based on their mode.
+       * @param {object} taskObject - The task object containing tasks and mode.
+       */
+      async function executeTasks(taskObject: any) {
+        const { tasks, mode } = taskObject;
+
+        if (mode === 'parallel') {
+          await Promise.all(
+            tasks.map((task: any) => {
+              if (typeof task === 'string') {
+                return executeCommand(task);
+              } else {
+                return executeTasks(task);
+              }
+            })
+          );
+        } else if (mode === 'sequence') {
+          await within(async () => {
+            for await (const task of tasks) {
+              if (typeof task === 'string') {
+                await executeCommand(task);
+              } else {
+                await executeTasks(task);
+              }
+            }
+          });
+        }
+      }
+
+      // Run the task tree
+      executeTasks(JSON.parse(JSON.stringify(result)))
+        .then(() => {
+          console.log('All tasks executed successfully.');
+        })
+        .catch((error) => {
+          console.error('Error executing tasks:', error);
+        });
     });
 }

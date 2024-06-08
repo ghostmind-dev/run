@@ -3,6 +3,12 @@
   "type": "project",
   "name": "run",
   "routines": {
-    "publish": "cd $SRC && deno publish --allow-dirty"
+    "test": "cd run && echo 'test'",
+    "run_parallel": "parallel test",
+    "run_sequence": "sequence test test1",
+    "test1": "cd run & echo 'test1'",
+    "test2": "echo 'test2'",
+    "test3": "echo 'test3'",
+    "another_test": "echo 'another_test'"
   }
 }
