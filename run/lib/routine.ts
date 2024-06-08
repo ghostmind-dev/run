@@ -45,9 +45,11 @@ export async function generateTreeCommands(
       const parallelTasks = command
         .slice(9)
         .split(' ')
-        .map((task) => task.trim());
+        .map((task: string) => task.trim());
       return {
-        tasks: parallelTasks.map((task) => resolveRoutine(task, routines)),
+        tasks: parallelTasks.map((task: string) =>
+          resolveRoutine(task, routines)
+        ),
         mode: 'parallel',
       };
     }
@@ -56,27 +58,33 @@ export async function generateTreeCommands(
       const sequenceTasks = command
         .slice(9)
         .split(' ')
-        .map((task) => task.trim());
+        .map((task: string) => task.trim());
       return {
-        tasks: sequenceTasks.map((task) => resolveRoutine(task, routines)),
+        tasks: sequenceTasks.map((task: string) =>
+          resolveRoutine(task, routines)
+        ),
         mode: 'sequence',
       };
     }
 
     // Split the command string by && for sequence
-    const sequenceParts = command.split('&&').map((part) => part.trim());
+    const sequenceParts = command
+      .split('&&')
+      .map((part: string) => part.trim());
     if (sequenceParts.length > 1) {
       return {
-        tasks: sequenceParts.map((part) => resolveRoutine(part, routines)),
+        tasks: sequenceParts.map((part: string) =>
+          resolveRoutine(part, routines)
+        ),
         mode: 'sequence',
       };
     }
 
     // Split the command string by & for parallel
-    const parallelParts = command.split('&').map((part) => part.trim());
+    const parallelParts = command.split('&').map((part: string) => part.trim());
     if (parallelParts.length > 1) {
       return {
-        tasks: parallelParts.map((part) => resolveRoutine(part, routines)),
+        tasks: parallelParts.map((part: any) => resolveRoutine(part, routines)),
         mode: 'parallel',
       };
     }
@@ -86,7 +94,7 @@ export async function generateTreeCommands(
   }
 
   function buildTaskTree(tasks: string[], routines: any) {
-    return tasks.map((task) => {
+    return tasks.map((task: string) => {
       if (routines[task]) {
         return resolveRoutine(task, routines);
       } else {
@@ -136,8 +144,7 @@ export default async function npm(program: any) {
 
       const result = await generateTreeCommands(scripts, routines);
 
-
-      async function executeCommand(command) {
+      async function executeCommand(command: string) {
         $.verbose = true;
 
         // if command start with cd then change directory
