@@ -58,6 +58,7 @@ export interface CustomOptions {
   input?: string[];
   metaConfig?: any;
   currentPath: string;
+  port: string;
   extract: (inputName: string) => string | undefined;
   has: (argument: string | string[]) => (arg: string) => boolean;
   cmd: (
@@ -407,7 +408,7 @@ async function runScript(
   const run =
     dev === true ? `${SRC}/dev/run/bin/cmd.ts` : `${HOME}/run/run/bin/cmd.ts`;
 
-  const PORT = Deno.env.get('PORT');
+  const port = Deno.env.get('PORT');
 
   let url: CustomOptionsUrl = {
     docker: `http://host.docker.internal`,
@@ -498,6 +499,7 @@ async function runScript(
       main,
       utils,
       ...utils,
+      port,
       input,
       metaConfig,
       currentPath,
