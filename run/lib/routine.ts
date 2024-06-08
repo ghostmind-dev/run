@@ -136,6 +136,7 @@ export default async function npm(program: any) {
 
       const result = await generateTreeCommands(scripts, routines);
 
+
       async function executeCommand(command) {
         $.verbose = true;
 

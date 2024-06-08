@@ -1,6 +1,6 @@
 {
   "name": "@ghostmind/run",
-  "version": "0.2.10",
+  "version": "0.2.18",
   "exports": {
     ".": "./run/main.ts",
     "./cmd": "./run/bin/cmd.ts"
