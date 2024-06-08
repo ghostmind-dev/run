@@ -46,7 +46,7 @@ export interface CustomOptionsUtils {
 export interface CustomOptionsUrl {
   docker: string;
   local: string;
-  tunnel?: string;
+  tunnel: string;
 }
 
 export interface CustomOptions {
@@ -58,6 +58,21 @@ export interface CustomOptions {
   input?: string[];
   metaConfig?: any;
   currentPath: string;
+  extract: (inputName: string) => string | undefined;
+  has: (argument: string | string[]) => (arg: string) => boolean;
+  cmd: (
+    template: string | TemplateStringsArray,
+    ...substitutions: any[]
+  ) => Promise<string[]>;
+  // start take a argument of type string or string[]
+  // start return an async function that take a config object
+  // start function being retur a Void Promise
+  // the config object has to property (commands, groups)
+  // the commands property is an object with key value pair
+  // the groups object is an object with key value pair
+  // value is an array of string
+
+  start: (config: CustomStartConfig) => Promise<void>;
 }
 
 export type CustomArgs = string | string[];
@@ -397,22 +412,28 @@ async function runScript(
   let url: CustomOptionsUrl = {
     docker: `http://host.docker.internal`,
     local: `http://localhost`,
+    tunnel: await getTunnelUrl(),
   };
 
-  if (metaConfig.tunnel) {
-    let subdomain = metaConfig.tunnel.subdomain;
+  async function getTunnelUrl(): Promise<string> {
+    const defaultTunnelUrl = 'http://whereisthetunnelgotdamnit';
+    if (metaConfig?.tunnel) {
+      let subdomain = metaConfig.tunnel.subdomain;
 
-    let tunnelUrl = '';
+      let tunnelUrl = defaultTunnelUrl;
 
-    if (subdomain) {
-      tunnelUrl = `https://${subdomain}.${Deno.env.get(
-        'CLOUDFLARED_TUNNEL_URL'
-      )}`;
+      if (subdomain) {
+        tunnelUrl = `https://${subdomain}.${Deno.env.get(
+          'CLOUDFLARED_TUNNEL_URL'
+        )}`;
+      } else {
+        tunnelUrl = `https://${Deno.env.get('CLOUDFLARED_TUNNEL_URL')}`;
+      }
+
+      return tunnelUrl;
     } else {
-      tunnelUrl = `https://${Deno.env.get('CLOUDFLARED_TUNNEL_URL')}`;
+      return defaultTunnelUrl;
     }
-
-    url['tunnel'] = tunnelUrl;
   }
 
   const { root }: any = {
@@ -476,6 +497,7 @@ async function runScript(
       url,
       main,
       utils,
+      ...utils,
       input,
       metaConfig,
       currentPath,
