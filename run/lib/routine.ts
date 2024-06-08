@@ -3,6 +3,7 @@ import {
   detectScriptsDirectory,
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
+import { cmd } from './custom.ts';
 import fs from 'npm:fs-extra@11.2.0';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -26,97 +27,88 @@ cd(currentPath);
 let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
-// TYPE DEFINITIONS
+//
 ////////////////////////////////////////////////////////////////////////////////
 
-type RoutineMap = {
-  [key: string]: string;
-};
-
-type ExecutionStep = {
-  task?: string[];
-  mode?: 'parallel' | 'sequence';
-  tasks?: ExecutionStep[];
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// PARSING AND FLATTENING FUNCTIONS
-////////////////////////////////////////////////////////////////////////////////
-
-function deconstructCommand(command: string): ExecutionStep {
-  const isParallel = command.includes('&');
-  const isSequence = command.includes('&&');
-  let tasks: ExecutionStep[] = [];
-
-  if (isParallel) {
-    tasks = command.split('&').map((cmd) => ({ task: [cmd.trim()] }));
-    return { mode: 'parallel', tasks };
-  } else if (isSequence) {
-    tasks = command.split('&&').map((cmd) => ({ task: [cmd.trim()] }));
-    return { mode: 'sequence', tasks };
-  } else {
-    return { task: [command] };
-  }
-}
-
-function parseRoutine(
-  routineName: string,
-  routines: RoutineMap
-): ExecutionStep {
-  const routine = routines[routineName];
-  if (!routine) {
-    return { task: [routineName] }; // If it's a direct command
-  }
-
-  const parts = routine.split(' ');
-  const mode = parts[0] as 'parallel' | 'sequence';
-  const commands = parts.slice(1).map((part) => parseRoutine(part, routines));
-
-  return {
-    mode,
-    tasks: commands,
-  };
-}
-
-function flattenSteps(step: ExecutionStep): ExecutionStep[] {
-  if (step.task) {
-    return [step];
-  }
-
-  if (step.tasks) {
-    const flattenedTasks = step.tasks.flatMap(flattenSteps);
-    return flattenedTasks;
-  }
-
-  return [];
-}
-
-function generateExecutionConfig(
+export async function generateTreeCommands(
   routines: string[],
-  mode: 'parallel' | 'sequence',
-  routineMap: RoutineMap
-): ExecutionStep {
-  const steps = routines.map((routine) => parseRoutine(routine, routineMap));
-  return {
-    mode,
-    tasks: steps,
-  };
-}
+  routineMap: any
+): Promise<any> {
+  function splitCommands(command, routines) {
+    if (command.startsWith('parallel ')) {
+      const parallelTasks = command
+        .slice(9)
+        .split(' ')
+        .map((task) => task.trim());
+      return {
+        tasks: parallelTasks.flatMap((task) => splitCommands(task, routines)),
+        mode: 'parallel',
+      };
+    }
 
-function parseUserInput(input: string): {
-  routines: string[];
-  mode: 'parallel' | 'sequence';
-} {
-  const parts = input.split(' ');
-  const modeIndex = parts.findIndex(
-    (part) => part === '--parallel' || part === '--sequence'
-  );
-  const mode =
-    modeIndex !== -1
-      ? (parts[modeIndex].replace('--', '') as 'parallel' | 'sequence')
-      : 'parallel';
-  const routines = parts.slice(2, modeIndex === -1 ? undefined : modeIndex);
-  return { routines, mode };
+    if (command.startsWith('sequence ')) {
+      const sequenceTasks = command
+        .slice(9)
+        .split(' ')
+        .map((task) => task.trim());
+      return {
+        tasks: sequenceTasks.flatMap((task) => splitCommands(task, routines)),
+        mode: 'sequence',
+      };
+    }
+
+    // Split the command string by && for sequence and & for parallel if it contains such commands
+    const sequenceParts = command.split('&&').map((part) => part.trim());
+    if (sequenceParts.length > 1) {
+      return {
+        tasks: sequenceParts.flatMap((seqPart) =>
+          splitCommands(seqPart, routines)
+        ),
+        mode: 'sequence',
+      };
+    }
+
+    const parallelParts = command.split('&').map((part) => part.trim());
+    if (parallelParts.length > 1) {
+      return {
+        tasks: parallelParts.flatMap((parPart) =>
+          splitCommands(parPart, routines)
+        ),
+        mode: 'parallel',
+      };
+    }
+
+    if (routines[command]) {
+      return splitCommands(routines[command], routines);
+    }
+
+    return command;
+  }
+
+  function buildTaskTree(tasks, routines) {
+    return tasks.map((task) => {
+      if (routines[task]) {
+        const splitTask = splitCommands(routines[task], routines);
+        if (typeof splitTask === 'string') {
+          return splitTask;
+        } else {
+          return splitTask;
+        }
+      } else {
+        return task;
+      }
+    });
+  }
+
+  function generateObjectTree(tasks, routines, initialMode = 'parallel') {
+    const taskTree = buildTaskTree(tasks, routines);
+    return {
+      tasks: taskTree,
+      mode: initialMode,
+    };
+  }
+
+  return generateObjectTree(routines, routineMap);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -141,52 +133,53 @@ export default async function npm(program: any) {
         Deno.exit(0);
       }
 
-      // Parse user input
-      const userInput = `run routine ${scripts.join(' ')} ${
-        options.parallel ? '--parallel' : '--sequence'
-      }`;
-      const { routines: userRoutines, mode } = parseUserInput(userInput);
+      const result = await generateTreeCommands(scripts, routines);
 
-      // Generate execution configuration
-      const executionConfig = generateExecutionConfig(
-        userRoutines,
-        mode,
-        routines
-      );
-      const flattenedExecutionConfig = flattenSteps(executionConfig);
-
-      if (!flattenedExecutionConfig.length) {
-        console.log('No valid tasks found');
-        Deno.exit(0);
+      /**
+       * Execute a single command using google/zx.
+       * @param {string} command - The command to execute.
+       */
+      async function executeCommand(command) {
+        $.verbose = true;
+        const isCustomCommand = cmd`${command}`;
+        await $`${isCustomCommand}`;
       }
 
-      console.log(JSON.stringify(flattenedExecutionConfig, null, 2));
+      /**
+       * Recursively execute tasks based on their mode.
+       * @param {object} taskObject - The task object containing tasks and mode.
+       */
+      async function executeTasks(taskObject) {
+        const { tasks, mode } = taskObject;
 
-      // Execute the tasks based on the flattenedExecutionConfig
-      for (const task of flattenedExecutionConfig) {
-        if (task.task) {
-          for (const cmd of task.task) {
-            await $`${cmd}`;
-          }
-        } else if (task.mode === 'parallel') {
+        if (mode === 'parallel') {
           await Promise.all(
-            task.tasks!.map(async (t) => {
-              if (t.task) {
-                for (const cmd of t.task) {
-                  await $`${cmd}`;
-                }
+            tasks.map((task) => {
+              if (typeof task === 'string') {
+                return executeCommand(task);
+              } else {
+                return executeTasks(task);
               }
             })
           );
-        } else if (task.mode === 'sequence') {
-          for (const t of task.tasks!) {
-            if (t.task) {
-              for (const cmd of t.task) {
-                await $`${cmd}`;
-              }
+        } else if (mode === 'sequence') {
+          for (const task of tasks) {
+            if (typeof task === 'string') {
+              await executeCommand(task);
+            } else {
+              await executeTasks(task);
             }
           }
         }
       }
+
+      // Run the task tree
+      executeTasks(JSON.parse(JSON.stringify(result)))
+        .then(() => {
+          console.log('All tasks executed successfully.');
+        })
+        .catch((error) => {
+          console.error('Error executing tasks:', error);
+        });
     });
 }
