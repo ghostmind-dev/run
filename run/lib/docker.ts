@@ -119,23 +119,25 @@ export async function getDockerImageDigest(
   // rempcve the tag from the image name
 
   if (arch === 'amd64') {
-    $.verbose = true;
+    $.verbose = false;
 
-    const imageDigestRaw = await $`docker manifest inspect ${image}`;
+    const imageDigestRaw = await $`docker manifest inspect ${image} --verbose`;
 
     const jsonManifest = JSON.parse(`${imageDigestRaw}`);
 
-    // find manifest with platform amd64
+    // verify jsonManifest is an array
 
-    const digest = jsonManifest.manifests.map((manifest: any) => {
-      if (manifest.platform.architecture === 'amd64') {
-        return manifest.digest;
-      }
-    });
+    let arrayManifest = Array.isArray(jsonManifest)
+      ? jsonManifest
+      : [jsonManifest];
+
+    const digest = arrayManifest.find(
+      (manifest: any) => manifest.Descriptor.platform.architecture === 'amd64'
+    )?.Descriptor.digest;
 
     image = image.split(':')[0];
-    return `${image}@${digest[0]}`;
-    // remove undefined from the array
+
+    return `${image}@${digest}`;
   } else if (arch === 'arm64') {
     $.verbose = false;
 
@@ -145,14 +147,16 @@ export async function getDockerImageDigest(
 
     // find manifest with platform amd64
 
-    const digest = jsonManifest.manifests.map((manifest: any) => {
-      if (manifest.platform.architecture === 'arm64') {
-        return manifest.digest;
-      }
-    });
+    let arrayManifest = Array.isArray(jsonManifest)
+      ? jsonManifest
+      : [jsonManifest];
+
+    const digest = arrayManifest.find(
+      (manifest: any) => manifest.Descriptor.platform.architecture === 'arm64'
+    )?.Descriptor.digest;
 
     image = image.split(':')[0];
-    return `${image}@${digest[0]}`;
+    return `${image}@${digest}`;
     // remove undefined from the array
   } else {
     const imageDigestRaw =

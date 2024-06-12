@@ -61,13 +61,18 @@ export async function getProjectName(): Promise<string> {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function setEnvOnLocal(): Promise<void> {
-  const gitDirExists = await exists('.git');
-
-  if (!gitDirExists) {
-    return;
-  }
-
   try {
+    // Check if we are in a Git repository
+
+    const isInRepoRaw =
+      await $`git rev-parse --is-inside-work-tree 2>/dev/null`;
+    const isInRepo = isInRepoRaw.stdout.trim() === 'true';
+
+    if (!isInRepo) {
+      Deno.env.set('ENV', 'default');
+      return;
+    }
+
     // Get the current branch
     const currentBranchRaw = await $`git branch --show-current`;
     let environment = currentBranchRaw.stdout.trim();
@@ -79,14 +84,8 @@ export async function setEnvOnLocal(): Promise<void> {
 
     // Set the environment variable
     Deno.env.set('ENV', environment);
-  } catch (err) {
-    // Log the error for debugging purposes
-    console.error(
-      "Failed to determine Git branch. Ensure you're in a Git repository.",
-      err.message
-    );
-
-    // Optionally, you can set a default environment or handle the error as needed
+  } catch {
+    // Quietly set the default environment variable if any error occurs
     Deno.env.set('ENV', 'default');
   }
 }

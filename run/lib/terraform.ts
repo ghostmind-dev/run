@@ -136,6 +136,8 @@ export async function terraformActivate(
 
     const imageDigest: any = await getDockerImageDigest(arch, dockerAppName);
 
+    $.verbose = true;
+
     Deno.env.set('TF_VAR_IMAGE_DIGEST', imageDigest);
 
     let { terraform, id } = metaConfig;
@@ -154,7 +156,7 @@ export async function terraformActivate(
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function terraformVariables(component: any, options: any) {
-  const { target, tf } = options;
+  const { target } = options;
 
   // if envfile is not defined, set it to .env
 
@@ -164,6 +166,13 @@ export async function terraformVariables(component: any, options: any) {
 
   const metaConfig = await verifyIfMetaJsonExists(currentPath);
 
+  let envcotent: string = '';
+  let baseContent: string = '';
+
+  if (metaConfig?.secrets.base) {
+    baseContent = readFileSync(metaConfig?.secrets.base, 'utf-8');
+  }
+
   if (metaConfig === undefined) {
     return;
   }
@@ -172,23 +181,18 @@ export async function terraformVariables(component: any, options: any) {
 
   const { path } = terraform[component];
 
-  const replaceContentBetweenComments = (
-    fileContent: any,
-    startComment: any,
-    endComment: any,
-    newContent: any
-  ) => {
-    const regex = new RegExp(`${startComment}[\\s\\S]*?${endComment}`, 'g');
-    return fileContent.replace(
-      regex,
-      `${startComment}\n\n${newContent}\n\n${endComment}`
-    );
-  };
-
   // Read the .env file
-  const content: any = readFileSync(env_file, 'utf-8');
+  envcotent = readFileSync(env_file, 'utf-8');
+
+  let content: string = `${baseContent}\n${envcotent}`;
+
   // Extract all variable names that don't start with TF_VAR
   let nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
+
+  if (nonTfVarNames === null) {
+    nonTfVarNames = [];
+  }
+
   // Generate the prefixed variable declarations for non-TF_VAR variables
 
   // remove element TF_VAR_PORT
@@ -196,7 +200,8 @@ export async function terraformVariables(component: any, options: any) {
   let prefixedVars = nonTfVarNames
 
     .map((varName: any) => {
-      const value = content.match(new RegExp(`^${varName}=(.*)$`, 'm'))[1];
+      const match = content.match(new RegExp(`^${varName}=(.*)$`, 'm'));
+      const value = match && match[1] ? match[1] : '';
       return `TF_VAR_${varName}=${value}`;
     })
     .join('\n');
@@ -236,8 +241,8 @@ export async function terraformVariables(component: any, options: any) {
 
   await fs.writeFile(`/tmp/.env.${APP_NAME}`, `${content}\n${prefixedVars}`);
 
-  // // Read the .env file
-  const envContent = readFileSync(`/tmp/.env.${APP_NAME}`, 'utf-8');
+  // Function to read environment variables from a file
+  const envContent = fs.readFileSync(`/tmp/.env.${APP_NAME}`, 'utf-8');
 
   // Extract all variable names that start with TF_VAR
   let tfVarNames = envContent.match(/^TF_VAR_[A-Z_]+(?==)/gm);
@@ -246,48 +251,51 @@ export async function terraformVariables(component: any, options: any) {
     return;
   }
 
+  // Generate variable declarations for variables.tf
   const varDeclarations = tfVarNames
     // remove if equal TF_VAR_PROJECT
-
-    .map((varName: any) => {
+    .map((varName: string) => {
       const tfName = varName.replace(/^TF_VAR_/, '');
       return `variable "${tfName}" {}`;
     })
     .join('\n');
 
-  const envDeclarations = tfVarNames
-    .filter((varName: any) => varName !== 'TF_VAR_PORT')
-    .map((varName: any) => {
+  // Generate locals block for environment variables
+  const localsBlock = `
+  locals {
+    env_vars = [
+  ${tfVarNames
+    .filter((varName: string) => varName !== 'TF_VAR_PORT')
+    .map((varName: string) => {
       const tfName = varName.replace(/^TF_VAR_/, '');
-      return `        env {\n          name  = "${tfName}"\n          value = var.${tfName}\n        }`;
+      return `    {
+        name  = "${tfName}"
+        value = var.${tfName}
+      }`;
     })
-    .join('\n\n');
-  // Generate the variable declarations for variables.tf
-  // Function to replace content between start and end comments
-  const startMainComment = `        ##########################################\n        # START ENV\n        ##########################################\n`;
-  const endMainComment = `        ##########################################\n        # END ENV\n        ##########################################\n`;
-  const mainTfPath = `${currentPath}/${path}/main.tf`;
+    .join(',\n')}
+    ]
+  }
+  `;
 
-  const mainTfContent = readFileSync(mainTfPath, 'utf-8');
-  const updatedMainTfContent = replaceContentBetweenComments(
-    mainTfContent,
-    startMainComment,
-    endMainComment,
-    envDeclarations
-  );
-  fs.writeFileSync(mainTfPath, updatedMainTfContent);
-  // Update variables.tf
-  const startVariablesComment = `##########################################\n# START ENV\n##########################################\n`;
-  const endVariablesComment = `##########################################\n# END ENV\n##########################################\n`;
+  // Combine variable declarations and locals block
+  const variablesTfContent = `# variables.tf
+
+  ${varDeclarations}
+  
+  ${localsBlock}
+  `;
+
+  // Path to variables.tf using Deno.cwd()
   const variablesTfPath = `${currentPath}/${path}/variables.tf`;
-  const variablesTfContent = readFileSync(variablesTfPath, 'utf-8');
-  const updatedVariablesTfContent = replaceContentBetweenComments(
-    variablesTfContent,
-    startVariablesComment,
-    endVariablesComment,
-    varDeclarations
-  );
-  fs.writeFileSync(variablesTfPath, updatedVariablesTfContent);
+
+  // Clear the content of variables.tf before writing new content
+  fs.writeFileSync(variablesTfPath, '');
+
+  // Write the new content to variables.tf
+  fs.writeFileSync(variablesTfPath, variablesTfContent, 'utf-8');
+
+  console.log('variables.tf file updated successfully.');
 }
 
 ////////////////////////////////////////////////////////////////////////////////
