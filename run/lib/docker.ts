@@ -409,13 +409,34 @@ export async function dockerComposeDown(component: any, options: any) {
 // DOCKER COMPOSE EXEC
 ////////////////////////////////////////////////////////////////////////////////
 
+export interface DockerComposeExecOptions {
+  instructions: string;
+  container?: string;
+  component?: string;
+  file?: string;
+  forceRecreate?: boolean;
+  envfile?: string;
+}
+
+export interface DockerComposeExecOptionsComponent
+  extends DockerComposeExecOptions {
+  instructions: string;
+}
+
 export async function dockerComposeExec(
-  instructions: any,
-  container: any,
-  component: any,
-  options: any
+  instructionsOrOptions: string | DockerComposeExecOptionsComponent,
+  options?: DockerComposeExecOptions
 ) {
-  let { file, forceRecreate } = options;
+  let instructions: string;
+
+  if (typeof instructionsOrOptions === 'string') {
+    instructions = instructionsOrOptions;
+  } else {
+    instructions = instructionsOrOptions.instructions;
+  }
+
+  let { file, forceRecreate, container, component } = options || {};
+
   if (file === undefined) {
     file = 'compose.yaml';
   }
@@ -589,8 +610,8 @@ export default async function commandDocker(program: any) {
     .description('docker compose exec')
     .action(dockerComposeExec)
     .argument('[instructions]', 'Commands to run')
-    .argument('[container]', 'Container to exec into)')
-    .argument('[component]', 'Component to exec into)')
+    .option('--container <container>', 'Container to exec into')
+    .option('--component <component>', 'Component to exec into')
     .option('-f, --file <file>', 'docker compose file')
     .option('--force-recreate', 'force recreate')
     .option('-e, --envfile <file>', 'env filename');

@@ -258,7 +258,7 @@ export async function start(
 
                     // in the example, we need to replace ${this} by the value of the variable this
 
-                    const variableToReplace = '${' + variable + '}';
+                    const variableToReplace = '$' + variable + '';
 
                     const indexOfVariable =
                       commandToRun.indexOf(variableToReplace);
