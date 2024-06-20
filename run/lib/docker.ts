@@ -564,24 +564,24 @@ export default async function commandDocker(program: any) {
   const docker = program.command('docker');
   docker.description('docker commands');
 
-  const dockerRegister = docker.command('register');
-  dockerRegister.description('build and push docker image');
-  dockerRegister.option('-a, --all', 'Build all docker images');
-  dockerRegister.option(
-    '-arg, --argument <arguments...>',
-    'Build docker image with arguments'
-  );
-  dockerRegister.option('--amd64', 'build amd64 docker image');
-  // add a --no-cache option with true as default
-  dockerRegister.option('--no-cache', 'build docker image without cache');
+  docker
+    .command('register')
+    .description('build and push docker image')
+    .option('-a, --all', 'Build all docker images')
+    .option(
+      '-arg, --argument <arguments...>',
+      'Build docker image with arguments'
+    )
+    .option('--amd64', 'build amd64 docker image')
+    .option('--no-cache', 'build docker image without cache')
 
-  dockerRegister.option('--arm64', 'build arm64 docker image');
-  dockerRegister.option('--component', 'component to build');
-  dockerRegister.argument(
-    '[component]',
-    'component to build. It has priority over --component'
-  );
-  dockerRegister.action(dockerRegister);
+    .option('--arm64', 'build arm64 docker image')
+    .option('--component', 'component to build')
+    .argument(
+      '[component]',
+      'component to build. It has priority over --component'
+    )
+    .action(dockerRegister);
 
   const dockerCompose = docker.command('compose');
   dockerCompose.description('docker compose commands');
