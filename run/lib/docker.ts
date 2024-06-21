@@ -177,6 +177,8 @@ export async function dockerRegister(
   if (typeof componentOrOptions === 'string') {
     options = options || {};
     options.component = componentOrOptions;
+  } else if (componentOrOptions === undefined) {
+    options = options || {};
   } else {
     options = componentOrOptions || {};
   }
