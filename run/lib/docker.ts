@@ -390,14 +390,7 @@ export async function dockerComposeDown(component: any, options: any) {
 
   let { root } = compose[component];
 
-  const baseCommand = [
-    'docker',
-    'compose',
-    '-f',
-    `${root}/${file}`,
-    'down',
-    '--remove-orphans',
-  ];
+  const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'down'];
   if (forceRecreate) {
     baseCommand.push('--force-recreate');
   }
