@@ -112,7 +112,7 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
   const randomFileNumber = await createUUID(12);
   let env_file = `/tmp/.env.${randomFileNumber}.${APP_NAME}`;
   if (secrets?.base) {
-    let base_file = `${currentPath}/${secrets.base}`;
+    let base_file = `${currentPath}/.env.${secrets.base}`;
     let target_file = `${currentPath}/.env.${target}`;
     try {
       await fs.access(target_file, fs.constants.R_OK);
