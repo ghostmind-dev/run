@@ -118,7 +118,6 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
     try {
       await fs.access(target_file, fs.constants.R_OK);
     } catch (err) {
-      console.log('target file does not exist');
       return;
     }
 
