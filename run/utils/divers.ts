@@ -98,10 +98,11 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
 
   const metaConfig = await verifyIfMetaJsonExists(currentPath);
 
+  expand(
+    config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
+  );
+
   if (metaConfig === undefined) {
-    expand(
-      config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
-    );
     return;
   }
 
@@ -116,10 +117,18 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
     let target_file = `${currentPath}/.env.${target}`;
     try {
       await fs.access(target_file, fs.constants.R_OK);
-      await fs.access(base_file, fs.constants.R_OK);
     } catch (err) {
+      console.log('target file does not exist');
       return;
     }
+
+    try {
+      await fs.access(base_file, fs.constants.R_OK);
+    } catch (err) {
+      console.log('base file does not exist');
+      return;
+    }
+
     // merge base and target files in /tmp/.env.APP_NAME
     await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
     await $`cat ${base_file} ${target_file} > /tmp/.env.${randomFileNumber}.${APP_NAME}`;
@@ -129,9 +138,6 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
     try {
       await fs.access(target_file, fs.constants.R_OK);
     } catch (err) {
-      expand(
-        config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
-      );
       return;
     }
     // Read the .env file
