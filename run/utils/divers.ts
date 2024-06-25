@@ -195,17 +195,33 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
     }
   }
   await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
+  await $`rm -rf /tmp/.env.${target}.${APP_NAME}`;
+  await $`rm -rf /tmp/.env.current.${APP_NAME}`;
+
   // write content to /tmp/.env.APP_NAME and addd prefixedVars at the end
   await fs.writeFile(
-    `/tmp/.env.${randomFileNumber}.${APP_NAME}`,
+    `/tmp/.env.${target}.${APP_NAME}`,
     `${content}\n${prefixedVars}`
   );
-  expand(
+  const newExpandedEnvVar = expand(
     config({
-      path: `/tmp/.env.${randomFileNumber}.${APP_NAME}`,
+      path: `/tmp/.env.${target}.${APP_NAME}`,
       override: true,
     })
   );
+
+  // wrtie the new expanded env var to the /tmp/.env.${target}.${APP} file
+  // newExpandedEnvVar is an object so we need to convert it to a string
+
+  let envVarString = '';
+
+  for (let key in newExpandedEnvVar.parsed) {
+    envVarString += `${key}=${newExpandedEnvVar.parsed[key]}\n`;
+  }
+
+  await fs.writeFile(`/tmp/.env.${target}.${APP_NAME}`, envVarString);
+  await $`cp /tmp/.env.${target}.${APP_NAME} /tmp/.env.current.${APP_NAME}`;
+
   expand(
     config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
   );
