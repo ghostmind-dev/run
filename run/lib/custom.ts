@@ -27,7 +27,7 @@ export interface CustomOptionsEnv {
 
 export interface CustomOptionsUtils {
   extract: (inputName: string) => string | undefined;
-  has: (argument: string | string[]) => (arg: string) => boolean;
+  has: (arg: string) => boolean;
   cmd: (
     template: string | TemplateStringsArray,
     ...substitutions: any[]
@@ -60,7 +60,7 @@ export interface CustomOptions {
   currentPath: string;
   port: string;
   extract: (inputName: string) => string | undefined;
-  has: (argument: string | string[]) => (arg: string) => boolean;
+  has: (arg: string) => boolean;
   cmd: (
     template: string | TemplateStringsArray,
     ...substitutions: any[]
