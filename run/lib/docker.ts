@@ -75,20 +75,25 @@ export async function getDockerfileAndImageName(
 
   component = component || 'default';
 
-  let { root, image, context_dockerfile } = docker[component];
+  let { root, image, env_based, context_dir } = docker[component];
 
   let dockerFileName;
   let dockerfile;
   let dockerContext;
 
-  if (context_dockerfile === false) {
+  if (env_based === false) {
     dockerFileName = `Dockerfile`;
   } else {
     dockerFileName = `Dockerfile.${ENV}`;
   }
 
   dockerfile = `${currentPath}/${root}/${dockerFileName}`;
-  dockerContext = `${currentPath}/${root}`;
+
+  if (context_dir === undefined) {
+    dockerContext = `${currentPath}/${root}`;
+  } else {
+    dockerContext = `${currentPath}/${context_dir}`;
+  }
 
   // $.verbose = true;
 
@@ -188,6 +193,9 @@ export async function dockerRegister(
   const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(
     options.component
   );
+
+  console.log('dockerContext', dockerContext);
+  console.log('dockerfile', dockerfile);
 
   Deno.env.set('BUILDX_NO_DEFAULT_ATTESTATIONS', '1');
 
