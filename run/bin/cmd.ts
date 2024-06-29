@@ -49,7 +49,7 @@ program
     if (!Deno.env.get('GITHUB_ACTIONS')) {
       const { cible } = thisCommand.opts();
       await setSecretsOnLocal(cible || 'local');
-      await setEnvOnLocal();
+      await setEnvOnLocal(cible || 'local');
     }
   });
 

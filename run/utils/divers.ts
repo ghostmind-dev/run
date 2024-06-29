@@ -59,9 +59,14 @@ export async function getProjectName(): Promise<string> {
 // SET ENV ON LOCAL
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function setEnvOnLocal(): Promise<void> {
+export async function setEnvOnLocal(target: string): Promise<void> {
   try {
     // Check if we are in a Git repository
+
+    if (target === 'local') {
+      Deno.env.set('ENV', 'local');
+      return;
+    }
 
     const isInRepoRaw =
       await $`git rev-parse --is-inside-work-tree 2>/dev/null`;
