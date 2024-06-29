@@ -198,134 +198,134 @@ export async function dockerRegister(
     options.component
   );
 
-  console.log(image);
+
 
   Deno.env.set('BUILDX_NO_DEFAULT_ATTESTATIONS', '1');
 
   // Determine the machine architecture
 
-  // if (amd64) {
-  //   // Ensure a buildx builder instance exists and is bootstrapped
-  //   try {
-  //     $.verbose = false;
-  //     await $`docker buildx use mybuilder`;
-  //   } catch {
-  //     $.verbose = true;
-  //     // If 'mybuilder' doesn't exist, create and bootstrap it
-  //     await $`docker buildx create --name mybuilder --use`;
-  //     await $`docker buildx inspect mybuilder --bootstrap`;
-  //   }
+  if (amd64) {
+    // Ensure a buildx builder instance exists and is bootstrapped
+    try {
+      $.verbose = false;
+      await $`docker buildx use mybuilder`;
+    } catch {
+      $.verbose = true;
+      // If 'mybuilder' doesn't exist, create and bootstrap it
+      await $`docker buildx create --name mybuilder --use`;
+      await $`docker buildx inspect mybuilder --bootstrap`;
+    }
 
-  //   let baseCommand = [
-  //     'docker',
-  //     'buildx',
-  //     'build',
-  //     '--pull=false',
-  //     '--platform=linux/amd64',
-  //     `--tag=${image}`,
-  //     `--tag=${image}-amd64`,
-  //     `--file=${dockerfile}`,
-  //     '--push',
-  //   ];
+    let baseCommand = [
+      'docker',
+      'buildx',
+      'build',
+      '--pull=false',
+      '--platform=linux/amd64',
+      `--tag=${image}`,
+      `--tag=${image}-amd64`,
+      `--file=${dockerfile}`,
+      '--push',
+    ];
 
-  //   if (cache === undefined) {
-  //     baseCommand.push('--no-cache');
-  //   }
+    if (cache === undefined) {
+      baseCommand.push('--no-cache');
+    }
 
-  //   if (argument) {
-  //     argument.map((arg: any) => {
-  //       baseCommand.push(`--build-arg=${arg}`);
-  //     });
-  //   }
+    if (argument) {
+      argument.map((arg: any) => {
+        baseCommand.push(`--build-arg=${arg}`);
+      });
+    }
 
-  //   baseCommand.push(dockerContext);
+    baseCommand.push(dockerContext);
 
-  //   await $`${baseCommand}`;
+    await $`${baseCommand}`;
 
-  //   $.verbose = false;
+    $.verbose = false;
 
-  //   // verify if image-arm64 exists
+    // verify if image-arm64 exists
 
-  //   try {
-  //     await $`docker manifest inspect ${image}-arm64`;
-  //     await $`docker manifest create --amend ${image} ${image}-amd64 ${image}-arm64`;
-  //     await $`docker manifest push ${image}`;
-  //   } catch (e) {
-  //     $.verbose = true;
-  //     await $`docker manifest create --amend ${image} ${image}-amd64 --amend`;
-  //     await $`docker manifest push ${image}`;
-  //   }
-  // }
+    try {
+      await $`docker manifest inspect ${image}-arm64`;
+      await $`docker manifest create --amend ${image} ${image}-amd64 ${image}-arm64`;
+      await $`docker manifest push ${image}`;
+    } catch (e) {
+      $.verbose = true;
+      await $`docker manifest create --amend ${image} ${image}-amd64 --amend`;
+      await $`docker manifest push ${image}`;
+    }
+  }
 
-  // if (arm64) {
-  //   try {
-  //     await $`docker buildx use mybuilder`;
-  //   } catch {
-  //     // If 'mybuilder' doesn't exist, create and bootstrap it
-  //     await $`docker buildx create --name mybuilder --use`;
-  //     await $`docker buildx inspect mybuilder --bootstrap`;
-  //   }
+  if (arm64) {
+    try {
+      await $`docker buildx use mybuilder`;
+    } catch {
+      // If 'mybuilder' doesn't exist, create and bootstrap it
+      await $`docker buildx create --name mybuilder --use`;
+      await $`docker buildx inspect mybuilder --bootstrap`;
+    }
 
-  //   let baseCommand = [
-  //     'docker',
-  //     'buildx',
-  //     'build',
-  //     '--platform=linux/arm64',
-  //     `--tag=${image}`,
-  //     `--tag=${image}-arm64`,
-  //     `--file=${dockerfile}`,
-  //     '--push',
-  //   ];
+    let baseCommand = [
+      'docker',
+      'buildx',
+      'build',
+      '--platform=linux/arm64',
+      `--tag=${image}`,
+      `--tag=${image}-arm64`,
+      `--file=${dockerfile}`,
+      '--push',
+    ];
 
-  //   if (cache === undefined) {
-  //     baseCommand.push('--no-cache');
-  //   }
+    if (cache === undefined) {
+      baseCommand.push('--no-cache');
+    }
 
-  //   if (argument) {
-  //     argument.map((arg: any) => {
-  //       baseCommand.push(`--build-arg=${arg}`);
-  //     });
-  //   }
+    if (argument) {
+      argument.map((arg: any) => {
+        baseCommand.push(`--build-arg=${arg}`);
+      });
+    }
 
-  //   baseCommand.push(dockerContext);
+    baseCommand.push(dockerContext);
 
-  //   await $`${baseCommand}`;
+    await $`${baseCommand}`;
 
-  //   try {
-  //     $.verbose = false;
-  //     const arm64Exists = await $`docker manifest inspect ${image}-amd64`;
-  //     await $`docker manifest create --amend ${image} ${image}-amd64 ${image}-arm64`;
-  //     await $`docker manifest push ${image}`;
-  //   } catch (e) {
-  //     await $`docker manifest create --amend ${image} ${image}-arm64 --amend`;
-  //     await $`docker manifest push ${image}`;
-  //   }
-  // }
+    try {
+      $.verbose = false;
+      const arm64Exists = await $`docker manifest inspect ${image}-amd64`;
+      await $`docker manifest create --amend ${image} ${image}-amd64 ${image}-arm64`;
+      await $`docker manifest push ${image}`;
+    } catch (e) {
+      await $`docker manifest create --amend ${image} ${image}-arm64 --amend`;
+      await $`docker manifest push ${image}`;
+    }
+  }
 
-  // if (amd64 === undefined && arm64 === undefined) {
-  //   let baseCommand = [
-  //     'docker',
-  //     'build',
-  //     `--tag=${image}`,
-  //     `--file=${dockerfile}`,
-  //     '--push',
-  //   ];
+  if (amd64 === undefined && arm64 === undefined) {
+    let baseCommand = [
+      'docker',
+      'build',
+      `--tag=${image}`,
+      `--file=${dockerfile}`,
+      '--push',
+    ];
 
-  //   if (argument) {
-  //     argument.map((arg: any) => {
-  //       baseCommand.push('--build-arg');
-  //       baseCommand.push(arg);
-  //     });
-  //   }
+    if (argument) {
+      argument.map((arg: any) => {
+        baseCommand.push('--build-arg');
+        baseCommand.push(arg);
+      });
+    }
 
-  //   if (cache === undefined) {
-  //     baseCommand.push('--no-cache');
-  //   }
+    if (cache === undefined) {
+      baseCommand.push('--no-cache');
+    }
 
-  //   baseCommand.push(dockerContext);
+    baseCommand.push(dockerContext);
 
-  //   await $`${baseCommand}`;
-  // }
+    await $`${baseCommand}`;
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
