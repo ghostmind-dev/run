@@ -126,7 +126,8 @@ export async function getDockerImageDigest(
   if (arch === 'amd64') {
     $.verbose = false;
 
-    const imageDigestRaw = await $`docker manifest inspect ${image} --verbose`;
+    const imageDigestRaw =
+      await $`docker manifest inspect ${image}-amd64 --verbose`;
 
     const jsonManifest = JSON.parse(`${imageDigestRaw}`);
 
@@ -146,7 +147,8 @@ export async function getDockerImageDigest(
   } else if (arch === 'arm64') {
     $.verbose = false;
 
-    const imageDigestRaw = await $`docker manifest inspect ${image} --verbose`;
+    const imageDigestRaw =
+      await $`docker manifest inspect ${image}-arm64 --verbose`;
 
     const jsonManifest = JSON.parse(`${imageDigestRaw}`);
 
