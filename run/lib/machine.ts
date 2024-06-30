@@ -74,19 +74,21 @@ export async function appClone(app: string) {
 
   // change the id
 
-  meta.id = await createUUID();
+  if (meta) {
+    meta.id = await createUUID();
 
-  // write the file back
+    // write the file back
 
-  await fs.writeJson(`${currentPath}/${name}/meta.json`, meta);
+    await fs.writeJson(`${currentPath}/${name}/meta.json`, meta);
 
-  // format the file
+    // format the file
 
-  const formatted = await prettier.format(JSON.stringify(meta), {
-    parser: 'json',
-  });
+    const formatted = await prettier.format(JSON.stringify(meta), {
+      parser: 'json',
+    });
 
-  await fs.writeFile(`${currentPath}/${name}/meta.json`, formatted, 'utf8');
+    await fs.writeFile(`${currentPath}/${name}/meta.json`, formatted, 'utf8');
+  }
 
   console.log(`App ${app} has been cloned`);
 
