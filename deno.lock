@@ -16,6 +16,7 @@
       "npm:jsonfile@6.1.0": "npm:jsonfile@6.1.0",
       "npm:lodash@4.17.21": "npm:lodash@4.17.21",
       "npm:nanoid@5.0.7": "npm:nanoid@5.0.7",
+      "npm:prettier@3.3.2": "npm:prettier@3.3.2",
       "npm:yaml@2.4.2": "npm:yaml@2.4.2",
       "npm:zx": "npm:zx@8.1.0",
       "npm:zx@8.1.0": "npm:zx@8.1.0",
@@ -675,6 +676,10 @@
         "dependencies": {
           "yocto-queue": "yocto-queue@0.1.0"
         }
+      },
+      "prettier@3.3.2": {
+        "integrity": "sha512-rAVeHYMcv8ATV5d508CFdn+8/pHPpXeIid1DdrPwXnaAdH7cqjVbpJaT5eq4yRAFU/lsbwYwSF/n5iNrdJHPQA==",
+        "dependencies": {}
       },
       "readable-stream@3.6.2": {
         "integrity": "sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA==",

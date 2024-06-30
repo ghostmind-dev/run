@@ -1,7 +1,13 @@
-import { $, cd } from 'npm:zx@8.1.0';
-import { detectScriptsDirectory, createUUID } from '../utils/divers.ts';
+import { $, cd, spinner, sleep, question } from 'npm:zx@8.1.0';
+import Table from 'npm:cli-table3@0.6.5';
+import {
+  detectScriptsDirectory,
+  createUUID,
+  verifyIfMetaJsonExists,
+} from '../utils/divers.ts';
 import inquirer from 'npm:inquirer@9.2.22';
 import fs from 'npm:fs-extra@11.2.0';
+import prettier from 'npm:prettier@3.3.2';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -16,6 +22,80 @@ $.verbose = false;
 let currentPath = await detectScriptsDirectory(Deno.cwd());
 
 cd(currentPath);
+
+export async function appClone(app: string) {
+  // git@github.com:ghostmind-dev/templates.git
+  // clone this repo in /tmp/templates
+
+  await spinner('Cloning templates', async () => {
+    await $`rm -rf /tmp/templates`;
+
+    await $`git clone git@github.com:ghostmind-dev/templates.git /tmp/templates`;
+
+    await sleep(1000);
+  });
+
+  // read all meta.json in all folders contains in  /tmp/templates/templates
+  // pull the name and description
+
+  if (!app) {
+    const table = new Table({
+      head: ['Name', 'Description'],
+    });
+
+    for await (const entry of Deno.readDir('/tmp/templates/templates')) {
+      const meta = await verifyIfMetaJsonExists(
+        `/tmp/templates/templates/${entry.name}`
+      );
+
+      if (meta) {
+        table.push([meta.name, meta.description]);
+      }
+    }
+
+    console.log(table.toString());
+
+    Deno.exit(0);
+  }
+
+  // copy the folder to the current directory
+
+  const name = await question('Name of the app: ');
+
+  await $`cp -r /tmp/templates/templates/${app} ${name}`;
+
+  cd(name);
+
+  //  change id in meta.json
+
+  // read the meta.json
+
+  const meta = await verifyIfMetaJsonExists(`${currentPath}/${name}`);
+
+  // change the id
+
+  meta.id = await createUUID();
+
+  // write the file back
+
+  await fs.writeJson(`${currentPath}/${name}/meta.json`, meta);
+
+  // format the file
+
+  const formatted = await prettier.format(JSON.stringify(meta), {
+    parser: 'json',
+  });
+
+  await fs.writeFile(`${currentPath}/${name}/meta.json`, formatted, 'utf8');
+
+  console.log(`App ${app} has been cloned`);
+
+  // remove the /tmp/templates
+
+  await $`rm -rf /tmp/templates`;
+
+  Deno.exit(0);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // INIT
@@ -32,26 +112,28 @@ export async function machineInit() {
     },
   ]);
 
-  await $`git clone https://github.com/ghostmind-dev/machine.git ${projectName}`;
-
-  // remove the user path from currentPath
-
   const pathFromHome = currentPath.replace(`${Deno.env.get('HOME')}/`, '');
 
-  cd(projectName);
+  /// diable cache for now
 
-  // we have to change so value in a few files. First
-  // First is the .devcontainer/devcontainer.json file
-  // Get the json file and parse it
+  await $`mkdir -p ${currentPath}/${projectName}`;
 
-  let devcontainer: any = await fs.readFile(
-    `${currentPath}/${projectName}/.devcontainer/devcontainer.json`,
-    'utf8'
+  cd(`${currentPath}/${projectName}`);
+
+  await $`mkdir -p ${currentPath}/${projectName}/.devcontainer`;
+
+  const defaultDevcontainerJsonRaw = await fetch(
+    'https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/devcontainer.json',
+    {
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    }
   );
 
-  devcontainer = JSON.parse(devcontainer);
+  let devcontainer = await defaultDevcontainerJsonRaw.json();
 
-  // Change the name of the container
+  // // Change the name of the container
 
   devcontainer.name = projectName;
   devcontainer.build.args.PROJECT_DIR =
@@ -69,7 +151,7 @@ export async function machineInit() {
 
   devcontainer.runArgs[3] = `--name=devcontainer-${projectName}`;
 
-  // write the file back
+  // // write the file back
 
   await fs.writeFile(
     `${currentPath}/${projectName}/.devcontainer/devcontainer.json`,
@@ -77,37 +159,37 @@ export async function machineInit() {
     'utf8'
   );
 
-  // now , we need to modify ./meta.json
+  await $`curl -o ${currentPath}/${projectName}/.devcontainer/Dockerfile https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/Dockerfile`;
 
-  let meta = await fs.readFile(
-    `${currentPath}/${projectName}/meta.json`,
-    'utf8'
-  );
+  // // now , we need to modify ./meta.json
 
-  meta = JSON.parse(meta);
+  await $`curl -o ${currentPath}/${projectName}/.gitignore https://raw.githubusercontent.com/ghostmind-dev/config/main/config/git/.gitignore`;
 
-  meta.id = await createUUID();
-  meta.name = projectName;
+  // create a new meta.json file
 
-  await fs.writeFile(
-    `${currentPath}/${projectName}/meta.json`,
-    JSON.stringify(meta, null, 2),
-    'utf8'
-  );
+  await fs.writeJson(`${currentPath}/${projectName}/meta.json`, {
+    id: await createUUID(),
+    name: projectName,
+    type: 'app',
+  });
 
-  // now we need replace the content of Readme.md and only write a ssingle line header
+  // // now we need replace the content of Readme.md and only write a ssingle line header
 
   await fs.writeFile(
     `${currentPath}/${projectName}/Readme.md`,
     `# ${projectName}`,
     'utf8'
   );
+
+  await $`mkdir -p ${currentPath}/${projectName}/vscode`;
+
+  await $`curl -o ${currentPath}/${projectName}/vscode/settings.json https://raw.githubusercontent.com/ghostmind-dev/config/main/config/vscode/settings.json`;
+
   $.verbose = true;
 
   await $`rm -rf .git`;
 
   await $`git init`;
-  // exit the execution
 
   Deno.exit(0);
 }
@@ -120,7 +202,18 @@ export default async function machine(program: any) {
   const machine = program.command('machine');
   machine.description('create a devcontainer for the project');
 
-  const init = machine.command('init');
+  const dvc = machine.command('dvc');
+  dvc.description('initialixe and manage a devcontainer for the project');
+
+  const init = dvc.command('init');
   init.description('create a devcontainer for the project');
   init.action(machineInit);
+
+  const app = machine.command('app');
+  app.description('initialize and manage a new app');
+
+  const clone = app.command('clone');
+  clone.description('clone an app from the templates');
+  clone.argument('[app]', 'app to clone');
+  clone.action(appClone);
 }
