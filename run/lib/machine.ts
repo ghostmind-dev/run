@@ -163,6 +163,10 @@ export async function machineInit() {
 
   await $`curl -o ${currentPath}/${projectName}/.devcontainer/Dockerfile https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/Dockerfile`;
 
+  await $`mkdir -p ${currentPath}/${projectName}/.devcontainer/library-scripts`;
+
+  await $`curl -o ${currentPath}/${projectName}/.devcontainer/library-scripts/post-attach.ts https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/library-scripts/post-attach.ts`;
+
   // // now , we need to modify ./meta.json
 
   await $`curl -o ${currentPath}/${projectName}/.gitignore https://raw.githubusercontent.com/ghostmind-dev/config/main/config/git/.gitignore`;
