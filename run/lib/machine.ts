@@ -183,9 +183,9 @@ export async function machineInit() {
     'utf8'
   );
 
-  await $`mkdir -p ${currentPath}/${projectName}/vscode`;
+  await $`mkdir -p ${currentPath}/${projectName}/.vscode`;
 
-  await $`curl -o ${currentPath}/${projectName}/vscode/settings.json https://raw.githubusercontent.com/ghostmind-dev/config/main/config/vscode/settings.json`;
+  await $`curl -o ${currentPath}/${projectName}/.vscode/settings.json https://raw.githubusercontent.com/ghostmind-dev/config/main/config/vscode/settings.json`;
 
   $.verbose = true;
 
