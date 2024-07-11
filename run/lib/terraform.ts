@@ -130,15 +130,17 @@ export async function terraformActivate(
       return;
     }
 
-    let dockerAppName = options.docker || 'default';
+    if (metaConfig.docker) {
+      let dockerAppName = options.docker || 'default';
 
-    let arch = options.arch || 'amd64';
+      let arch = options.arch || 'amd64';
 
-    const imageDigest: any = await getDockerImageDigest(arch, dockerAppName);
+      const imageDigest: any = await getDockerImageDigest(arch, dockerAppName);
 
-    $.verbose = true;
+      $.verbose = true;
 
-    Deno.env.set('TF_VAR_IMAGE_DIGEST', imageDigest);
+      Deno.env.set('TF_VAR_IMAGE_DIGEST', imageDigest);
+    }
 
     let { terraform, id } = metaConfig;
     let { path, global } = terraform[component];
