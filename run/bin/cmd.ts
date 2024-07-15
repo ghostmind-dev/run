@@ -45,7 +45,10 @@ const run = program.name('run');
 program
   .option('--cible <env context>', 'target environment context')
   .hook('preAction', async (thisCommand: any) => {
-    if (!Deno.env.get('GITHUB_ACTIONS')) {
+    if (
+      !Deno.env.get('GITHUB_ACTIONS') &&
+      Deno.env.get('CUSTOM_STATUS') !== 'in_progress'
+    ) {
       const { cible } = thisCommand.opts();
       await setSecretsOnLocal(cible || 'local');
       await setEnvOnLocal(cible || 'local');

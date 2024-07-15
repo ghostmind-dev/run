@@ -385,6 +385,8 @@ async function runScript(
   argument: string[] | string,
   options: any
 ) {
+  Deno.env.set('CUSTOM_STATUS', 'in_progress');
+
   let currentPath = Deno.cwd();
 
   let { test, input, dev, all } = options;

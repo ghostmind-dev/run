@@ -138,6 +138,7 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
     await $`cat ${base_file} ${target_file} > /tmp/.env.${randomFileNumber}.${APP_NAME}`;
   } else {
     let target_file = `${currentPath}/.env.${target}`;
+
     await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
     try {
       await fs.access(target_file, fs.constants.R_OK);
