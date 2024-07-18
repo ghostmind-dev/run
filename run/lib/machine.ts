@@ -165,7 +165,7 @@ export async function machineInit() {
 
   await $`mkdir -p ${currentPath}/${projectName}/.devcontainer/library-scripts`;
 
-  await $`curl -o ${currentPath}/${projectName}/.devcontainer/library-scripts/post-attach.ts https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/library-scripts/post-attach.ts`;
+  await $`curl -o ${currentPath}/${projectName}/.devcontainer/library-scripts/post-create.ts https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/library-scripts/post-create.ts`;
 
   // // now , we need to modify ./meta.json
 
