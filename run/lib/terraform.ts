@@ -149,9 +149,9 @@ export async function terraformActivate(
       Deno.env.set('TF_VAR_IMAGE_DIGEST', imageDigest);
     }
 
-    // await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
-    // await $`terraform plan`;
-    // await $`terraform apply -auto-approve`;
+    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
+    await $`terraform plan`;
+    await $`terraform apply -auto-approve`;
   } catch (error) {
     console.error(error.message);
   }
