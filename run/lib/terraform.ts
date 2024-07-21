@@ -130,25 +130,28 @@ export async function terraformActivate(
       return;
     }
 
-    if (metaConfig.docker) {
-      let dockerAppName = options.docker || 'default';
+    let { terraform, id } = metaConfig;
+    let { path, global, dockerComponent } = terraform[component];
+    const { bcBucket, bcPrefix } = await getBucketConfig(id, global, component);
 
+    cd(`${currentPath}/${path}`);
+
+    if (dockerComponent) {
       let arch = options.arch || 'amd64';
 
-      const imageDigest: any = await getDockerImageDigest(arch, dockerAppName);
+      const imageDigest: any = await getDockerImageDigest(
+        arch,
+        dockerComponent
+      );
 
       $.verbose = true;
 
       Deno.env.set('TF_VAR_IMAGE_DIGEST', imageDigest);
     }
 
-    let { terraform, id } = metaConfig;
-    let { path, global } = terraform[component];
-    const { bcBucket, bcPrefix } = await getBucketConfig(id, global, component);
-    cd(`${currentPath}/${path}`);
-    await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
-    await $`terraform plan`;
-    await $`terraform apply -auto-approve`;
+    // await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
+    // await $`terraform plan`;
+    // await $`terraform apply -auto-approve`;
   } catch (error) {
     console.error(error.message);
   }
