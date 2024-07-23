@@ -6,7 +6,6 @@ import {
 import _ from 'npm:lodash@4.17.21';
 import { parse } from 'npm:yaml@2.4.2';
 import { readFileSync } from 'node:fs';
-import fs from 'npm:fs-extra@11.2.0';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -66,8 +65,6 @@ export async function getDockerfileAndImageName(
 ): Promise<{ dockerfile: string; dockerContext: string; image: string }> {
   $.verbose = true;
   const ENV = `${Deno.env.get('ENV')}`;
-
-  console.log(ENV);
 
   let currentPath = await detectScriptsDirectory(Deno.cwd());
 
@@ -198,8 +195,6 @@ export async function dockerRegister(
     options.component
   );
 
-
-
   Deno.env.set('BUILDX_NO_DEFAULT_ATTESTATIONS', '1');
 
   // Determine the machine architecture
@@ -226,6 +221,12 @@ export async function dockerRegister(
       `--tag=${image}-amd64`,
       `--file=${dockerfile}`,
       '--push',
+      '--cache-totype=local,src=./cache',
+      `--cache-to=type=registry,ref=${image},mode=max`,
+      `--cache-to=type=registry,ref=${image}-amd64,mode=max`,
+      '--cache-from=type=local,src=./cache',
+      `--cache-from=type=registry,ref=${image}`,
+      `--cache-from=type=registry,ref=${image}-amd64`,
     ];
 
     if (cache === undefined) {
@@ -275,6 +276,12 @@ export async function dockerRegister(
       `--tag=${image}-arm64`,
       `--file=${dockerfile}`,
       '--push',
+      '--cache-totype=local,src=./cache',
+      `--cache-to=type=registry,ref=${image},mode=max`,
+      `--cache-to=type=registry,ref=${image}-arm64,mode=max`,
+      '--cache-from=type=local,src=./cache',
+      `--cache-from=type=registry,ref=${image}`,
+      `--cache-from=type=registry,ref=${image}-arm64`,
     ];
 
     if (cache === undefined) {
@@ -309,6 +316,10 @@ export async function dockerRegister(
       `--tag=${image}`,
       `--file=${dockerfile}`,
       '--push',
+      '--cache-totype=local,src=./cache',
+      `--cache-to=type=registry,ref=${image},mode=max`,
+      '--cache-from=type=local,src=./cache',
+      `--cache-from=type=registry,ref=${image}`,
     ];
 
     if (argument) {
