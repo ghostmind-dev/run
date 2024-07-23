@@ -222,9 +222,7 @@ export async function dockerRegister(
       `--file=${dockerfile}`,
       '--push',
       `--cache-to=type=registry,ref=${image},mode=max`,
-      `--cache-to=type=registry,ref=${image}-amd64,mode=max`,
       `--cache-from=type=registry,ref=${image}`,
-      `--cache-from=type=registry,ref=${image}-amd64`,
     ];
 
     if (cache === undefined) {
@@ -275,9 +273,7 @@ export async function dockerRegister(
       `--file=${dockerfile}`,
       '--push',
       `--cache-to=type=registry,ref=${image},mode=max`,
-      `--cache-to=type=registry,ref=${image}-arm64,mode=max`,
       `--cache-from=type=registry,ref=${image}`,
-      `--cache-from=type=registry,ref=${image}-arm64`,
     ];
 
     if (cache === undefined) {
