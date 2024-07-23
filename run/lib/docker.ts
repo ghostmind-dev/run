@@ -221,10 +221,10 @@ export async function dockerRegister(
       `--tag=${image}-amd64`,
       `--file=${dockerfile}`,
       '--push',
-      '--cache-totype=local,src=./cache',
+      '--cache-to=type=local,src=~/.docker_cache',
       `--cache-to=type=registry,ref=${image},mode=max`,
       `--cache-to=type=registry,ref=${image}-amd64,mode=max`,
-      '--cache-from=type=local,src=./cache',
+      '--cache-from=type=local,src=!/docker_cache',
       `--cache-from=type=registry,ref=${image}`,
       `--cache-from=type=registry,ref=${image}-amd64`,
     ];
@@ -276,10 +276,10 @@ export async function dockerRegister(
       `--tag=${image}-arm64`,
       `--file=${dockerfile}`,
       '--push',
-      '--cache-totype=local,src=./cache',
+      '--cache-to=type=local,src=~/docker_cache',
       `--cache-to=type=registry,ref=${image},mode=max`,
       `--cache-to=type=registry,ref=${image}-arm64,mode=max`,
-      '--cache-from=type=local,src=./cache',
+      '--cache-from=type=local,src=~/docker_cache',
       `--cache-from=type=registry,ref=${image}`,
       `--cache-from=type=registry,ref=${image}-arm64`,
     ];
@@ -316,9 +316,9 @@ export async function dockerRegister(
       `--tag=${image}`,
       `--file=${dockerfile}`,
       '--push',
-      '--cache-totype=local,src=./cache',
+      '--cache-totype=local,src=~/docker_cache',
       `--cache-to=type=registry,ref=${image},mode=max`,
-      '--cache-from=type=local,src=./cache',
+      '--cache-from=type=local,src=~/docker_cache',
       `--cache-from=type=registry,ref=${image}`,
     ];
 
