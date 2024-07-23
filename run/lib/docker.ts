@@ -203,12 +203,13 @@ export async function dockerRegister(
     // Ensure a buildx builder instance exists and is bootstrapped
     try {
       $.verbose = false;
-      await $`docker buildx use mybuilder`;
+      await `docker buildx inspect default`;
+      await $`docker buildx use default`;
     } catch {
       $.verbose = true;
-      // If 'mybuilder' doesn't exist, create and bootstrap it
-      await $`docker buildx create --name mybuilder --use`;
-      await $`docker buildx inspect mybuilder --bootstrap`;
+      // it should terminate
+      console.log('Default builder not found');
+      return;
     }
 
     let baseCommand = [
@@ -256,13 +257,15 @@ export async function dockerRegister(
 
   if (arm64) {
     try {
-      await $`docker buildx use mybuilder`;
+      $.verbose = false;
+      await `docker buildx inspect default`;
+      await $`docker buildx use default`;
     } catch {
-      // If 'mybuilder' doesn't exist, create and bootstrap it
-      await $`docker buildx create --name mybuilder --use`;
-      await $`docker buildx inspect mybuilder --bootstrap`;
+      $.verbose = true;
+      // it should terminate
+      console.log('Default builder not found');
+      return;
     }
-
     let baseCommand = [
       'docker',
       'buildx',
