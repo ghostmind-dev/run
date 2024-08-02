@@ -4,6 +4,7 @@ import {
   detectScriptsDirectory,
   createUUID,
   verifyIfMetaJsonExists,
+  withMetaMatching,
 } from '../utils/divers.ts';
 import inquirer from 'npm:inquirer@9.2.22';
 import fs from 'npm:fs-extra@11.2.0';
@@ -23,78 +24,155 @@ let currentPath = await detectScriptsDirectory(Deno.cwd());
 
 cd(currentPath);
 
-export async function appClone(app: string) {
-  // git@github.com:ghostmind-dev/templates.git
-  // clone this repo in /tmp/templates
+////////////////////////////////////////////////////////////////////////////////
+// ENVIRONMENT VARIABLES
+////////////////////////////////////////////////////////////////////////////////
 
-  await spinner('Cloning templates', async () => {
-    await $`rm -rf /tmp/templates`;
+const RUN_MACHINE_GITHUB_REPO = Deno.env.get('RUN_MACHINE_GITHUB_REPO');
 
-    await $`git clone git@github.com:ghostmind-dev/templates.git /tmp/templates`;
+////////////////////////////////////////////////////////////////////////////////
+// LISTE
+////////////////////////////////////////////////////////////////////////////////
 
-    await sleep(1000);
-  });
+async function machineList(options: any) {
+  const { repo } = options;
 
-  // read all meta.json in all folders contains in  /tmp/templates/templates
-  // pull the name and description
+  $.verbose = false;
 
-  if (!app) {
-    const table = new Table({
-      head: ['Name', 'Description'],
+  let githubRepo = repo || RUN_MACHINE_GITHUB_REPO;
+
+  const folder = `/tmp/run/${githubRepo}`;
+
+  await spinner('Acquiring the list...', async () => {
+    if (fs.existsSync(folder)) {
+      cd(folder);
+
+      // mute the output
+
+      await $`git pull origin main --quiet > /dev/null 2>&1`;
+    } else {
+      await $`rm -rf ${folder}`;
+
+      await $`git clone git@github.com:${githubRepo}.git ${folder} --quiet > /dev/null 2>&1`;
+
+      cd(folder);
+    }
+
+    const appsPath = await withMetaMatching({
+      property: 'type',
+      value: 'app',
+      path: `${folder}`,
     });
 
-    for await (const entry of Deno.readDir('/tmp/templates/templates')) {
-      const meta = await verifyIfMetaJsonExists(
-        `/tmp/templates/templates/${entry.name}`
-      );
+    const table = new Table({
+      head: ['Name', 'Description', 'Tags'],
+    });
+
+    for (const appPath of appsPath) {
+      const meta = await verifyIfMetaJsonExists(appPath);
+
+      let tags = '';
+
+      if (meta?.tags) {
+        tags = meta.tags.join(', ');
+      }
 
       if (meta) {
-        table.push([meta.name, meta.description]);
+        table.push([meta.name, meta.description, tags]);
       }
     }
 
+    await sleep(1300);
+
     console.log(table.toString());
+  });
 
-    Deno.exit(0);
-  }
+  Deno.exit(0);
+}
 
-  // copy the folder to the current directory
+////////////////////////////////////////////////////////////////////////////////
+// CLONE
+////////////////////////////////////////////////////////////////////////////////
 
-  const name = await question('Name of the app: ');
+export async function appClone(app: string, options: any) {
+  const { repo } = options;
 
-  await $`cp -r /tmp/templates/templates/${app} ${name}`;
+  $.verbose = false;
 
-  cd(name);
+  let githubRepo = repo || RUN_MACHINE_GITHUB_REPO;
 
-  //  change id in meta.json
+  const folder = `/tmp/run/${githubRepo}`;
 
-  // read the meta.json
+  let appPath = '';
 
-  const meta = await verifyIfMetaJsonExists(`${currentPath}/${name}`);
+  await spinner('Cloning in progress...', async () => {
+    if (fs.existsSync(folder)) {
+      cd(folder);
 
-  // change the id
+      // mute the output
 
-  if (meta) {
-    meta.id = await createUUID();
+      await $`git pull origin main --quiet > /dev/null 2>&1`;
+    } else {
+      await $`rm -rf ${folder}`;
 
-    // write the file back
+      await $`git clone git@github.com:${githubRepo}.git ${folder} --quiet > /dev/null 2>&1`;
+    }
 
-    await fs.writeJson(`${currentPath}/${name}/meta.json`, meta);
+    cd(currentPath);
 
-    // format the file
-
-    const formatted = await prettier.format(JSON.stringify(meta), {
-      parser: 'json',
+    const appsPath = await withMetaMatching({
+      property: 'name',
+      value: app,
+      path: `${folder}`,
     });
 
-    await fs.writeFile(`${currentPath}/${name}/meta.json`, formatted, 'utf8');
-  }
+    if (appsPath.length === 0) {
+      console.log(`App ${app} not found`);
+      Deno.exit(0);
+    }
 
-  console.log(`App ${app} has been cloned`);
+    appPath = appsPath[0];
 
-  // remove the /tmp/templates
+    await sleep(1300);
+  });
 
-  await $`rm -rf /tmp/templates`;
+  const name = await question('What is the name of the app? ');
+
+  await spinner('Cloning in progress...', async () => {
+    $.verbose = false;
+
+    await $`cp -r ${appPath} ${name}`;
+
+    cd(name);
+
+    //  change id in meta.json
+
+    // read the meta.json
+
+    const meta = await verifyIfMetaJsonExists(`${currentPath}/${name}`);
+
+    //   // change the id
+
+    if (meta) {
+      meta.id = await createUUID();
+
+      // write the file back
+
+      await fs.writeJson(`${currentPath}/${name}/meta.json`, meta);
+
+      // format the file
+
+      const formatted = await prettier.format(JSON.stringify(meta), {
+        parser: 'json',
+      });
+
+      await fs.writeFile(`${currentPath}/${name}/meta.json`, formatted, 'utf8');
+    }
+
+    await sleep(2000);
+  });
+
+  console.log(`App ${name} has been cloned`);
 
   Deno.exit(0);
 }
@@ -208,18 +286,18 @@ export default async function machine(program: any) {
   const machine = program.command('machine');
   machine.description('create a devcontainer for the project');
 
-  const dvc = machine.command('dvc');
-  dvc.description('initialixe and manage a devcontainer for the project');
-
-  const init = dvc.command('init');
+  const init = machine.command('init');
   init.description('create a devcontainer for the project');
   init.action(machineInit);
 
-  const app = machine.command('app');
-  app.description('initialize and manage a new app');
-
-  const clone = app.command('clone');
+  const clone = machine.command('clone');
   clone.description('clone an app from the templates');
   clone.argument('[app]', 'app to clone');
+  clone.option('-r, --repo <repo>', 'github repo to clone from');
   clone.action(appClone);
+
+  const list = machine.command('list');
+  list.description('list all the available apps');
+  list.option('-r, --repo <repo>', 'github repo to clone from');
+  list.action(machineList);
 }
