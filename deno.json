@@ -1,15 +1,22 @@
 {
   "name": "@ghostmind/run",
-  "version": "0.2.54",
+  "version": "0.2.55",
   "exports": {
     ".": "./run/main.ts",
     "./cmd": "./run/bin/cmd.ts"
   },
   "lint": {
-    "include": ["**/run/**", "**/.devcontainer/**"],
+    "include": [
+      "**/run/**",
+      "**/.devcontainer/**"
+    ],
     "rules": {
-      "tags": ["recommended"],
-      "include": ["ban-untagged-todo"],
+      "tags": [
+        "recommended"
+      ],
+      "include": [
+        "ban-untagged-todo"
+      ],
       "exclude": [
         "no-unused-vars",
         "no-explicit-any",
