@@ -68,6 +68,22 @@ export default async function misc(program: any) {
       uuid = await createUUID();
       console.log(uuid);
     });
+
+  ////////////////////////////////////////////////////////////////////////////
+  // GENERATE A UUID
+  ////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('oneliner')
+    .description('generate a bsee64 oneline string (linux only)')
+    .argument('<path>', 'path to the file')
+    .action(async (path: 'string') => {
+      $.verbose = true;
+
+      await $`base64 -w 0 ${path}`;
+
+      Deno.exit(0);
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
