@@ -9,6 +9,7 @@ import {
 import inquirer from 'npm:inquirer@9.2.22';
 import fs from 'npm:fs-extra@11.2.0';
 import prettier from 'npm:prettier@3.3.2';
+import _ from 'npm:lodash@4.17.21';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -35,7 +36,7 @@ const RUN_MACHINE_GITHUB_REPO = Deno.env.get('RUN_MACHINE_GITHUB_REPO');
 ////////////////////////////////////////////////////////////////////////////////
 
 async function machineList(options: any) {
-  const { repo } = options;
+  const { repo, ascending, descending, tag } = options;
 
   $.verbose = false;
 
@@ -66,7 +67,10 @@ async function machineList(options: any) {
 
     const table = new Table({
       head: ['Name', 'Description', 'Tags'],
+      colWidths: [20, 60, 60],
     });
+
+    let tmpTable = [];
 
     for (const appPath of appsPath) {
       const meta = await verifyIfMetaJsonExists(appPath);
@@ -77,12 +81,65 @@ async function machineList(options: any) {
         tags = meta.tags.join(', ');
       }
 
+      let lastTimeUpdatedRaw =
+        await $`git log -1 --format=%cd --date=short ${appPath}`;
+
+      // remove the new line
+
+      let lastTimeUpdated = `${lastTimeUpdatedRaw}`.replace(/\n/g, '');
+
       if (meta) {
-        table.push([meta.name, meta.description, tags]);
+        tmpTable.push([meta.name, meta.description, tags, lastTimeUpdated]);
       }
     }
 
+    if (tag) {
+      tmpTable = _.filter(tmpTable, (row: any) => {
+        return row[2].includes(tag);
+      });
+    }
+
     await sleep(1300);
+
+    if (ascending) {
+      tmpTable = _.sortBy(tmpTable, (row: any) => -new Date(row[3]).getTime());
+    }
+
+    if (descending) {
+      tmpTable = _.sortBy(tmpTable, (row: any) => new Date(row[3]).getTime());
+    }
+
+    // remove the lastTimeUpdated field
+
+    function wrapText(text: any, width: any) {
+      const lines = [];
+      let line = '';
+      const words = text.split(' ');
+      for (const word of words) {
+        if ((line + word).length > width) {
+          lines.push(line.trim());
+          line = '';
+        }
+        line += word + ' ';
+      }
+      if (line.trim().length > 0) {
+        lines.push(line.trim());
+      }
+      return lines.join('\n');
+    }
+
+    const cleanedTable = _.chain(tmpTable)
+
+      .map((row: any) => _.slice(row, 0, 3))
+      .value();
+
+    for (const row of cleanedTable) {
+      table.push(
+        row.map((cell: any, index: any) =>
+          wrapText(cell, table.options.colWidths[index])
+        )
+      );
+    }
 
     console.log(table.toString());
   });
@@ -299,5 +356,10 @@ export default async function machine(program: any) {
   const list = machine.command('list');
   list.description('list all the available apps');
   list.option('-r, --repo <repo>', 'github repo to clone from');
+  // add option to list by the most recent
+  list.option('-asc, --ascending', 'sort by the most recent');
+  list.option('-desc, --descending', 'sort by the oldest');
+  // NEED TO BE ABLE TO FILTER BY TAG NAME
+  list.option('-t, --tag <tag>', 'filter by tag name');
   list.action(machineList);
 }
