@@ -1,6 +1,7 @@
 import { $ } from 'npm:zx@8.1.0';
 import * as inquirer from 'npm:inquirer@9.2.22';
 import { createUUID } from '../utils/divers.ts';
+import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
@@ -74,15 +75,18 @@ export default async function misc(program: any) {
   ////////////////////////////////////////////////////////////////////////////
 
   misc
-    .command('oneliner')
-    .description('generate a bsee64 oneline string (linux only)')
-    .argument('<path>', 'path to the file')
-    .action(async (path: 'string') => {
-      $.verbose = true;
+    .command('exec')
+    .description('initiate an interactive shell in a running devcontainer')
+    .action(async () => {
+      try {
+        $.verbose = true;
+        const meta = await verifyIfMetaJsonExists(Deno.cwd());
+        const { name } = meta;
 
-      await $`base64 -w 0 ${path}`;
-
-      Deno.exit(0);
+        await $`docker exec -it ${name} /bin/zsh -c "cd /workspaces/${name} && zsh"`;
+      } catch (e) {
+        Deno.exit(0);
+      }
     });
 }
 
