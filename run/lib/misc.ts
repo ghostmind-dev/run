@@ -83,7 +83,7 @@ export default async function misc(program: any) {
         const meta = await verifyIfMetaJsonExists(Deno.cwd());
         const { name } = meta;
 
-        await $`docker exec -it ${name} /bin/zsh -c "cd /workspaces/${name} && zsh"`;
+        await $`docker exec -it ${name} /bin/zsh -c "cd /workspaces/${name} && export PROMPT_EOL_MARK='' && zsh"`;
       } catch (e) {
         Deno.exit(0);
       }
