@@ -1,4 +1,4 @@
-import { $ } from 'npm:zx@8.1.0';
+import { $, chalk } from 'npm:zx@8.1.0';
 import { config } from 'npm:dotenv@16.4.5';
 import { expand } from 'npm:dotenv-expand@11.0.6';
 import fs from 'npm:fs-extra@11.2.0';
@@ -129,7 +129,7 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
     try {
       await fs.access(base_file, fs.constants.R_OK);
     } catch (err) {
-      console.log('base file does not exist');
+      console.log(chalk.red(`The file .env.${base_file} does not exist`));
       return;
     }
 
