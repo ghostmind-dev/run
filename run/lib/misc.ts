@@ -80,7 +80,14 @@ export default async function misc(program: any) {
     .action(async () => {
       try {
         $.verbose = true;
+
         const meta = await verifyIfMetaJsonExists(Deno.cwd());
+
+        if (!meta) {
+          console.log('No meta.json found');
+          Deno.exit(0);
+        }
+
         const { name } = meta;
 
         await $`docker exec -it ${name} /bin/zsh -c "cd /workspaces/${name} && export PROMPT_EOL_MARK='' && zsh"`;
