@@ -1,11 +1,7 @@
 import { $, cd } from 'npm:zx@8.1.0';
 import fs from 'npm:fs-extra@11.2.0';
 import { readFileSync } from 'node:fs';
-import {
-  detectScriptsDirectory,
-  verifyIfMetaJsonExists,
-  recursiveDirectoriesDiscovery,
-} from '../utils/divers.ts';
+import { detectScriptsDirectory, verifyIfMetaJsonExists, recursiveDirectoriesDiscovery } from '../utils/divers.ts';
 import { getAppName } from '../utils/divers.ts';
 import { getDockerImageDigest } from '../main.ts';
 import _ from 'npm:lodash@4.17.21';
@@ -34,8 +30,7 @@ interface TerraformActivateOptions {
   docker?: string;
 }
 
-interface TerraformActivateOptionsWithComponent
-  extends TerraformActivateOptions {
+interface TerraformActivateOptionsWithComponent extends TerraformActivateOptions {
   component: string;
 }
 
@@ -48,11 +43,7 @@ interface TerraformDestroyOptions {
 // GET BACKEND BUCKET NAME AND DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getBucketConfig(
-  id: string,
-  global: any,
-  component: string
-): Promise<{ bcBucket: string; bcPrefix: string }> {
+export async function getBucketConfig(id: string, global: any, component: string): Promise<{ bcBucket: string; bcPrefix: string }> {
   const ENV = `${Deno.env.get('ENV')}`;
   let bucketDirectory;
 
@@ -74,10 +65,7 @@ export async function getBucketConfig(
 // TERRAFORM DESTROY UNIT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformDestroy(
-  component: string,
-  options: TerraformDestroyOptions
-) {
+export async function terraformDestroy(component: string, options: TerraformDestroyOptions) {
   try {
     let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -86,11 +74,7 @@ export async function terraformDestroy(
 
       let { path, global } = terraform[component];
 
-      const { bcBucket, bcPrefix } = await getBucketConfig(
-        id,
-        global,
-        component
-      );
+      const { bcBucket, bcPrefix } = await getBucketConfig(id, global, component);
 
       Deno.env.set('TF_VAR_IMAGE_DIGEST', '');
 
@@ -109,10 +93,7 @@ export async function terraformDestroy(
 // TERRAFORM APPLY UNIT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function terraformActivate(
-  componentOrOptions: string | TerraformActivateOptionsWithComponent,
-  options?: TerraformActivateOptions
-) {
+export async function terraformActivate(componentOrOptions: string | TerraformActivateOptionsWithComponent, options?: TerraformActivateOptions) {
   let component: string;
 
   if (typeof componentOrOptions === 'string') {
@@ -132,22 +113,26 @@ export async function terraformActivate(
 
     let { terraform, id } = metaConfig;
     let { path, global, dockerComponent } = terraform[component];
+
     const { bcBucket, bcPrefix } = await getBucketConfig(id, global, component);
 
-    cd(`${currentPath}/${path}`);
+    const componentToTarget = dockerComponent || 'default';
 
-    if (dockerComponent) {
+    if (componentToTarget) {
       let arch = options.arch || 'amd64';
 
-      const imageDigest: any = await getDockerImageDigest(
-        arch,
-        dockerComponent
-      );
+      cd(`${currentPath}`);
+
+      const imageDigest: any = await getDockerImageDigest(arch, componentToTarget);
 
       $.verbose = true;
 
       Deno.env.set('TF_VAR_IMAGE_DIGEST', imageDigest);
+
+      console.log(imageDigest);
     }
+
+    cd(`${currentPath}/${path}`);
 
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform plan`;
@@ -213,9 +198,7 @@ export async function terraformVariables(component: any, options: any) {
 
   const projectHasBeenDefined = prefixedVars.match(/^TF_VAR_PROJECT=(.*)$/m);
   const appNameHasBeenDefined = prefixedVars.match(/^TF_VAR_APP=(.*)$/m);
-  const gcpProjectIdhAsBeenDefined = prefixedVars.match(
-    /^TF_VAR_GCP_PROJECT_ID=(.*)$/m
-  );
+  const gcpProjectIdhAsBeenDefined = prefixedVars.match(/^TF_VAR_GCP_PROJECT_ID=(.*)$/m);
 
   if (!projectHasBeenDefined) {
     const SRC = Deno.env.get('SRC') || '';
@@ -369,10 +352,7 @@ export default async function commandTerraform(program: any) {
   const terraform = program.command('terraform');
   terraform.description('infrastructure definition');
 
-  terraform
-    .command('clean')
-    .description('delete all .tfstate files')
-    .action(cleanDotTerraformFolders);
+  terraform.command('clean').description('delete all .tfstate files').action(cleanDotTerraformFolders);
 
   terraform
     .command('env')
@@ -386,10 +366,7 @@ export default async function commandTerraform(program: any) {
     .description('apply the infrastructure')
     .option('--arch <arch>', 'architecture. default to amd64')
     .option('--docker <docker>', 'docker app name')
-    .argument(
-      '[component]',
-      'component to deplo. It has priority over --component option'
-    )
+    .argument('[component]', 'component to deplo. It has priority over --component option')
     .option('--component <component>', 'component to deploy')
     .option('--local', 'use local state')
     .action(terraformActivate);
