@@ -42,18 +42,13 @@ const run = program.name('run');
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-program
-  .option('--cible <env context>', 'target environment context')
-  .hook('preAction', async (thisCommand: any) => {
-    if (
-      !Deno.env.get('GITHUB_ACTIONS') &&
-      Deno.env.get('CUSTOM_STATUS') !== 'in_progress'
-    ) {
-      const { cible } = thisCommand.opts();
-      await setSecretsOnLocal(cible || 'local');
-      await setEnvOnLocal(cible || 'local');
-    }
-  });
+program.option('--cible <env context>', 'target environment context').hook('preAction', async (thisCommand: any) => {
+  if (!Deno.env.get('GITHUB_ACTIONS') && Deno.env.get('CUSTOM_STATUS') !== 'in_progress') {
+    const { cible } = thisCommand.opts();
+    await setSecretsOnLocal(cible || 'local');
+    await setEnvOnLocal(cible || 'local');
+  }
+});
 
 ////////////////////////////////////////////////////////////////////////////////
 // GIT COMMAND
@@ -84,11 +79,13 @@ program.exitOverride();
 try {
   await program.parseAsync();
 } catch (err) {
-  const { message } = err;
+  if (err) {
+    const { message } = err;
 
-  if (!message.includes('outputHelp')) {
-    console.log(message);
-    console.error('something went wrong');
+    if (!message.includes('outputHelp')) {
+      console.log(message);
+      console.error('something went wrong');
+    }
   }
 }
 

@@ -52,10 +52,7 @@ export interface ActionRunRemoteOptions {
  * @param {Object} options - The options for the action
  */
 
-export async function actionRunRemote(
-  workflow: string,
-  options: ActionRunRemoteOptions
-): Promise<void> {
+export async function actionRunRemote(workflow: string, options: ActionRunRemoteOptions): Promise<void> {
   $.verbose = true;
 
   const { watch, input, branch } = options;
@@ -74,7 +71,12 @@ export async function actionRunRemote(
   try {
     await $`gh workflow run ${workflow} --ref ${refBranch} ${inputsArguments}`;
   } catch (error) {
-    console.log(error.stderr);
+    if (error.stderr.includes('No such file or directory')) {
+      console.log(error.stderr);
+      console.log('Please make sure you are in the right directory');
+      console.log('You can also try to run the command below:');
+      console.log(`gh workflow run ${workflow} --ref ${refBranch} ${inputsArguments}`);
+    }
   }
 
   if (watch) {
@@ -82,8 +84,7 @@ export async function actionRunRemote(
 
     await sleep(5000);
 
-    const runId =
-      await $`gh run list --limit 1 | sed -En '1p' | awk '{ print $(NF - 2) }'`;
+    const runId = await $`gh run list --limit 1 | sed -En '1p' | awk '{ print $(NF - 2) }'`;
 
     $.verbose = true;
 
@@ -95,20 +96,13 @@ export async function actionRunRemote(
 // RUN ACTION LOCALLY WITH ACT
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function actionRunLocal(
-  target: any,
-  actArguments: any,
-  event: any,
-  custom: any,
-  workaround: any
-): Promise<void> {
+export async function actionRunLocal(target: any, actArguments: any, event: any, custom: any, workaround: any): Promise<void> {
   const actArgmentsArray = [...actArgmentsDefault, ...actArguments];
 
   let workflowsPath = LOCALHOST_SRC + '/.github/workflows';
 
   if (custom == true) {
-    actArgmentsArray[0] =
-      '--platform=ubuntu-latest=ghcr.io/ghostmind-dev/act-base:latest';
+    actArgmentsArray[0] = '--platform=ubuntu-latest=ghcr.io/ghostmind-dev/act-base:latest';
 
     await $`rm -rf /tmp/.github`;
 
@@ -167,8 +161,7 @@ export async function actionRunLocal(
 
 export async function actionRunLocalEntry(target: any, options: any) {
   const ENV = Deno.env.get('ENV');
-  const { live, input, reuse, secure, event, push, custom, workaround, env } =
-    options;
+  const { live, input, reuse, secure, event, push, custom, workaround, env } = options;
 
   let inputsArguments: any = {};
 
@@ -199,10 +192,7 @@ export async function actionRunLocalEntry(target: any, options: any) {
   }
 
   if (event === 'push') {
-    const eventFile = await fs.readFile(
-      `${LOCALHOST_SRC}/.github/mocking/push.json`,
-      'utf8'
-    );
+    const eventFile = await fs.readFile(`${LOCALHOST_SRC}/.github/mocking/push.json`, 'utf8');
 
     // this push has 3 properties: ref, before, after
     // add these properties to the /tmp/inputs.json file
@@ -244,10 +234,7 @@ export default async function act(program: any) {
     .option('--no-reuse', 'do not reuse container state')
     .option('--no-secure', "show secrets in logs (don't use in production)")
     .option('--custom', 'custom act container')
-    .option(
-      '-W, --workaround',
-      'set file path to .github/workflows/workflow_name (workaround for a bug)'
-    )
+    .option('-W, --workaround', 'set file path to .github/workflows/workflow_name (workaround for a bug)')
     .option('-i, --input [inputs...]', 'action inputs')
     .option('--event <string>", " trigger event (ex: workflow_run')
     .action(actionRunLocalEntry);
