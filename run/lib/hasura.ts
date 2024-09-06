@@ -1,8 +1,5 @@
 import { $, cd } from 'npm:zx@8.1.0';
-import {
-  detectScriptsDirectory,
-  verifyIfMetaJsonExists,
-} from '../utils/divers.ts';
+import { detectScriptsDirectory, verifyIfMetaJsonExists } from '../utils/divers.ts';
 import fs from 'npm:fs-extra@11.2.0';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -56,14 +53,12 @@ export async function hasuraOpenConsole(options: any) {
 
   async function isHasuraReady() {
     try {
-      let HASURA_GRAPHQL_ENDPOINT =
-        Deno.env.get('HASURA_GRAPHQL_ENDPOINT') ||
-        'http://host.docker.internal:8081';
+      let HASURA_GRAPHQL_ENDPOINT = Deno.env.get('HASURA_GRAPHQL_ENDPOINT') || 'http://host.docker.internal:8081';
 
       const response = await fetch(`${HASURA_GRAPHQL_ENDPOINT}/healthz`);
       return response.ok; // Returns true if the status code is 2xx
     } catch (error) {
-      console.error('Hasura health check failed:', error.message);
+      console.log('Error:', error);
       return false;
     }
   }
@@ -81,13 +76,9 @@ export async function hasuraOpenConsole(options: any) {
   $.verbose = true;
 
   if (local) {
-    let HASURA_GRAPHQL_CONSOLE_PORT =
-      Deno.env.get('HASURA_GRAPHQL_CONSOLE_PORT') || 8085;
-    let HASURA_GRAPHQL_HGE_ENDPOINT =
-      Deno.env.get('HASURA_GRAPHQL_HGE_ENDPOINT') || 'http://0.0.0.0:8081';
-    let HASURA_GRAPHQL_ENDPOINT =
-      Deno.env.get('HASURA_GRAPHQL_ENDPOINT') ||
-      'http://host.docker.internal:8081';
+    let HASURA_GRAPHQL_CONSOLE_PORT = Deno.env.get('HASURA_GRAPHQL_CONSOLE_PORT') || 8085;
+    let HASURA_GRAPHQL_HGE_ENDPOINT = Deno.env.get('HASURA_GRAPHQL_HGE_ENDPOINT') || 'http://0.0.0.0:8081';
+    let HASURA_GRAPHQL_ENDPOINT = Deno.env.get('HASURA_GRAPHQL_ENDPOINT') || 'http://host.docker.internal:8081';
 
     if (wait) {
       await waitForHasura();
@@ -97,8 +88,7 @@ export async function hasuraOpenConsole(options: any) {
     await $`hasura console --endpoint ${HASURA_GRAPHQL_ENDPOINT} --no-browser --address 0.0.0.0 --console-port ${HASURA_GRAPHQL_CONSOLE_PORT} --console-hge-endpoint ${HASURA_GRAPHQL_HGE_ENDPOINT} --skip-update-check`;
   } else {
     let HASURA_GRAPHQL_ENDPOINT = Deno.env.get('HASURA_GRAPHQL_ENDPOINT');
-    let HASURA_GRAPHQL_CONSOLE_PORT =
-      Deno.env.get('HASURA_GRAPHQL_CONSOLE_PORT') || 9695;
+    let HASURA_GRAPHQL_CONSOLE_PORT = Deno.env.get('HASURA_GRAPHQL_CONSOLE_PORT') || 9695;
     if (wait) {
       await waitForHasura();
       console.log('Hasura is ready');
@@ -160,12 +150,8 @@ export async function hasuraMigrateApply(options: any) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function hasuraSchemaExportToLocal() {
-  const HASURA_GRAPHQL_API_ENDPOINT = Deno.env.get(
-    'HASURA_GRAPHQL_API_ENDPOINT'
-  );
-  const HASURA_GRAPHQL_ADMIN_SECRET = Deno.env.get(
-    'HASURA_GRAPHQL_ADMIN_SECRET'
-  );
+  const HASURA_GRAPHQL_API_ENDPOINT = Deno.env.get('HASURA_GRAPHQL_API_ENDPOINT');
+  const HASURA_GRAPHQL_ADMIN_SECRET = Deno.env.get('HASURA_GRAPHQL_ADMIN_SECRET');
   const SRC = Deno.env.get('SRC');
 
   await $`gq ${HASURA_GRAPHQL_API_ENDPOINT} -H "X-Hasura-Admin-Secret: ${HASURA_GRAPHQL_ADMIN_SECRET}" --introspect > ${SRC}/schema.graphql`;
@@ -224,14 +210,8 @@ export default async function hasura(program: any) {
     .action(hasuraMigrateSquash);
 
   const migrateApply = hasuraMigrate.command('apply');
-  migrateApply
-    .description('apply all migrations')
-    .option('--local', 'use local hasura')
-    .action(hasuraMigrateApply);
+  migrateApply.description('apply all migrations').option('--local', 'use local hasura').action(hasuraMigrateApply);
 
   const hasuraMetadataApply = hasuraMetadata.command('apply');
-  hasuraMetadataApply
-    .description('apply metadata')
-    .option('--local', 'use local hasura')
-    .action(metaDataApply);
+  hasuraMetadataApply.description('apply metadata').option('--local', 'use local hasura').action(metaDataApply);
 }

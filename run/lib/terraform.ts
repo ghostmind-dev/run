@@ -85,7 +85,7 @@ export async function terraformDestroy(component: string, options: TerraformDest
       await $`terraform destroy -auto-approve`;
     }
   } catch (error) {
-    console.error(error.message);
+    console.log(error);
   }
 }
 
@@ -138,7 +138,7 @@ export async function terraformActivate(componentOrOptions: string | TerraformAc
     await $`terraform plan`;
     await $`terraform apply -auto-approve`;
   } catch (error) {
-    console.error(error.message);
+    console.log(error);
   }
 }
 ////////////////////////////////////////////////////////////////////////////////

@@ -71,12 +71,8 @@ export async function actionRunRemote(workflow: string, options: ActionRunRemote
   try {
     await $`gh workflow run ${workflow} --ref ${refBranch} ${inputsArguments}`;
   } catch (error) {
-    if (error.stderr.includes('No such file or directory')) {
-      console.log(error.stderr);
-      console.log('Please make sure you are in the right directory');
-      console.log('You can also try to run the command below:');
-      console.log(`gh workflow run ${workflow} --ref ${refBranch} ${inputsArguments}`);
-    }
+    console.log(error);
+    Deno.exit(1);
   }
 
   if (watch) {

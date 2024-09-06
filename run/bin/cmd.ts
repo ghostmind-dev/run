@@ -79,14 +79,8 @@ program.exitOverride();
 try {
   await program.parseAsync();
 } catch (err) {
-  if (err) {
-    const { message } = err;
-
-    if (!message.includes('outputHelp')) {
-      console.log(message);
-      console.error('something went wrong');
-    }
-  }
+  console.error(err);
+  Deno.exit(1);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
