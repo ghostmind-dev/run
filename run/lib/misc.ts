@@ -77,21 +77,24 @@ export default async function misc(program: any) {
   misc
     .command('exec')
     .description('initiate an interactive shell in a running devcontainer')
-    .action(async () => {
+
+    .argument('[name]', 'name of the devcontainer')
+    .action(async (container: string) => {
       try {
         $.verbose = true;
 
         const meta = await verifyIfMetaJsonExists(Deno.cwd());
 
-        if (!meta) {
+        if (!meta && !container) {
           console.log('No meta.json found');
           Deno.exit(0);
         }
 
-        const { name } = meta;
+        const name = container || meta.name;
 
         await $`docker exec -it ${name} /bin/zsh -c "cd /workspaces/${name} && export PROMPT_EOL_MARK='' && zsh"`;
       } catch (e) {
+        console.log("Are you sure in the the path of the project's root?");
         Deno.exit(0);
       }
     });
