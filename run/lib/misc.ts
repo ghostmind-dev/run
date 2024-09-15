@@ -90,7 +90,7 @@ export default async function misc(program: any) {
           Deno.exit(0);
         }
 
-        const name = container || meta.name;
+        const name = container || meta?.name;
 
         await $`docker exec -it ${name} /bin/zsh -c "cd /workspaces/${name} && export PROMPT_EOL_MARK='' && zsh"`;
       } catch (e) {
