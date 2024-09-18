@@ -3,6 +3,7 @@
 import { $ } from 'npm:zx@8.1.0';
 import { Command } from 'npm:commander@12.1.0';
 import { setSecretsOnLocal, setEnvOnLocal } from '../utils/divers.ts';
+import { argv } from 'node:process';
 
 ////////////////////////////////////////////////////////////////////////////////
 // VERBOSE BY DEFAULT
@@ -42,13 +43,18 @@ const run = program.name('run');
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-program.option('--cible <env context>', 'target environment context').hook('preAction', async (thisCommand: any) => {
-  if (!Deno.env.get('GITHUB_ACTIONS') && Deno.env.get('CUSTOM_STATUS') !== 'in_progress') {
-    const { cible } = thisCommand.opts();
-    await setSecretsOnLocal(cible || 'local');
-    await setEnvOnLocal(cible || 'local');
-  }
-});
+program
+  .option('--cible <env context>', 'target environment context')
+  .hook('preAction', async (thisCommand: any) => {
+    if (
+      !Deno.env.get('GITHUB_ACTIONS') &&
+      Deno.env.get('CUSTOM_STATUS') !== 'in_progress'
+    ) {
+      const { cible } = thisCommand.opts();
+      await setSecretsOnLocal(cible || 'local');
+      await setEnvOnLocal(cible || 'local');
+    }
+  });
 
 ////////////////////////////////////////////////////////////////////////////////
 // GIT COMMAND
@@ -77,7 +83,18 @@ program.exitOverride();
 ////////////////////////////////////////////////////////////////////////////////
 
 try {
-  await program.parseAsync();
+  if (argv.length === 2) {
+    console.error('No command provided');
+    console.log(program.helpInformation());
+    Deno.exit(0);
+  }
+
+  if (argv.length === 3 && argv[2] === '--help') {
+    console.log(program.helpInformation());
+    Deno.exit(0);
+  }
+
+  await program.parseAsync(argv);
 } catch (err) {
   console.error(err);
   Deno.exit(1);
