@@ -98,8 +98,44 @@ export default async function misc(program: any) {
         Deno.exit(0);
       }
     });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  //
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('wait')
+    .description('wait for a url to be ready')
+    .argument('<url>', 'url to wait for')
+    .action(async (target: string) => {
+      async function isHasuraReady() {
+        const url = new URL(target);
+        const hostname = url.hostname;
+        const port = parseInt(url.port) || 80; // Default to port 80 if not specified
+
+        try {
+          const conn = await Deno.connect({ hostname, port });
+          conn.close();
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      let ready = await isHasuraReady();
+      while (!ready) {
+        console.log('Waiting for Hasura to be ready...');
+        await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait for 5 seconds before retrying
+        ready = await isHasuraReady();
+      }
+
+      Deno.exit();
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // THE END
 ////////////////////////////////////////////////////////////////////////////////
+
+// Polling function to wait for Hasura to be ready
+async function waitForHasura() {}
