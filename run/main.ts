@@ -14,7 +14,6 @@ expand(config({ override: true }));
 export * from './lib/action.ts';
 export * from './lib/custom.ts';
 export * from './lib/docker.ts';
-export * from './lib/hasura.ts';
 export * from './lib/machine.ts';
 export * from './lib/meta.ts';
 export * from './lib/misc.ts';

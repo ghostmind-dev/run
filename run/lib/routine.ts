@@ -4,7 +4,6 @@ import {
   verifyIfMetaJsonExists,
 } from '../utils/divers.ts';
 import { cmd } from './custom.ts';
-import fs from 'npm:fs-extra@11.2.0';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
