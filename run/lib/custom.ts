@@ -1,4 +1,4 @@
-import { $, cd } from 'npm:zx@8.1.0';
+import { $, cd, within } from 'npm:zx@8.1.0';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
 import * as main from '../main.ts';
@@ -227,11 +227,14 @@ export async function start(
           async (command_from_config: any) => {
             if (typeof commands[command_from_config] === 'string') {
               const commandToRun = cmd`${commands[command_from_config]}`;
-              await $`${commandToRun}`;
+              within(async () => {
+                await $`${commandToRun}`;
+              });
             } else if (typeof commands[command_from_config] === 'function') {
               const function_to_call: any = commands[command_from_config];
-
-              await function_to_call();
+              within(async () => {
+                await function_to_call();
+              });
             } else if (typeof commands[command_from_config] === 'object') {
               const command_to_run = commands[command_from_config];
 
@@ -242,7 +245,9 @@ export async function start(
               if (command !== undefined && typeof command === 'function') {
                 let options_to_pass = options === undefined ? {} : options;
                 const function_to_call: any = command;
-                await function_to_call(options_to_pass);
+                within(async () => {
+                  await function_to_call(options_to_pass);
+                });
               }
 
               if (command !== undefined && typeof command === 'string') {
@@ -269,7 +274,9 @@ export async function start(
                   }
                 }
 
-                await $`${commandToRun}`;
+                within(async () => {
+                  await $`${commandToRun}`;
+                });
               }
             }
           }
