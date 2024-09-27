@@ -134,6 +134,7 @@ export async function start(
   options: CustomCommanderOptions
 ): Promise<CustomStart> {
   return async function (commands: CustomStartConfig): Promise<void> {
+    console.log('start');
     let { all } = options;
 
     let commandsToRun: string[] = [];
@@ -198,6 +199,8 @@ export async function start(
     for (let command of commandsToRun) {
       let { priority } = commands[command] as CustomStartConfigCommandCommand;
 
+      console.log(priority);
+
       if (priority === undefined) {
         groupedCommandsPerPriority[999] =
           groupedCommandsPerPriority[999] === undefined
@@ -227,12 +230,12 @@ export async function start(
           async (command_from_config: any) => {
             if (typeof commands[command_from_config] === 'string') {
               const commandToRun = cmd`${commands[command_from_config]}`;
-              within(async () => {
+              await within(async () => {
                 await $`${commandToRun}`;
               });
             } else if (typeof commands[command_from_config] === 'function') {
               const function_to_call: any = commands[command_from_config];
-              within(async () => {
+              await within(async () => {
                 await function_to_call();
               });
             } else if (typeof commands[command_from_config] === 'object') {
@@ -245,7 +248,8 @@ export async function start(
               if (command !== undefined && typeof command === 'function') {
                 let options_to_pass = options === undefined ? {} : options;
                 const function_to_call: any = command;
-                within(async () => {
+
+                await within(async () => {
                   await function_to_call(options_to_pass);
                 });
               }
@@ -274,7 +278,7 @@ export async function start(
                   }
                 }
 
-                within(async () => {
+                await within(async () => {
                   await $`${commandToRun}`;
                 });
               }
