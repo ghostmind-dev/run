@@ -134,7 +134,6 @@ export async function start(
   options: CustomCommanderOptions
 ): Promise<CustomStart> {
   return async function (commands: CustomStartConfig): Promise<void> {
-    console.log('start');
     let { all } = options;
 
     let commandsToRun: string[] = [];
@@ -198,8 +197,6 @@ export async function start(
 
     for (let command of commandsToRun) {
       let { priority } = commands[command] as CustomStartConfigCommandCommand;
-
-      console.log(priority);
 
       if (priority === undefined) {
         groupedCommandsPerPriority[999] =
