@@ -3,6 +3,7 @@
   "type": "project",
   "name": "run",
   "routines": {
-    "check": "deno check run/bin/cmd.ts"
+    "check": "deno check run/bin/cmd.ts",
+    "test": "deno test  --allow-all run/test/units.ts"
   }
 }

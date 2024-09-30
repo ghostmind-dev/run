@@ -4,6 +4,8 @@ import { expand } from 'npm:dotenv-expand@11.0.6';
 import fs from 'npm:fs-extra@11.2.0';
 import { nanoid } from 'npm:nanoid@5.0.7';
 import { readFileSync } from 'node:fs';
+import crypto from 'node:crypto';
+import { Buffer } from 'node:buffer';
 
 ////////////////////////////////////////////////////////////////////////////////
 // iNTRODUCE
@@ -490,6 +492,58 @@ export async function withMetaMatching({
   }
 
   return directories;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// ENCRYPT A STRING
+////////////////////////////////////////////////////////////////////////////////
+
+export function encrypt(
+  text: string,
+  cryptoKey: string,
+  algorithm?: string
+): string {
+  const ALGORITHM = algorithm || 'aes-256-cbc';
+  const IV_LENGTH = 16;
+  const iv = crypto.randomBytes(IV_LENGTH);
+
+  // Generate a 32-byte key from the cryptoKey
+  const key = crypto.createHash('sha256').update(cryptoKey).digest();
+
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  let encrypted = cipher.update(text, 'utf8');
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  return iv.toString('hex') + ':' + encrypted.toString('hex');
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// DECRYPT A STRING
+// /////////////////////////////////////////////////////////////////////////////
+
+export function decrypt(
+  encryptedKey: string,
+  cryptoKey: string,
+  algorithm?: string
+): string {
+  const ALGORITHM = algorithm || 'aes-256-cbc';
+  const textParts = encryptedKey.split(':');
+  const ivHex = textParts.shift();
+
+  if (!ivHex) {
+    throw new Error('Invalid input: Initialization vector (IV) is missing.');
+  }
+
+  const iv = Buffer.from(ivHex, 'hex');
+  const encryptedText = Buffer.from(textParts.join(':'), 'hex');
+
+  // Generate the same 32-byte key from the cryptoKey
+  const key = crypto.createHash('sha256').update(cryptoKey).digest();
+
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  let decrypted = decipher.update(encryptedText);
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+
+  return decrypted.toString('utf8');
 }
 
 ////////////////////////////////////////////////////////////////////////////////
