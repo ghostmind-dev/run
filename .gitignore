@@ -107,4 +107,6 @@ __pycache__
 
 **/output.txt
 
+!**/.env.template
+
 **/dist
