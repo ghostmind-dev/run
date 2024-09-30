@@ -14,14 +14,14 @@ jobs:
         uses: actions/checkout@v3
       - uses: denoland/setup-deno@v1
         with:
-          deno-version: canary
+          deno-version: 1.45.2
       - run: |
           deno install --allow-all --force --name run ./run/bin/cmd.ts
           echo "$HOME/.deno/bin" >> $GITHUB_PATH
-          run
+          $HOME/.deno/bin/run
         if: ${{ github.event.inputs.LOCAL }}
       - run: deno publish --allow-dirty
-        if: ${{ !github.event.inputs.LOCAL }}
+        if: ${{ !github.event.inputs.LOCAL }}  
   
 
      

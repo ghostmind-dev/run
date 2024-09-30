@@ -1,6 +1,6 @@
 {
   "name": "@ghostmind/run",
-  "version": "0.2.73",
+  "version": "0.2.74",
   "license": "MIT",
   "exports": {
     ".": "./run/main.ts",
@@ -10,6 +10,9 @@
     "include": [
       "**/run/**",
       "**/.devcontainer/**"
+    ],
+    "exclude": [
+      "**/run/test/**"
     ],
     "rules": {
       "tags": [
