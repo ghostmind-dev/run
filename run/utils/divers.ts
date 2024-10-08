@@ -311,8 +311,11 @@ export async function getDirectories(path: string): Promise<string[]> {
   const directories = directoriesWithFiles
     .filter((dirent: any) => dirent.isDirectory())
     .filter((dirent: any) => dirent.name !== 'node_modules')
+    .filter((dirent: any) => dirent.name !== '.next')
     .filter((dirent: any) => dirent.name !== '.git')
     .filter((dirent: any) => dirent.name !== '.terraform')
+    // filter any folder that starts with a dot
+    .filter((dirent: any) => !dirent.name.startsWith('.'))
     .map((dirent: any) => dirent.name);
 
   return directories;

@@ -1,7 +1,12 @@
 import { $ } from 'npm:zx@8.1.0';
 import * as inquirer from 'npm:inquirer@9.2.22';
 import { createUUID } from '../utils/divers.ts';
-import { verifyIfMetaJsonExists } from '../utils/divers.ts';
+import {
+  verifyIfMetaJsonExists,
+  recursiveDirectoriesDiscovery,
+} from '../utils/divers.ts';
+import _ from 'npm:lodash';
+import fs from 'node:fs';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
@@ -71,6 +76,38 @@ export default async function misc(program: any) {
     });
 
   ////////////////////////////////////////////////////////////////////////////
+  // ID COLLISION
+  ////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('collision')
+    .description('verify if all ids are unique')
+    .action(async () => {
+      const SRC = Deno.env.get('SRC') || '';
+
+      const folders = await recursiveDirectoriesDiscovery(SRC);
+
+      let ids: string[] = [];
+
+      for (let folder of folders) {
+        let meta = await verifyIfMetaJsonExists(folder);
+
+        if (!meta) {
+          continue;
+        }
+
+        if (ids.includes(meta.id)) {
+          console.log(`id collision in ${folder}`);
+          Deno.exit(0);
+        }
+
+        ids.push(meta.id);
+      }
+
+      console.log('No id collision');
+    });
+
+  ////////////////////////////////////////////////////////////////////////////
   // GENERATE A UUID
   ////////////////////////////////////////////////////////////////////////////
 
@@ -97,6 +134,116 @@ export default async function misc(program: any) {
         console.log("Are you sure in the the path of the project's root?");
         Deno.exit(0);
       }
+    });
+
+  ////////////////////////////////////////////////////////////////////////////
+  // GENERATE A UUID
+  ////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('session')
+    .description('reset the tasks related to terminal session in tasks.json')
+    .action(async () => {
+      try {
+        $.verbose = true;
+
+        // const meta = await verifyIfMetaJsonExists(Deno.cwd());
+
+        const SRC = Deno.env.get('SRC') || '';
+
+        const folders = await recursiveDirectoriesDiscovery(SRC);
+
+        let tasks = [];
+
+        tasks.push({
+          label: 'home',
+          type: 'shell',
+          command: `cd ${SRC} && zsh`,
+          isBackground: true,
+          presentation: {
+            reveal: 'always',
+            panel: 'dedicated',
+            group: 'home',
+            clear: true,
+          },
+          problemMatcher: [],
+        });
+
+        let tasksName: string[] = [];
+        let appsName: string[] = [];
+
+        for (let folder of folders) {
+          let meta = await verifyIfMetaJsonExists(folder);
+
+          if (!meta) {
+            continue;
+          }
+
+          appsName.push(meta.name);
+
+          ['run', 'test'].map((task) => {
+            tasksName.push(`${meta.name}_${task}`);
+
+            tasks.push({
+              label: `${meta.name}_${task}`,
+              type: 'shell',
+              command: `cd ${folder} && zsh`,
+              isBackground: true,
+              presentation: {
+                reveal: 'always',
+                panel: 'dedicated',
+                group: `${meta.name}`,
+                clear: true,
+              },
+            });
+          });
+        }
+
+        appsName.push('collective');
+        appsName.push('home');
+        tasksName.push('home');
+
+        tasks.push({
+          label: 'Open All Terminals',
+          type: 'shell',
+          dependsOn: tasksName,
+          presentation: {
+            reveal: 'never',
+            group: 'collective',
+          },
+          runOptions: {
+            reevaluateOnRerun: false,
+          },
+        });
+        const tasksJson = Deno.readTextFileSync(`${SRC}/.vscode/tasks.json`);
+
+        let tasksJsonObj = JSON.parse(tasksJson);
+
+        // get takss from the tasks.json file
+
+        let tasksArray = tasksJsonObj.tasks;
+
+        delete tasksJsonObj.tasks;
+
+        let newTaksArray = tasksArray.filter((task: any) => {
+          return !appsName.includes(task.presentation.group);
+        });
+
+        let finalNewTaksArray = newTaksArray.concat(tasks);
+
+        // write the tasks.json file
+
+        tasksJsonObj.tasks = finalNewTaksArray;
+
+        const tasksJsonString = JSON.stringify(tasksJsonObj, null, 2);
+
+        fs.writeFileSync(`${SRC}/.vscode/tasks.json`, tasksJsonString);
+      } catch (e) {
+        console.log(e);
+        Deno.exit(0);
+      }
+
+      // read the tasks.json file
     });
 
   ////////////////////////////////////////////////////////////////////////////////
