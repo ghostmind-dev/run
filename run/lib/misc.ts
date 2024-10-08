@@ -5,7 +5,6 @@ import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
 } from '../utils/divers.ts';
-import _ from 'npm:lodash';
 import fs from 'node:fs';
 
 ////////////////////////////////////////////////////////////////////////////////
