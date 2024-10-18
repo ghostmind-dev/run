@@ -101,6 +101,8 @@ export async function setEnvOnLocal(target: string): Promise<void> {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function setSecretsOnLocal(target: string): Promise<void> {
+  $.verbose = false;
+
   const currentPath = await detectScriptsDirectory(Deno.cwd());
 
   const metaConfig = await verifyIfMetaJsonExists(currentPath);
@@ -136,6 +138,7 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
     }
 
     // merge base and target files in /tmp/.env.APP_NAME
+
     await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
     await $`cat ${base_file} ${target_file} > /tmp/.env.${randomFileNumber}.${APP_NAME}`;
   } else {
