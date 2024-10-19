@@ -171,10 +171,17 @@ export default async function misc(program: any) {
         let tasksName: string[] = [];
         let appsName: string[] = [];
 
+        appsName.push('home');
+        tasksName.push('home');
+
         for (let folder of folders) {
           let meta = await verifyIfMetaJsonExists(folder);
 
           if (!meta) {
+            continue;
+          }
+
+          if (meta.type === 'project') {
             continue;
           }
 
@@ -199,8 +206,6 @@ export default async function misc(program: any) {
         }
 
         appsName.push('collective');
-        appsName.push('home');
-        tasksName.push('home');
 
         tasks.push({
           label: 'Open All Terminals',
