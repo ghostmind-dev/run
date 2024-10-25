@@ -58,6 +58,7 @@ export interface CustomOptions {
   input?: string[];
   metaConfig?: any;
   currentPath: string;
+  test?: boolean;
   port: string;
   extract: (inputName: string) => string | undefined;
   has: (arg: string) => boolean;
@@ -397,7 +398,7 @@ async function runScript(
 
   let currentPath = Deno.cwd();
 
-  let { test, input, dev, all } = options;
+  let { test, input, dev } = options;
 
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -406,8 +407,6 @@ async function runScript(
   }
 
   let { custom } = metaConfig;
-
-  let testMode = test === undefined ? {} : { root: 'test' };
 
   const SRC = Deno.env.get('SRC');
   const HOME = Deno.env.get('HOME');
@@ -450,7 +449,6 @@ async function runScript(
   const { root }: any = {
     ...customConfigDefault,
     ...custom,
-    ...testMode,
   };
   cd(`${currentPath}/${root}`);
 
@@ -506,6 +504,7 @@ async function runScript(
       env,
       run,
       url,
+      test,
       main,
       utils,
       ...utils,
