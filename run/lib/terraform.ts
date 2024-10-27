@@ -80,6 +80,8 @@ export async function terraformDestroy(
   try {
     let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
+    console.log(metaConfig);
+
     if (metaConfig) {
       let { terraform, id } = metaConfig;
 
@@ -91,17 +93,15 @@ export async function terraformDestroy(
         component
       );
 
-      cd(`${currentPath}/${path}`);
-
       if (containers) {
-        cd(`${currentPath}`);
-
         for (const container of containers) {
           $.verbose = true;
 
           Deno.env.set(`TF_VAR_IMAGE_DIGEST_${container.toUpperCase()}`, '');
         }
       }
+
+      cd(`${currentPath}/${path}`);
 
       await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
       await $`terraform plan -destroy`;
