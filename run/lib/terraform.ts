@@ -83,7 +83,7 @@ export async function terraformDestroy(
     if (metaConfig) {
       let { terraform, id } = metaConfig;
 
-      let { path, global } = terraform[component];
+      let { path, global, containers } = terraform[component];
 
       const { bcBucket, bcPrefix } = await getBucketConfig(
         id,
@@ -92,6 +92,16 @@ export async function terraformDestroy(
       );
 
       cd(`${currentPath}/${path}`);
+
+      if (containers) {
+        cd(`${currentPath}`);
+
+        for (const container of containers) {
+          $.verbose = true;
+
+          Deno.env.set(`TF_VAR_IMAGE_DIGEST_${container.toUpperCase()}`, '');
+        }
+      }
 
       await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
       await $`terraform plan -destroy`;
