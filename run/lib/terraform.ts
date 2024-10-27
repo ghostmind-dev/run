@@ -41,7 +41,6 @@ interface TerraformActivateOptionsWithComponent
 
 interface TerraformDestroyOptions {
   arch?: string;
-  docker?: string;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -92,8 +91,6 @@ export async function terraformDestroy(
         component
       );
 
-      Deno.env.set('TF_VAR_IMAGE_DIGEST', '');
-
       cd(`${currentPath}/${path}`);
 
       await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
@@ -131,25 +128,25 @@ export async function terraformActivate(
     }
 
     let { terraform, id } = metaConfig;
-    let { path, global, docker_component, no_container } = terraform[component];
+    let { path, global, containers } = terraform[component];
 
     const { bcBucket, bcPrefix } = await getBucketConfig(id, global, component);
 
-    const componentToTarget = docker_component || 'default';
-
-    if (!no_container) {
+    if (containers) {
       let arch = options.arch || 'amd64';
 
       cd(`${currentPath}`);
 
-      const imageDigest: any = await getDockerImageDigest(
-        arch,
-        componentToTarget
-      );
+      for (const container of containers) {
+        const imageDigest: any = await getDockerImageDigest(arch, container);
 
-      $.verbose = true;
+        $.verbose = true;
 
-      Deno.env.set('TF_VAR_IMAGE_DIGEST', imageDigest);
+        Deno.env.set(
+          `TF_VAR_IMAGE_DIGEST_${container.toUpperCase()}`,
+          imageDigest
+        );
+      }
     }
 
     cd(`${currentPath}/${path}`);
@@ -207,8 +204,14 @@ export async function terraformVariables(component: any, options: any) {
 
   // remove element TF_VAR_PORT
 
-  let prefixedVars = nonTfVarNames
+  if (terraform[component].containers) {
+    // Add IMAGE_DIGEST variables for each container
+    for (const container of terraform[component].containers) {
+      nonTfVarNames.push(`IMAGE_DIGEST_${container.toUpperCase()}`);
+    }
+  }
 
+  let prefixedVars = nonTfVarNames
     .map((varName: any) => {
       const match = content.match(new RegExp(`^${varName}=(.*)$`, 'm'));
       const value = match && match[1] ? match[1] : '';
@@ -292,7 +295,7 @@ export async function terraformVariables(component: any, options: any) {
   const variablesTfContent = `# variables.tf
 
   ${varDeclarations}
-  
+
   ${localsBlock}
   `;
 
