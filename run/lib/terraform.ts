@@ -80,8 +80,6 @@ export async function terraformDestroy(
   try {
     let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
-    console.log(metaConfig);
-
     if (metaConfig) {
       let { terraform, id } = metaConfig;
 
