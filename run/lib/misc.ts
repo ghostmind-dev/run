@@ -4,6 +4,7 @@ import { createUUID } from '../utils/divers.ts';
 import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
+  detectScriptsDirectory,
 } from '../utils/divers.ts';
 import fs from 'node:fs';
 
