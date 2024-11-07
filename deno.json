@@ -1,6 +1,6 @@
 {
   "name": "@ghostmind/run",
-  "version": "0.2.84",
+  "version": "0.2.85",
   "license": "MIT",
   "exports": {
     ".": "./run/main.ts",
