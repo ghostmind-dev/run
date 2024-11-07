@@ -6,6 +6,7 @@ import {
 import _ from 'npm:lodash@4.17.21';
 import { parse } from 'npm:yaml@2.4.2';
 import { readFileSync } from 'node:fs';
+import yaml from 'npm:yaml@2.4.2';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -53,7 +54,9 @@ export interface DockerRegisterOptions {
   amd64?: boolean;
   cache?: boolean;
   arm64?: boolean;
+  cloud?: boolean;
   component?: string;
+  machine_type?: string;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -189,7 +192,7 @@ export async function dockerRegister(
     options = componentOrOptions || {};
   }
 
-  const { amd64, arm64, argument, cache } = options;
+  const { amd64, arm64, argument, cache, cloud, machine_type } = options;
 
   const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(
     options.component
@@ -199,7 +202,90 @@ export async function dockerRegister(
 
   // Determine the machine architecture
 
-  if (amd64) {
+  if (cloud && amd64 && !arm64) {
+    await $`rm -rf /tmp/cloud_build.yaml`;
+
+    let machineType = machine_type || 'e2-highcpu-32';
+
+    // remove value of currentPath from dockerfile and dockerContext
+    let dockerfilePath = dockerfile.replace(`${currentPath}/`, '');
+    let dockerContextPath = dockerContext.replace(`${currentPath}/`, '');
+
+    const cloudBuildConfig = {
+      steps: [
+        {
+          name: 'gcr.io/cloud-builders/docker',
+          script: 'docker buildx create --use',
+        },
+        {
+          name: 'gcr.io/cloud-builders/docker',
+          script: `docker buildx build --platform=linux/amd64 -t ${image} -t ${image}-amd64 --file=${dockerfilePath} --push ${dockerContextPath} `,
+        },
+      ],
+    };
+
+    await Deno.writeTextFile(
+      '/tmp/cloud_build.yaml',
+      JSON.stringify(cloudBuildConfig)
+    );
+
+    // print the file
+
+    // await $`gcloud builds submit --config=/tmp/cloud_build.yaml --machine-type=${machineType}`;
+
+    try {
+      await $`docker manifest inspect ${image}-arm64`;
+      await $`docker manifest create --amend ${image} ${image}-amd64 ${image}-arm64`;
+      await $`docker manifest push ${image}`;
+    } catch (e) {
+      $.verbose = true;
+      await $`docker manifest create --amend ${image} ${image}-amd64 --amend`;
+      await $`docker manifest push ${image}`;
+    }
+  }
+
+  if (arm64 && !amd64 && cloud) {
+    await $`rm -rf /tmp/cloud_build.yaml`;
+
+    let machineType = machine_type || 'e2-highcpu-32';
+    // remove value of currentPath from dockerfile and dockerContext
+    let dockerfilePath = dockerfile.replace(`${currentPath}/`, '');
+    let dockerContextPath = dockerContext.replace(`${currentPath}/`, '');
+
+    const cloudBuildConfig = {
+      steps: [
+        {
+          name: 'gcr.io/cloud-builders/docker',
+          script: 'docker buildx create --use',
+        },
+        {
+          name: 'gcr.io/cloud-builders/docker',
+          script: `docker buildx build --platform=linux/arm64 -t ${image} -t ${image}-arm64 --file=${dockerfilePath} --push ${dockerContextPath}`,
+        },
+      ],
+    };
+
+    await Deno.writeTextFile(
+      '/tmp/cloud_build.yaml',
+      JSON.stringify(cloudBuildConfig)
+    );
+
+    // print the file
+
+    await $`gcloud builds submit --config=/tmp/cloud_build.yaml --machine-type=${machineType}`;
+
+    try {
+      $.verbose = false;
+      const arm64Exists = await $`docker manifest inspect ${image}-amd64`;
+      await $`docker manifest create --amend ${image} ${image}-amd64 ${image}-arm64`;
+      await $`docker manifest push ${image}`;
+    } catch (e) {
+      await $`docker manifest create --amend ${image} ${image}-arm64 --amend`;
+      await $`docker manifest push ${image}`;
+    }
+  }
+
+  if (amd64 && !cloud) {
     // Ensure a buildx builder instance exists and is bootstrapped
     try {
       $.verbose = false;
@@ -253,7 +339,7 @@ export async function dockerRegister(
     }
   }
 
-  if (arm64) {
+  if (arm64 && !cloud) {
     try {
       $.verbose = false;
       await `docker buildx inspect default`;
@@ -300,7 +386,7 @@ export async function dockerRegister(
     }
   }
 
-  if (amd64 === undefined && arm64 === undefined) {
+  if (amd64 === undefined && arm64 === undefined && !cloud) {
     let baseCommand = [
       'docker',
       'build',
@@ -579,9 +665,10 @@ export default async function commandDocker(program: any) {
       'Build docker image with arguments'
     )
     .option('--amd64', 'build amd64 docker image')
-    .option('--no-cache', 'build docker image without cache')
-
     .option('--arm64', 'build arm64 docker image')
+    .option('--no-cache', 'build docker image without cache')
+    .option('--cloud', 'build docker image withh gcloud builds')
+    .option('--machine-type <machine_type>', 'machine type')
     .option('--component', 'component to build')
     .argument(
       '[component]',
