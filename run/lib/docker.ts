@@ -120,17 +120,26 @@ export async function getDockerfileAndImageName(
 
 export async function getDockerImageDigest(
   arch: any,
-  component: any
+  component: any,
+  imageModifier?: string
 ): Promise<string> {
   let { image } = await getDockerfileAndImageName(component);
 
   // rempcve the tag from the image name
 
+  let imageName;
+
+  if (imageModifier) {
+    imageName = `${image}-${imageModifier}`;
+  } else {
+    imageName = image;
+  }
+
   if (arch === 'amd64') {
     $.verbose = false;
 
     const imageDigestRaw =
-      await $`docker manifest inspect ${image}-amd64 --verbose`;
+      await $`docker manifest inspect ${imageName}-amd64 --verbose`;
 
     const jsonManifest = JSON.parse(`${imageDigestRaw}`);
 
@@ -144,14 +153,14 @@ export async function getDockerImageDigest(
       (manifest: any) => manifest.Descriptor.platform.architecture === 'amd64'
     )?.Descriptor.digest;
 
-    image = image.split(':')[0];
+    imageName = imageName.split(':')[0];
 
-    return `${image}@${digest}`;
+    return `${imageName}@${digest}`;
   } else if (arch === 'arm64') {
     $.verbose = false;
 
     const imageDigestRaw =
-      await $`docker manifest inspect ${image}-arm64 --verbose`;
+      await $`docker manifest inspect ${imageName}-arm64 --verbose`;
 
     const jsonManifest = JSON.parse(`${imageDigestRaw}`);
 
@@ -165,12 +174,12 @@ export async function getDockerImageDigest(
       (manifest: any) => manifest.Descriptor.platform.architecture === 'arm64'
     )?.Descriptor.digest;
 
-    image = image.split(':')[0];
-    return `${image}@${digest}`;
+    imageName = imageName.split(':')[0];
+    return `${imageName}@${digest}`;
     // remove undefined from the array
   } else {
     const imageDigestRaw =
-      await $`docker inspect --format='{{index .RepoDigests 0}}' ${image}`;
+      await $`docker inspect --format='{{index .RepoDigests 0}}' ${imageName}`;
     return imageDigestRaw.toString();
   }
 }

@@ -32,6 +32,7 @@ cd(currentPath);
 interface TerraformActivateOptions {
   arch?: string;
   docker?: string;
+  image_modifiers?: string[];
 }
 
 interface TerraformActivateOptionsWithComponent
@@ -143,10 +144,30 @@ export async function terraformActivate(
     if (containers) {
       let arch = options.arch || 'amd64';
 
+      let imageModifiers = options.image_modifiers || [];
+
       cd(`${currentPath}`);
 
       for (const container of containers) {
-        const imageDigest: any = await getDockerImageDigest(arch, container);
+        // verify if container equal to the begiining of one of the image_modifiers
+
+        let imageModifier = imageModifiers.find((imageModifier: string) => {
+          return imageModifier.startsWith(`${container}:`);
+        });
+
+        let imageDigest;
+
+        // extr
+
+        if (imageModifier) {
+          // extract the image name from the image modifier
+
+          let imageName = imageModifier.split(':')[1];
+
+          imageDigest = await getDockerImageDigest(arch, container, imageName);
+        } else {
+          imageDigest = await getDockerImageDigest(arch, container);
+        }
 
         $.verbose = true;
 
@@ -407,6 +428,7 @@ export default async function commandTerraform(program: any) {
       'component to deplo. It has priority over --component option'
     )
     .option('--component <component>', 'component to deploy')
+    .option('--image-modifiers <...image-modifiers>', 'image modifiers')
     .option('--local', 'use local state')
     .action(terraformActivate);
 
