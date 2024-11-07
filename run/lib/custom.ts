@@ -1,5 +1,8 @@
 import { $, cd, within } from 'npm:zx@8.1.0';
-import { verifyIfMetaJsonExists } from '../utils/divers.ts';
+import {
+  verifyIfMetaJsonExists,
+  detectScriptsDirectory,
+} from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
 import * as main from '../main.ts';
 
@@ -16,6 +19,12 @@ $.verbose = false;
 const customConfigDefault = {
   root: 'scripts',
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// RUNNING COMMAND LOCATION
+////////////////////////////////////////////////////////////////////////////////
+
+let currentPath = await detectScriptsDirectory(Deno.cwd());
 
 ////////////////////////////////////////////////////////////////////////////////
 // TYPES
@@ -234,6 +243,7 @@ export async function start(
             } else if (typeof commands[command_from_config] === 'function') {
               const function_to_call: any = commands[command_from_config];
               await within(async () => {
+                cd(currentPath);
                 await function_to_call();
               });
             } else if (typeof commands[command_from_config] === 'object') {
@@ -248,6 +258,7 @@ export async function start(
                 const function_to_call: any = command;
 
                 await within(async () => {
+                  cd(currentPath);
                   await function_to_call(options_to_pass);
                 });
               }
@@ -277,6 +288,7 @@ export async function start(
                 }
 
                 await within(async () => {
+                  cd(currentPath);
                   await $`${commandToRun}`;
                 });
               }

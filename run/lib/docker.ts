@@ -1,5 +1,8 @@
 import { $, sleep, cd } from 'npm:zx@8.1.0';
-import { detectScriptsDirectory, verifyIfMetaJsonExists } from '../utils/divers.ts';
+import {
+  detectScriptsDirectory,
+  verifyIfMetaJsonExists,
+} from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
 import { parse } from 'npm:yaml@2.4.2';
 import { readFileSync } from 'node:fs';
@@ -28,7 +31,8 @@ export interface DockerComposeBuildOptions {
   cache?: boolean;
 }
 
-export interface DockerComposeBuildOptionsComponent extends DockerComposeBuildOptions {
+export interface DockerComposeBuildOptionsComponent
+  extends DockerComposeBuildOptions {
   component?: string;
 }
 
@@ -38,7 +42,8 @@ export interface DockerComposeUpOptions {
   detach?: boolean;
 }
 
-export interface DockerComposeUpOptionsComponent extends DockerComposeUpOptions {
+export interface DockerComposeUpOptionsComponent
+  extends DockerComposeUpOptions {
   component?: string;
 }
 
@@ -55,7 +60,9 @@ export interface DockerRegisterOptions {
 // GET DOCKERFILE NAME AND IMAGE NAME
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDockerfileAndImageName(component: any): Promise<{ dockerfile: string; dockerContext: string; image: string }> {
+export async function getDockerfileAndImageName(
+  component: any
+): Promise<{ dockerfile: string; dockerContext: string; image: string }> {
   $.verbose = true;
   const ENV = `${Deno.env.get('ENV')}`;
 
@@ -107,7 +114,10 @@ export async function getDockerfileAndImageName(component: any): Promise<{ docke
 // GET LATEST IMAGE DIGEST
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDockerImageDigest(arch: any, component: any): Promise<string> {
+export async function getDockerImageDigest(
+  arch: any,
+  component: any
+): Promise<string> {
   let { image } = await getDockerfileAndImageName(component);
 
   // rempcve the tag from the image name
@@ -115,15 +125,20 @@ export async function getDockerImageDigest(arch: any, component: any): Promise<s
   if (arch === 'amd64') {
     $.verbose = false;
 
-    const imageDigestRaw = await $`docker manifest inspect ${image}-amd64 --verbose`;
+    const imageDigestRaw =
+      await $`docker manifest inspect ${image}-amd64 --verbose`;
 
     const jsonManifest = JSON.parse(`${imageDigestRaw}`);
 
     // verify jsonManifest is an array
 
-    let arrayManifest = Array.isArray(jsonManifest) ? jsonManifest : [jsonManifest];
+    let arrayManifest = Array.isArray(jsonManifest)
+      ? jsonManifest
+      : [jsonManifest];
 
-    const digest = arrayManifest.find((manifest: any) => manifest.Descriptor.platform.architecture === 'amd64')?.Descriptor.digest;
+    const digest = arrayManifest.find(
+      (manifest: any) => manifest.Descriptor.platform.architecture === 'amd64'
+    )?.Descriptor.digest;
 
     image = image.split(':')[0];
 
@@ -131,21 +146,27 @@ export async function getDockerImageDigest(arch: any, component: any): Promise<s
   } else if (arch === 'arm64') {
     $.verbose = false;
 
-    const imageDigestRaw = await $`docker manifest inspect ${image}-arm64 --verbose`;
+    const imageDigestRaw =
+      await $`docker manifest inspect ${image}-arm64 --verbose`;
 
     const jsonManifest = JSON.parse(`${imageDigestRaw}`);
 
     // find manifest with platform amd64
 
-    let arrayManifest = Array.isArray(jsonManifest) ? jsonManifest : [jsonManifest];
+    let arrayManifest = Array.isArray(jsonManifest)
+      ? jsonManifest
+      : [jsonManifest];
 
-    const digest = arrayManifest.find((manifest: any) => manifest.Descriptor.platform.architecture === 'arm64')?.Descriptor.digest;
+    const digest = arrayManifest.find(
+      (manifest: any) => manifest.Descriptor.platform.architecture === 'arm64'
+    )?.Descriptor.digest;
 
     image = image.split(':')[0];
     return `${image}@${digest}`;
     // remove undefined from the array
   } else {
-    const imageDigestRaw = await $`docker inspect --format='{{index .RepoDigests 0}}' ${image}`;
+    const imageDigestRaw =
+      await $`docker inspect --format='{{index .RepoDigests 0}}' ${image}`;
     return imageDigestRaw.toString();
   }
 }
@@ -153,7 +174,10 @@ export async function getDockerImageDigest(arch: any, component: any): Promise<s
 ////////////////////////////////////////////////////////////////////////////////
 // DOCKER BUILD UNIT
 ////////////////////////////////////////////////////////////////////////////////
-export async function dockerRegister(componentOrOptions?: string | DockerRegisterOptions, options?: DockerRegisterOptions) {
+export async function dockerRegister(
+  componentOrOptions?: string | DockerRegisterOptions,
+  options?: DockerRegisterOptions
+) {
   // verify id componentOrOptions is a string or an object
 
   if (typeof componentOrOptions === 'string') {
@@ -167,7 +191,9 @@ export async function dockerRegister(componentOrOptions?: string | DockerRegiste
 
   const { amd64, arm64, argument, cache } = options;
 
-  const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(options.component);
+  const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(
+    options.component
+  );
 
   Deno.env.set('BUILDX_NO_DEFAULT_ATTESTATIONS', '1');
 
@@ -238,7 +264,16 @@ export async function dockerRegister(componentOrOptions?: string | DockerRegiste
       console.log('Default builder not found');
       return;
     }
-    let baseCommand = ['docker', 'buildx', 'build', '--platform=linux/arm64', `--tag=${image}`, `--tag=${image}-arm64`, `--file=${dockerfile}`, '--push'];
+    let baseCommand = [
+      'docker',
+      'buildx',
+      'build',
+      '--platform=linux/arm64',
+      `--tag=${image}`,
+      `--tag=${image}-arm64`,
+      `--file=${dockerfile}`,
+      '--push',
+    ];
 
     if (cache === undefined) {
       baseCommand.push('--no-cache');
@@ -297,7 +332,10 @@ export async function dockerRegister(componentOrOptions?: string | DockerRegiste
 // DOCKER COMPOSE UP
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerComposeUp(componentOrOptions?: string | DockerComposeUpOptionsComponent, options?: DockerComposeUpOptions) {
+export async function dockerComposeUp(
+  componentOrOptions?: string | DockerComposeUpOptionsComponent,
+  options?: DockerComposeUpOptions
+) {
   let component: string;
 
   if (typeof componentOrOptions === 'string') {
@@ -386,11 +424,15 @@ export interface DockerComposeExecOptions {
   envfile?: string;
 }
 
-export interface DockerComposeExecOptionsComponent extends DockerComposeExecOptions {
+export interface DockerComposeExecOptionsComponent
+  extends DockerComposeExecOptions {
   instructions: string;
 }
 
-export async function dockerComposeExec(instructionsOrOptions: string | DockerComposeExecOptionsComponent, options?: DockerComposeExecOptions) {
+export async function dockerComposeExec(
+  instructionsOrOptions: string | DockerComposeExecOptionsComponent,
+  options?: DockerComposeExecOptions
+) {
   let instructions: string;
 
   if (typeof instructionsOrOptions === 'string') {
@@ -436,7 +478,9 @@ export async function dockerComposeExec(instructionsOrOptions: string | DockerCo
       lines = lines.filter((line) => line.trim() !== '');
       // Parse each line as a separate JSON object
       let jsonState = lines.map((line) => JSON.parse(line));
-      let containerDetected = jsonState.find((box) => box.Names.includes(container));
+      let containerDetected = jsonState.find((box) =>
+        box.Names.includes(container)
+      );
       if (containerDetected) {
         console.log('Container found:', container);
         notReady = false;
@@ -449,7 +493,17 @@ export async function dockerComposeExec(instructionsOrOptions: string | DockerCo
       await sleep(5000);
     }
   }
-  const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'exec', container, '/bin/bash', '-c', instructions];
+  const baseCommand = [
+    'docker',
+    'compose',
+    '-f',
+    `${root}/${file}`,
+    'exec',
+    container,
+    '/bin/bash',
+    '-c',
+    instructions,
+  ];
   if (forceRecreate) {
     baseCommand.push('--force-recreate');
   }
@@ -461,7 +515,10 @@ export async function dockerComposeExec(instructionsOrOptions: string | DockerCo
 // DOCKER COMPOSE BUILD
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerComposeBuild(componentOrOptions: DockerComposeBuildOptionsComponent, options?: DockerComposeBuildOptions) {
+export async function dockerComposeBuild(
+  componentOrOptions: DockerComposeBuildOptionsComponent,
+  options?: DockerComposeBuildOptions
+) {
   let component: string;
 
   if (typeof componentOrOptions === 'string') {
@@ -517,13 +574,19 @@ export default async function commandDocker(program: any) {
     .command('register')
     .description('build and push docker image')
     .option('-a, --all', 'Build all docker images')
-    .option('-arg, --argument <arguments...>', 'Build docker image with arguments')
+    .option(
+      '-arg, --argument <arguments...>',
+      'Build docker image with arguments'
+    )
     .option('--amd64', 'build amd64 docker image')
     .option('--no-cache', 'build docker image without cache')
 
     .option('--arm64', 'build arm64 docker image')
     .option('--component', 'component to build')
-    .argument('[component]', 'component to build. It has priority over --component')
+    .argument(
+      '[component]',
+      'component to build. It has priority over --component'
+    )
     .action(dockerRegister);
 
   const dockerCompose = docker.command('compose');
