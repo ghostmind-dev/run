@@ -50,13 +50,14 @@ export interface DockerComposeUpOptionsComponent
 
 export interface DockerRegisterOptions {
   all?: boolean;
-  argument?: string[];
   amd64?: boolean;
   cache?: boolean;
   arm64?: boolean;
   cloud?: boolean;
   component?: string;
   machine_type?: string;
+  build_args?: string[];
+  tags?: string[];
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -192,13 +193,20 @@ export async function dockerRegister(
     options = componentOrOptions || {};
   }
 
-  const { amd64, arm64, argument, cache, cloud, machine_type } = options;
+  const { amd64, arm64, build_args, cache, cloud, machine_type, tags } =
+    options;
 
   const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(
     options.component
   );
 
   Deno.env.set('BUILDX_NO_DEFAULT_ATTESTATIONS', '1');
+
+  // verify the current architecture
+
+  if (!amd64 && !arm64) {
+    console.log('No architecture specified, using current architecture');
+  }
 
   // Determine the machine architecture
 
@@ -211,7 +219,75 @@ export async function dockerRegister(
     let dockerfilePath = dockerfile.replace(`${currentPath}/`, '');
     let dockerContextPath = dockerContext.replace(`${currentPath}/`, '');
 
+    let dockerBuildCommand = [
+      'docker',
+      'buildx',
+      'build',
+      '--platform=linux/amd64',
+      `--file=${dockerfilePath}`,
+      '--push',
+    ];
+
+    if (build_args) {
+      build_args.map((arg: any) => {
+        dockerBuildCommand.push(`--build-arg=${arg}`);
+      });
+    }
+
+    let tagsToPush = [];
+
+    if (tags) {
+      tags.map((tag: any) => {
+        tagsToPush.push([`${image}-${tag}`, `${image}-${tag}-amd64`]);
+      });
+    } else {
+      tagsToPush.push([`${image}`, `${image}-amd64`]);
+    }
+
+    dockerBuildCommand.push(dockerContextPath);
+
+    for (let tag of tagsToPush) {
+      dockerBuildCommand.push(`--tag=${tag[0]}`);
+      dockerBuildCommand.push(`--tag=${tag[1]}`);
+    }
+
+    let manifestAmenTags = [];
+
+    let combinedImage = tagsToPush[0][0];
+
+    for (const [fullImage, archImage] of tagsToPush) {
+      try {
+        await $`docker manifest inspect ${fullImage}-arm64`;
+        manifestAmenTags.push(fullImage);
+        manifestAmenTags.push(`${fullImage}-arm64`);
+        manifestAmenTags.push(`${fullImage}-amd64`);
+      } catch (e) {
+        manifestAmenTags.push(fullImage);
+        manifestAmenTags.push(`${fullImage}-amd64`);
+      }
+    }
+
+    const dockerManifestCreateCommand = [
+      'docker',
+      'manifest',
+      'create',
+      '--amend',
+      ...manifestAmenTags,
+    ];
+
+    const dockerManifestPushCommand = [
+      'docker',
+      'manifest',
+      'push',
+      combinedImage,
+    ];
+
+    console.log(combinedImage);
+
     const cloudBuildConfig = {
+      options: {
+        env: ['BUILDX_NO_DEFAULT_ATTESTATIONS=1'],
+      },
       steps: [
         {
           name: 'gcr.io/cloud-builders/docker',
@@ -219,7 +295,15 @@ export async function dockerRegister(
         },
         {
           name: 'gcr.io/cloud-builders/docker',
-          script: `docker buildx build --platform=linux/amd64 -t ${image} -t ${image}-amd64 --file=${dockerfilePath} --push ${dockerContextPath} `,
+          script: dockerBuildCommand.join(' '),
+        },
+        {
+          name: 'gcr.io/cloud-builders/docker',
+          script: dockerManifestCreateCommand.join(' '),
+        },
+        {
+          name: 'gcr.io/cloud-builders/docker',
+          script: dockerManifestPushCommand.join(' '),
         },
       ],
     };
@@ -229,30 +313,86 @@ export async function dockerRegister(
       JSON.stringify(cloudBuildConfig)
     );
 
-    // print the file
+    await $`gcloud builds submit --config=/tmp/cloud_build.yaml --machine-type=${machineType}`;
 
-    // await $`gcloud builds submit --config=/tmp/cloud_build.yaml --machine-type=${machineType}`;
-
-    try {
-      await $`docker manifest inspect ${image}-arm64`;
-      await $`docker manifest create --amend ${image} ${image}-amd64 ${image}-arm64`;
-      await $`docker manifest push ${image}`;
-    } catch (e) {
-      $.verbose = true;
-      await $`docker manifest create --amend ${image} ${image}-amd64 --amend`;
-      await $`docker manifest push ${image}`;
-    }
+    // ... existing code ...
   }
-
-  if (arm64 && !amd64 && cloud) {
+  if (cloud && !amd64 && arm64) {
     await $`rm -rf /tmp/cloud_build.yaml`;
 
     let machineType = machine_type || 'e2-highcpu-32';
+
     // remove value of currentPath from dockerfile and dockerContext
     let dockerfilePath = dockerfile.replace(`${currentPath}/`, '');
     let dockerContextPath = dockerContext.replace(`${currentPath}/`, '');
 
+    let dockerBuildCommand = [
+      'docker',
+      'buildx',
+      'build',
+      '--platform=linux/arm64',
+      `--file=${dockerfilePath}`,
+      '--push',
+    ];
+
+    if (build_args) {
+      build_args.map((arg: any) => {
+        dockerBuildCommand.push(`--build-arg=${arg}`);
+      });
+    }
+
+    let tagsToPush = [];
+
+    if (tags) {
+      tags.map((tag: any) => {
+        tagsToPush.push([`${image}-${tag}`, `${image}-${tag}-arm64`]);
+      });
+    } else {
+      tagsToPush.push([`${image}`, `${image}-arm64`]);
+    }
+
+    for (let tag of tagsToPush) {
+      dockerBuildCommand.push(`--tag=${tag[0]}`);
+      dockerBuildCommand.push(`--tag=${tag[1]}`);
+    }
+
+    dockerBuildCommand.push(dockerContextPath);
+
+    let manifestAmenTags = [];
+
+    let combinedImage = tagsToPush[0][0];
+
+    for (const [fullImage, archImage] of tagsToPush) {
+      try {
+        await $`docker manifest inspect ${fullImage}-amd64`;
+        manifestAmenTags.push(fullImage);
+        manifestAmenTags.push(`${fullImage}-arm64`);
+        manifestAmenTags.push(`${fullImage}-amd64`);
+      } catch (e) {
+        manifestAmenTags.push(fullImage);
+        manifestAmenTags.push(`${fullImage}-arm64`);
+      }
+    }
+
+    const dockerManifestCreateCommand = [
+      'docker',
+      'manifest',
+      'create',
+      '--amend',
+      ...manifestAmenTags,
+    ];
+
+    const dockerManifestPushCommand = [
+      'docker',
+      'manifest',
+      'push',
+      combinedImage,
+    ];
+
     const cloudBuildConfig = {
+      options: {
+        env: ['BUILDX_NO_DEFAULT_ATTESTATIONS=1'],
+      },
       steps: [
         {
           name: 'gcr.io/cloud-builders/docker',
@@ -260,7 +400,15 @@ export async function dockerRegister(
         },
         {
           name: 'gcr.io/cloud-builders/docker',
-          script: `docker buildx build --platform=linux/arm64 -t ${image} -t ${image}-arm64 --file=${dockerfilePath} --push ${dockerContextPath}`,
+          script: dockerBuildCommand.join(' '),
+        },
+        {
+          name: 'gcr.io/cloud-builders/docker',
+          script: dockerManifestCreateCommand.join(' '),
+        },
+        {
+          name: 'gcr.io/cloud-builders/docker',
+          script: dockerManifestPushCommand.join(' '),
         },
       ],
     };
@@ -270,19 +418,9 @@ export async function dockerRegister(
       JSON.stringify(cloudBuildConfig)
     );
 
-    // print the file
-
     await $`gcloud builds submit --config=/tmp/cloud_build.yaml --machine-type=${machineType}`;
 
-    try {
-      $.verbose = false;
-      const arm64Exists = await $`docker manifest inspect ${image}-amd64`;
-      await $`docker manifest create --amend ${image} ${image}-amd64 ${image}-arm64`;
-      await $`docker manifest push ${image}`;
-    } catch (e) {
-      await $`docker manifest create --amend ${image} ${image}-arm64 --amend`;
-      await $`docker manifest push ${image}`;
-    }
+    // ... existing code ...
   }
 
   if (amd64 && !cloud) {
@@ -302,10 +440,7 @@ export async function dockerRegister(
       'docker',
       'buildx',
       'build',
-      '--pull=false',
       '--platform=linux/amd64',
-      `--tag=${image}`,
-      `--tag=${image}-amd64`,
       `--file=${dockerfile}`,
       '--push',
     ];
@@ -314,32 +449,70 @@ export async function dockerRegister(
       baseCommand.push('--no-cache');
     }
 
-    if (argument) {
-      argument.map((arg: any) => {
+    if (build_args) {
+      build_args.map((arg: any) => {
         baseCommand.push(`--build-arg=${arg}`);
       });
+    }
+
+    let tagsToPush = [];
+
+    if (tags) {
+      tags.map((tag: any) => {
+        tagsToPush.push([`${image}-${tag}`, `${image}-${tag}-amd64`]);
+      });
+    } else {
+      tagsToPush.push([`${image}`, `${image}-amd64`]);
+    }
+
+    for (let tag of tagsToPush) {
+      baseCommand.push(`--tag=${tag[0]}`);
+      baseCommand.push(`--tag=${tag[1]}`);
     }
 
     baseCommand.push(dockerContext);
 
     await $`${baseCommand}`;
 
-    $.verbose = false;
+    let manifestAmenTags = [];
 
-    // verify if image-arm64 exists
+    let combinedImage = tagsToPush[0][0];
 
-    try {
-      await $`docker manifest inspect ${image}-arm64`;
-      await $`docker manifest create --amend ${image} ${image}-amd64 ${image}-arm64`;
-      await $`docker manifest push ${image}`;
-    } catch (e) {
-      $.verbose = true;
-      await $`docker manifest create --amend ${image} ${image}-amd64 --amend`;
-      await $`docker manifest push ${image}`;
+    for (const [fullImage, archImage] of tagsToPush) {
+      try {
+        await $`docker manifest inspect ${fullImage}-arm64`;
+        manifestAmenTags.push(fullImage);
+        manifestAmenTags.push(`${fullImage}-arm64`);
+        manifestAmenTags.push(`${fullImage}-amd64`);
+      } catch (e) {
+        manifestAmenTags.push(fullImage);
+        manifestAmenTags.push(`${fullImage}-amd64`);
+      }
     }
+    const dockerManifestCreateCommand = [
+      'docker',
+      'manifest',
+      'create',
+      '--amend',
+      ...manifestAmenTags,
+    ];
+
+    const dockerManifestPushCommand = [
+      'docker',
+      'manifest',
+      'push',
+      combinedImage,
+    ];
+
+    $.verbose = true;
+    await $`${dockerManifestCreateCommand}`;
+    await $`${dockerManifestPushCommand}`;
+
+    // $.verbose = false;
   }
 
   if (arm64 && !cloud) {
+    // Ensure a buildx builder instance exists and is bootstrapped
     try {
       $.verbose = false;
       await `docker buildx inspect default`;
@@ -350,13 +523,12 @@ export async function dockerRegister(
       console.log('Default builder not found');
       return;
     }
+
     let baseCommand = [
       'docker',
       'buildx',
       'build',
       '--platform=linux/arm64',
-      `--tag=${image}`,
-      `--tag=${image}-arm64`,
       `--file=${dockerfile}`,
       '--push',
     ];
@@ -365,52 +537,66 @@ export async function dockerRegister(
       baseCommand.push('--no-cache');
     }
 
-    if (argument) {
-      argument.map((arg: any) => {
+    if (build_args) {
+      build_args.map((arg: any) => {
         baseCommand.push(`--build-arg=${arg}`);
       });
     }
 
+    let tagsToPush = [];
+
+    if (tags) {
+      tags.map((tag: any) => {
+        tagsToPush.push([`${image}-${tag}`, `${image}-${tag}-arm64`]);
+      });
+    } else {
+      tagsToPush.push([`${image}`, `${image}-arm64`]);
+    }
+
+    for (let tag of tagsToPush) {
+      baseCommand.push(`--tag=${tag[0]}`);
+      baseCommand.push(`--tag=${tag[1]}`);
+    }
+
     baseCommand.push(dockerContext);
 
     await $`${baseCommand}`;
 
-    try {
-      $.verbose = false;
-      const arm64Exists = await $`docker manifest inspect ${image}-amd64`;
-      await $`docker manifest create --amend ${image} ${image}-amd64 ${image}-arm64`;
-      await $`docker manifest push ${image}`;
-    } catch (e) {
-      await $`docker manifest create --amend ${image} ${image}-arm64 --amend`;
-      await $`docker manifest push ${image}`;
-    }
-  }
+    let manifestAmenTags = [];
 
-  if (amd64 === undefined && arm64 === undefined && !cloud) {
-    let baseCommand = [
+    let combinedImage = tagsToPush[0][0];
+
+    for (const [fullImage, archImage] of tagsToPush) {
+      try {
+        await $`docker manifest inspect ${fullImage}-amd64`;
+        manifestAmenTags.push(fullImage);
+        manifestAmenTags.push(`${fullImage}-arm64`);
+        manifestAmenTags.push(`${fullImage}-amd64`);
+      } catch (e) {
+        manifestAmenTags.push(fullImage);
+        manifestAmenTags.push(`${fullImage}-arm64`);
+      }
+    }
+    const dockerManifestCreateCommand = [
       'docker',
-      'build',
-      `--tag=${image}`,
-      `--file=${dockerfile}`,
-      '--push',
-      `--cache-to=type=registry,ref=${image},mode=max`,
-      `--cache-from=type=registry,ref=${image}`,
+      'manifest',
+      'create',
+      '--amend',
+      ...manifestAmenTags,
     ];
 
-    if (argument) {
-      argument.map((arg: any) => {
-        baseCommand.push('--build-arg');
-        baseCommand.push(arg);
-      });
-    }
+    const dockerManifestPushCommand = [
+      'docker',
+      'manifest',
+      'push',
+      combinedImage,
+    ];
 
-    if (cache === undefined) {
-      baseCommand.push('--no-cache');
-    }
+    $.verbose = true;
+    await $`${dockerManifestCreateCommand}`;
+    await $`${dockerManifestPushCommand}`;
 
-    baseCommand.push(dockerContext);
-
-    await $`${baseCommand}`;
+    // $.verbose = false;
   }
 }
 
@@ -660,16 +846,14 @@ export default async function commandDocker(program: any) {
     .command('register')
     .description('build and push docker image')
     .option('-a, --all', 'Build all docker images')
-    .option(
-      '-arg, --argument <arguments...>',
-      'Build docker image with arguments'
-    )
+    .option('--build-args <build_args...>', 'build arguments')
     .option('--amd64', 'build amd64 docker image')
     .option('--arm64', 'build arm64 docker image')
     .option('--no-cache', 'build docker image without cache')
     .option('--cloud', 'build docker image withh gcloud builds')
     .option('--machine-type <machine_type>', 'machine type')
     .option('--component', 'component to build')
+    .option('-t, --tags <tags...>', 'tags')
     .argument(
       '[component]',
       'component to build. It has priority over --component'
