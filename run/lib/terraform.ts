@@ -52,7 +52,7 @@ export async function getBucketConfig(
   global: any,
   component: string
 ): Promise<{ bcBucket: string; bcPrefix: string }> {
-  const ENV = `${Deno.env.get('ENV')}`;
+  const ENV = `${Deno.env.get('ENVIRONMENT')}`;
   let bucketDirectory;
 
   if (global === true) {
@@ -354,7 +354,7 @@ export async function terraformUnlock(component: string, options: any) {
   const { id } = metaConfig;
 
   if (env === undefined) {
-    env = Deno.env.get('ENV');
+    env = Deno.env.get('ENVIRONMENT');
   }
 
   const filename = `${id}/${env}/terraform/${component}/default.tflock`;

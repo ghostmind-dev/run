@@ -64,7 +64,7 @@ export async function getDockerfileAndImageName(
   component: any
 ): Promise<{ dockerfile: string; dockerContext: string; image: string }> {
   $.verbose = true;
-  const ENV = `${Deno.env.get('ENV')}`;
+  const ENV = `${Deno.env.get('ENVIRONMENT')}`;
 
   let currentPath = await detectScriptsDirectory(Deno.cwd());
 
