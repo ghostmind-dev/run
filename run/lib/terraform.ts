@@ -151,23 +151,11 @@ export async function terraformActivate(
       for (const container of containers) {
         // verify if container equal to the begiining of one of the image_modifiers
 
-        let imageModifier = imageModifiers.find((imageModifier: string) => {
-          return imageModifier.startsWith(`${container}:`);
-        });
-
         let imageDigest;
 
         // extr
 
-        if (imageModifier) {
-          // extract the image name from the image modifier
-
-          let imageName = imageModifier.split(':')[1];
-
-          imageDigest = await getDockerImageDigest(arch, container, imageName);
-        } else {
-          imageDigest = await getDockerImageDigest(arch, container);
-        }
+        imageDigest = await getDockerImageDigest(arch, container);
 
         $.verbose = true;
 

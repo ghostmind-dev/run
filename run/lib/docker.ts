@@ -64,9 +64,12 @@ export interface DockerRegisterOptions {
 // GET DOCKERFILE NAME AND IMAGE NAME
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDockerfileAndImageName(
-  component: any
-): Promise<{ dockerfile: string; dockerContext: string; image: string }> {
+export async function getDockerfileAndImageName(component: any): Promise<{
+  dockerfile: string;
+  dockerContext: string;
+  image: string;
+  tagsToPush: string[][];
+}> {
   $.verbose = true;
   const ENV = `${Deno.env.get('ENVIRONMENT')}`;
 
@@ -78,7 +81,24 @@ export async function getDockerfileAndImageName(
 
   component = component || 'default';
 
-  let { root, image, env_based, context_dir } = docker[component];
+  let { root, image, env_based, context_dir, tag_modifers } = docker[component];
+
+  let tagsToPush = [];
+
+  if (tag_modifers) {
+    tag_modifers.map((tag: any) => {
+      if (tag === 'undefined' || tag === null || tag === undefined) {
+        // go to next tag
+        return;
+      }
+
+      tagsToPush.push([`${image}:${ENV}-${tag}`]);
+    });
+  } else {
+    tagsToPush.push([`${image}:${ENV}`]);
+  }
+
+  image = tagsToPush[0][0];
 
   let dockerFileName;
   let dockerfile;
@@ -103,15 +123,7 @@ export async function getDockerfileAndImageName(
   // need other solution to get the project name
   const { name: PROJECT_NAME } = metaConfig || { name: '' };
 
-  if (image.includes('gcr.io') || image.includes('ghcr.io')) {
-    image = `${image}:${ENV}`;
-    return { dockerfile, dockerContext, image };
-  } else {
-    const PROJECT = Deno.env.get('PROJECT') || PROJECT_NAME;
-    const DOCKER_GCR_BASE = Deno.env.get('DOCKER_GCR_BASE');
-    image = `${DOCKER_GCR_BASE}/${PROJECT}-${image}:${ENV}`;
-    return { dockerfile, dockerContext, image };
-  }
+  return { dockerfile, dockerContext, image, tagsToPush };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -120,26 +132,19 @@ export async function getDockerfileAndImageName(
 
 export async function getDockerImageDigest(
   arch: any,
-  component: any,
-  imageModifier?: string
+  component: any
 ): Promise<string> {
   let { image } = await getDockerfileAndImageName(component);
 
+  console.log(image);
+
   // rempcve the tag from the image name
-
-  let imageName;
-
-  if (imageModifier) {
-    imageName = `${image}-${imageModifier}`;
-  } else {
-    imageName = image;
-  }
 
   if (arch === 'amd64') {
     $.verbose = false;
 
     const imageDigestRaw =
-      await $`docker manifest inspect ${imageName}-amd64 --verbose`;
+      await $`docker manifest inspect ${image}-amd64 --verbose`;
 
     const jsonManifest = JSON.parse(`${imageDigestRaw}`);
 
@@ -153,14 +158,14 @@ export async function getDockerImageDigest(
       (manifest: any) => manifest.Descriptor.platform.architecture === 'amd64'
     )?.Descriptor.digest;
 
-    imageName = imageName.split(':')[0];
+    image = image.split(':')[0];
 
-    return `${imageName}@${digest}`;
+    return `${image}@${digest}`;
   } else if (arch === 'arm64') {
     $.verbose = false;
 
     const imageDigestRaw =
-      await $`docker manifest inspect ${imageName}-arm64 --verbose`;
+      await $`docker manifest inspect ${image}-arm64 --verbose`;
 
     const jsonManifest = JSON.parse(`${imageDigestRaw}`);
 
@@ -174,12 +179,12 @@ export async function getDockerImageDigest(
       (manifest: any) => manifest.Descriptor.platform.architecture === 'arm64'
     )?.Descriptor.digest;
 
-    imageName = imageName.split(':')[0];
-    return `${imageName}@${digest}`;
+    image = image.split(':')[0];
+    return `${image}@${digest}`;
     // remove undefined from the array
   } else {
     const imageDigestRaw =
-      await $`docker inspect --format='{{index .RepoDigests 0}}' ${imageName}`;
+      await $`docker inspect --format='{{index .RepoDigests 0}}' ${image}`;
     return imageDigestRaw.toString();
   }
 }
@@ -202,12 +207,10 @@ export async function dockerRegister(
     options = componentOrOptions || {};
   }
 
-  const { amd64, arm64, build_args, cache, cloud, machine_type, tags } =
-    options;
+  const { amd64, arm64, build_args, cache, cloud, machine_type } = options;
 
-  const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(
-    options.component
-  );
+  const { dockerfile, dockerContext, image, tagsToPush } =
+    await getDockerfileAndImageName(options.component);
 
   Deno.env.set('BUILDX_NO_DEFAULT_ATTESTATIONS', '1');
 
@@ -215,6 +218,12 @@ export async function dockerRegister(
 
   if (!amd64 && !arm64) {
     console.log('No architecture specified, using current architecture');
+    return;
+  }
+
+  if (amd64 && arm64) {
+    console.log('Only one architecture can be specified');
+    return;
   }
 
   // Determine the machine architecture
@@ -243,22 +252,12 @@ export async function dockerRegister(
       });
     }
 
-    let tagsToPush = [];
-
-    if (tags) {
-      tags.map((tag: any) => {
-        tagsToPush.push([`${image}-${tag}`, `${image}-${tag}-amd64`]);
-      });
-    } else {
-      tagsToPush.push([`${image}`, `${image}-amd64`]);
+    for (let tag of tagsToPush) {
+      dockerBuildCommand.push(`--tag=${tag[0]}`);
+      dockerBuildCommand.push(`--tag=${tag[0]}-amd64`);
     }
 
     dockerBuildCommand.push(dockerContextPath);
-
-    for (let tag of tagsToPush) {
-      dockerBuildCommand.push(`--tag=${tag[0]}`);
-      dockerBuildCommand.push(`--tag=${tag[1]}`);
-    }
 
     let manifestAmenTags = [];
 
@@ -290,8 +289,6 @@ export async function dockerRegister(
       'push',
       combinedImage,
     ];
-
-    console.log(combinedImage);
 
     const cloudBuildConfig = {
       options: {
@@ -350,19 +347,9 @@ export async function dockerRegister(
       });
     }
 
-    let tagsToPush = [];
-
-    if (tags) {
-      tags.map((tag: any) => {
-        tagsToPush.push([`${image}-${tag}`, `${image}-${tag}-arm64`]);
-      });
-    } else {
-      tagsToPush.push([`${image}`, `${image}-arm64`]);
-    }
-
     for (let tag of tagsToPush) {
       dockerBuildCommand.push(`--tag=${tag[0]}`);
-      dockerBuildCommand.push(`--tag=${tag[1]}`);
+      dockerBuildCommand.push(`--tag=${tag[0]}-arm64`);
     }
 
     dockerBuildCommand.push(dockerContextPath);
@@ -464,19 +451,9 @@ export async function dockerRegister(
       });
     }
 
-    let tagsToPush = [];
-
-    if (tags) {
-      tags.map((tag: any) => {
-        tagsToPush.push([`${image}-${tag}`, `${image}-${tag}-amd64`]);
-      });
-    } else {
-      tagsToPush.push([`${image}`, `${image}-amd64`]);
-    }
-
     for (let tag of tagsToPush) {
       baseCommand.push(`--tag=${tag[0]}`);
-      baseCommand.push(`--tag=${tag[1]}`);
+      baseCommand.push(`--tag=${tag[0]}-amd64`);
     }
 
     baseCommand.push(dockerContext);
@@ -552,19 +529,9 @@ export async function dockerRegister(
       });
     }
 
-    let tagsToPush = [];
-
-    if (tags) {
-      tags.map((tag: any) => {
-        tagsToPush.push([`${image}-${tag}`, `${image}-${tag}-arm64`]);
-      });
-    } else {
-      tagsToPush.push([`${image}`, `${image}-arm64`]);
-    }
-
     for (let tag of tagsToPush) {
       baseCommand.push(`--tag=${tag[0]}`);
-      baseCommand.push(`--tag=${tag[1]}`);
+      baseCommand.push(`--tag=${tag[0]}-arm64`);
     }
 
     baseCommand.push(dockerContext);
