@@ -87,7 +87,8 @@ export async function getDockerfileAndImageName(
 
   component = component || 'default';
 
-  let { root, image, env_based, context_dir, tag_modifers } = docker[component];
+  let { root, image, env_based, context_dir, tag_modifiers } =
+    docker[component];
 
   if (!modifier) {
     image = `${image}:${ENV}`;
@@ -97,8 +98,8 @@ export async function getDockerfileAndImageName(
 
   let tagsToPush = [];
   tagsToPush.push([`${image}`]);
-  if (tag_modifers && !skip_tag_modifiers) {
-    tag_modifers.map((tag: any) => {
+  if (tag_modifiers && !skip_tag_modifiers) {
+    tag_modifiers.map((tag: any) => {
       if (tag === 'undefined' || tag === null || tag === undefined) {
         // go to next tag
         return;
