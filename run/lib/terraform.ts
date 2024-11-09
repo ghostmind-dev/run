@@ -33,6 +33,7 @@ interface TerraformActivateOptions {
   arch?: string;
   docker?: string;
   modifiers?: string[];
+  clean?: boolean;
 }
 
 interface TerraformActivateOptionsWithComponent
@@ -42,6 +43,7 @@ interface TerraformActivateOptionsWithComponent
 
 interface TerraformDestroyOptions {
   arch?: string;
+  clean?: boolean;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -101,6 +103,10 @@ export async function terraformDestroy(
       }
 
       cd(`${currentPath}/${path}`);
+
+      if (options.clean) {
+        await $`rm -rf .terraform`;
+      }
 
       await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
       await $`terraform plan -destroy`;
@@ -180,6 +186,10 @@ export async function terraformActivate(
     }
 
     cd(`${currentPath}/${path}`);
+
+    if (options.clean) {
+      await $`rm -rf .terraform`;
+    }
 
     await $`terraform init -backend-config=${bcBucket} -backend-config=${bcPrefix} --lock=false`;
     await $`terraform plan`;
@@ -431,6 +441,7 @@ export default async function commandTerraform(program: any) {
     .option('--component <component>', 'component to deploy')
     .option('--modifiers <...modifiers>', 'docker image modifiers')
     .option('--local', 'use local state')
+    .option('--clean', 'delete the .terraform folder before apply')
     .action(terraformActivate);
 
   terraform
@@ -438,6 +449,7 @@ export default async function commandTerraform(program: any) {
     .argument('[component]', 'component to deploy')
     .option('--arch <arch>', 'architecture. default to amd64')
     .option('--docker <docker>', 'docker app name')
+    .option('--clean', 'delete the .terraform folder before destroy')
     .description('terminate the infrastructure')
     .action(terraformDestroy);
 

@@ -461,6 +461,7 @@ async function runScript(
   const { root }: any = {
     ...customConfigDefault,
     ...custom,
+    ...options,
   };
   cd(`${currentPath}/${root}`);
 
@@ -544,6 +545,7 @@ export default async function commandScript(program: any) {
     .option('--all', 'run all start commands')
     .option('--dev', 'run in dev mode')
     .option('--test', 'run in test mode')
+    .option('--root <path>', 'root path for the custom script')
     .action(runScript);
 }
 
