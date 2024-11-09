@@ -58,13 +58,19 @@ export interface DockerRegisterOptions {
   machine_type?: string;
   build_args?: string[];
   tags?: string[];
+  modifier?: string;
+  skip_tag_modifiers?: boolean;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // GET DOCKERFILE NAME AND IMAGE NAME
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function getDockerfileAndImageName(component: any): Promise<{
+export async function getDockerfileAndImageName(
+  component: any,
+  modifier?: string,
+  skip_tag_modifiers?: boolean
+): Promise<{
   dockerfile: string;
   dockerContext: string;
   image: string;
@@ -83,19 +89,23 @@ export async function getDockerfileAndImageName(component: any): Promise<{
 
   let { root, image, env_based, context_dir, tag_modifers } = docker[component];
 
-  let tagsToPush = [];
+  if (!modifier) {
+    image = `${image}:${ENV}`;
+  } else {
+    image = `${image}:${ENV}-${modifier}`;
+  }
 
-  if (tag_modifers) {
+  let tagsToPush = [];
+  tagsToPush.push([`${image}`]);
+  if (tag_modifers && !skip_tag_modifiers) {
     tag_modifers.map((tag: any) => {
       if (tag === 'undefined' || tag === null || tag === undefined) {
         // go to next tag
         return;
       }
 
-      tagsToPush.push([`${image}:${ENV}-${tag}`]);
+      tagsToPush.push([`${image}-${tag}`]);
     });
-  } else {
-    tagsToPush.push([`${image}:${ENV}`]);
   }
 
   image = tagsToPush[0][0];
@@ -132,11 +142,10 @@ export async function getDockerfileAndImageName(component: any): Promise<{
 
 export async function getDockerImageDigest(
   arch: any,
-  component: any
+  component: any,
+  modifier?: string
 ): Promise<string> {
-  let { image } = await getDockerfileAndImageName(component);
-
-  console.log(image);
+  let { image } = await getDockerfileAndImageName(component, modifier);
 
   // rempcve the tag from the image name
 
@@ -207,10 +216,23 @@ export async function dockerRegister(
     options = componentOrOptions || {};
   }
 
-  const { amd64, arm64, build_args, cache, cloud, machine_type } = options;
+  const {
+    amd64,
+    arm64,
+    build_args,
+    cache,
+    cloud,
+    machine_type,
+    modifier,
+    skip_tag_modifiers,
+  } = options;
 
   const { dockerfile, dockerContext, image, tagsToPush } =
-    await getDockerfileAndImageName(options.component);
+    await getDockerfileAndImageName(
+      options.component,
+      modifier,
+      skip_tag_modifiers
+    );
 
   Deno.env.set('BUILDX_NO_DEFAULT_ATTESTATIONS', '1');
 
@@ -828,6 +850,8 @@ export default async function commandDocker(program: any) {
     .option('--no-cache', 'build docker image without cache')
     .option('--cloud', 'build docker image withh gcloud builds')
     .option('--machine-type <machine_type>', 'machine type')
+    .option('--modifier <modifier>', 'image name modifier')
+    .option('--skip-tag-modifiers', 'skip tag modifiers')
     .option('--component', 'component to build')
     .option('-t, --tags <tags...>', 'tags')
     .argument(
