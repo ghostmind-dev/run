@@ -2,7 +2,7 @@
 
 import { $ } from 'npm:zx@8.1.0';
 import { Command } from 'npm:commander@12.1.0';
-import { setSecretsOnLocal, setEnvOnLocal } from '../utils/divers.ts';
+import { setSecretsOnLocal } from '../utils/divers.ts';
 import { argv } from 'node:process';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -51,7 +51,7 @@ program
     ) {
       const { cible } = thisCommand.opts();
       await setSecretsOnLocal(cible || 'local');
-      await setEnvOnLocal(cible || 'local');
+      Deno.env.set('ENV', cible || 'local');
     }
   });
 
