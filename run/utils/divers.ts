@@ -58,47 +58,6 @@ export async function getProjectName(): Promise<string> {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// SET ENV ON LOCAL
-////////////////////////////////////////////////////////////////////////////////
-
-export async function setEnvOnLocal(target: string): Promise<void> {
-  try {
-    // Check if we are in a Git repository
-
-    if (target === 'local') {
-      Deno.env.set('ENV', 'local');
-      return;
-    }
-
-    console.log(target);
-
-    const isInRepoRaw =
-      await $`git rev-parse --is-inside-work-tree 2>/dev/null`;
-    const isInRepo = isInRepoRaw.stdout.trim() === 'true';
-
-    if (!isInRepo) {
-      Deno.env.set('ENV', 'default');
-      return;
-    }
-
-    // Get the current branch
-    const currentBranchRaw = await $`git branch --show-current`;
-    let environment = currentBranchRaw.stdout.trim();
-
-    // Map 'main' branch to 'prod'
-    if (environment === 'main') {
-      environment = 'prod';
-    }
-
-    // Set the environment variable
-    Deno.env.set('ENV', environment);
-  } catch {
-    // Quietly set the default environment variable if any error occurs
-    Deno.env.set('ENV', 'default');
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // SET ENVIRONMENT .ENV VARIABLES
 ////////////////////////////////////////////////////////////////////////////////
 
