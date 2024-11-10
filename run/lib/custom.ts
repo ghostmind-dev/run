@@ -406,6 +406,11 @@ async function runScript(
   argument: string[] | string,
   options: any
 ) {
+  if (!script) {
+    console.log('specify a script to run');
+    return;
+  }
+
   Deno.env.set('CUSTOM_STATUS', 'in_progress');
 
   let currentPath = Deno.cwd();
@@ -463,6 +468,20 @@ async function runScript(
     ...custom,
     ...options,
   };
+
+  // verify if root folder exists
+  try {
+    Deno.statSync(`${currentPath}/${root}`);
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) {
+      console.log(
+        `custom folder name: ${root} \n` + `This folder does not exist`
+      );
+      return;
+    }
+    throw error; // rethrow if it's a different error
+  }
+
   cd(`${currentPath}/${root}`);
 
   // if there is no custom script

@@ -70,6 +70,8 @@ export async function setEnvOnLocal(target: string): Promise<void> {
       return;
     }
 
+    console.log(target);
+
     const isInRepoRaw =
       await $`git rev-parse --is-inside-work-tree 2>/dev/null`;
     const isInRepo = isInRepoRaw.stdout.trim() === 'true';
