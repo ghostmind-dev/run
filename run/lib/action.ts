@@ -1,6 +1,5 @@
 import { $, sleep, cd } from 'npm:zx@8.1.0';
 import fs from 'npm:fs-extra@11.2.0';
-import { detectScriptsDirectory } from '../utils/divers.ts';
 import { join, extname } from 'jsr:@std/path@0.225.1';
 import yaml from 'npm:js-yaml@4.1.0';
 import { readFileSync } from 'node:fs';
@@ -16,14 +15,6 @@ $.verbose = false;
 ////////////////////////////////////////////////////////////////////////////////
 
 const LOCALHOST_SRC = Deno.env.get('LOCALHOST_SRC');
-
-////////////////////////////////////////////////////////////////////////////////
-// RUNNING COMMAND LOCATION
-////////////////////////////////////////////////////////////////////////////////
-
-let currentPath = await detectScriptsDirectory(Deno.cwd());
-
-cd(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
 // ACT DEFAULT CONFIG

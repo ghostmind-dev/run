@@ -1,8 +1,5 @@
 import { $, cd } from 'npm:zx@8.1.0';
-import {
-  verifyIfMetaJsonExists,
-  detectScriptsDirectory,
-} from '../utils/divers.ts';
+import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import { nanoid } from 'npm:nanoid@5.0.7';
 import jsonfile from 'npm:jsonfile@6.1.0';
 import * as inquirer from 'npm:inquirer@9.2.22';
@@ -19,7 +16,7 @@ $.verbose = false;
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let currentPath = await detectScriptsDirectory(Deno.cwd());
+let currentPath = Deno.cwd();
 
 cd(currentPath);
 

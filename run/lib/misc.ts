@@ -4,7 +4,7 @@ import { createUUID } from '../utils/divers.ts';
 import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
-  detectScriptsDirectory,
+  findProjectDirectory,
 } from '../utils/divers.ts';
 import fs from 'node:fs';
 
@@ -146,10 +146,18 @@ export default async function misc(program: any) {
     .action(async () => {
       try {
         $.verbose = true;
+        let currentPath = Deno.cwd();
 
-        // const meta = await verifyIfMetaJsonExists(Deno.cwd());
+        const projectPath = await findProjectDirectory(currentPath);
 
-        const SRC = Deno.env.get('SRC') || '';
+        const SRC = Deno.env.get('SRC') || projectPath;
+
+        if (!SRC) {
+          console.log(
+            'SRC is not defined. If you are not running inside a run compatible devcontainer, you need to set a project folder (meta.json with type project'
+          );
+          Deno.exit(0);
+        }
 
         const folders = await recursiveDirectoriesDiscovery(SRC);
 

@@ -36,7 +36,7 @@ export async function createUUID(length: number = 12): Promise<string> {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function getAppName(): Promise<string> {
-  const currentPath = await detectScriptsDirectory(Deno.cwd());
+  const currentPath = Deno.cwd();
   const { name }: any = await verifyIfMetaJsonExists(
     Deno.env.get(currentPath) || currentPath
   );
@@ -49,7 +49,7 @@ export async function getAppName(): Promise<string> {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function getProjectName(): Promise<string> {
-  const currentPath = await detectScriptsDirectory(Deno.cwd());
+  const currentPath = await Deno.cwd();
   const { name }: any = await verifyIfMetaJsonExists(
     Deno.env.get('SRC') || currentPath
   );
@@ -64,7 +64,7 @@ export async function getProjectName(): Promise<string> {
 export async function setSecretsOnLocal(target: string): Promise<void> {
   $.verbose = false;
 
-  const currentPath = await detectScriptsDirectory(Deno.cwd());
+  const currentPath = Deno.cwd();
 
   const metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -201,24 +201,6 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// DETECT SCRIPS DIRECTORY
-////////////////////////////////////////////////////////////////////////////////
-
-export async function detectScriptsDirectory(
-  currentPath: string
-): Promise<string> {
-  // verify if the current path ends with scripts
-
-  if (currentPath.includes('scripts')) {
-    // remove /scripts from the path
-    currentPath = currentPath.replace('/scripts', '');
-    return currentPath;
-  }
-
-  return currentPath;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // GET FILES IN A DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -304,6 +286,26 @@ export async function recursiveDirectoriesDiscovery(
   }
 
   return directoriesPath;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// FIND PROJECT DIRECTORY
+////////////////////////////////////////////////////////////////////////////////
+
+export async function findProjectDirectory(
+  path: string
+): Promise<string | undefined> {
+  let currentPath = path;
+
+  while (currentPath !== '/') {
+    const metaConfig = await verifyIfMetaJsonExists(currentPath);
+    if (metaConfig && metaConfig.type === 'project') {
+      return currentPath;
+    }
+    currentPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+  }
+
+  return undefined;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

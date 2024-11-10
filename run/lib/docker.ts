@@ -1,8 +1,5 @@
 import { $, sleep, cd } from 'npm:zx@8.1.0';
-import {
-  detectScriptsDirectory,
-  verifyIfMetaJsonExists,
-} from '../utils/divers.ts';
+import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
 import { parse } from 'npm:yaml@2.4.2';
 import { readFileSync } from 'node:fs';
@@ -18,7 +15,7 @@ $.verbose = false;
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let currentPath = await detectScriptsDirectory(Deno.cwd());
+let currentPath = Deno.cwd();
 
 cd(currentPath);
 
@@ -79,7 +76,7 @@ export async function getDockerfileAndImageName(
   $.verbose = true;
   const ENV = `${Deno.env.get('ENVIRONMENT')}`;
 
-  let currentPath = await detectScriptsDirectory(Deno.cwd());
+  let currentPath = Deno.cwd();
 
   const metaConfig = await verifyIfMetaJsonExists(currentPath);
 

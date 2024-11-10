@@ -1,6 +1,5 @@
 import { $, cd, fs } from 'npm:zx@8.1.0';
 import {
-  detectScriptsDirectory,
   verifyIfMetaJsonExists,
   withMetaMatching,
   setSecretsOnLocal,
@@ -18,7 +17,7 @@ $.verbose = false;
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-const currentPath = await detectScriptsDirectory(Deno.cwd());
+const currentPath = Deno.cwd();
 
 cd(currentPath);
 

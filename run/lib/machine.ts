@@ -1,7 +1,6 @@
 import { $, cd, spinner, sleep, question } from 'npm:zx@8.1.0';
 import Table from 'npm:cli-table3@0.6.5';
 import {
-  detectScriptsDirectory,
   createUUID,
   verifyIfMetaJsonExists,
   withMetaMatching,
@@ -21,7 +20,7 @@ $.verbose = false;
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let currentPath = await detectScriptsDirectory(Deno.cwd());
+let currentPath = Deno.cwd();
 
 cd(currentPath);
 

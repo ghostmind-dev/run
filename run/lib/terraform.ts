@@ -2,7 +2,6 @@ import { $, cd } from 'npm:zx@8.1.0';
 import fs from 'npm:fs-extra@11.2.0';
 import { readFileSync } from 'node:fs';
 import {
-  detectScriptsDirectory,
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
 } from '../utils/divers.ts';
@@ -21,7 +20,7 @@ $.verbose = false;
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let currentPath = await detectScriptsDirectory(Deno.cwd());
+let currentPath = Deno.cwd();
 
 cd(currentPath);
 

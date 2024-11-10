@@ -1,8 +1,5 @@
 import { $, cd, within } from 'npm:zx@8.1.0';
-import {
-  verifyIfMetaJsonExists,
-  detectScriptsDirectory,
-} from '../utils/divers.ts';
+import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
 import * as main from '../main.ts';
 
@@ -24,7 +21,7 @@ const customConfigDefault = {
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let currentPath = await detectScriptsDirectory(Deno.cwd());
+let currentPath = Deno.cwd();
 
 ////////////////////////////////////////////////////////////////////////////////
 // TYPES

@@ -1,8 +1,5 @@
 import { $, cd } from 'npm:zx@8.1.0';
-import {
-  detectScriptsDirectory,
-  verifyIfMetaJsonExists,
-} from '../utils/divers.ts';
+import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import fs from 'npm:fs-extra@11.2.0';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -15,7 +12,7 @@ $.verbose = false;
 // RUNNING COMMAND LOCATION
 ////////////////////////////////////////////////////////////////////////////////
 
-let currentPath = await detectScriptsDirectory(Deno.cwd());
+let currentPath = Deno.cwd();
 
 cd(currentPath);
 
@@ -24,7 +21,7 @@ cd(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 
 async function defineSecretNamespace(target?: string) {
-  let currentPath = await detectScriptsDirectory(Deno.cwd());
+  let currentPath = Deno.cwd();
   cd(currentPath);
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -90,7 +87,7 @@ export async function vaultKvLocalToVault(options: any) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function vaultKvVaultToLocal(options: any) {
-  let currentPath = await detectScriptsDirectory(Deno.cwd());
+  let currentPath = Deno.cwd();
 
   cd(currentPath);
 
