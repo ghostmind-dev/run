@@ -479,27 +479,6 @@ async function runScript(
     throw error; // rethrow if it's a different error
   }
 
-  cd(`${currentPath}/${root}`);
-
-  // if there is no custom script
-  // return the list of available custom scripts
-  if (script === undefined) {
-    try {
-      const { stdout: scripts } = await $`ls *.ts`;
-      // remove \n from apps
-      let scriptsArray = scripts.split('\n');
-      // removing empty element from scriptsArray
-      scriptsArray.pop();
-      console.log('Available scripts:');
-      for (let scriptAvailable of scriptsArray) {
-        scriptAvailable = scriptAvailable.replace('.ts', '');
-        console.log(`- ${scriptAvailable}`);
-      }
-    } catch (error) {
-      console.log('no custom script found');
-    }
-    return;
-  }
   // if there is a custom script
   // try to run the custom script
   try {
