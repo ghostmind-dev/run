@@ -1,5 +1,10 @@
 import { $, sleep, cd } from 'npm:zx@8.1.0';
-import { verifyIfMetaJsonExists } from '../utils/divers.ts';
+import {
+  verifyIfMetaJsonExists,
+  recursiveDirectoriesDiscovery,
+  setSecretsOnLocal,
+  createUUID,
+} from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
 import { parse } from 'npm:yaml@2.4.2';
 import { readFileSync } from 'node:fs';
@@ -35,9 +40,10 @@ export interface DockerComposeBuildOptionsComponent
 }
 
 export interface DockerComposeUpOptions {
-  file?: string;
+  build?: boolean;
   forceRecreate?: boolean;
   detach?: boolean;
+  all?: boolean;
 }
 
 export interface DockerComposeUpOptionsComponent
@@ -614,35 +620,91 @@ export async function dockerComposeUp(
       component = 'default';
     } else {
       component = componentOrOptions.component || 'default';
+      options = componentOrOptions;
+    }
+  }
+
+  let { forceRecreate, detach, all, build } = options || {};
+
+  let filesToUp = [];
+
+  if (!all) {
+    let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
+
+    if (metaConfig === undefined) {
+      return;
     }
 
-    options = componentOrOptions;
+    let { compose } = metaConfig;
+
+    if (compose === undefined) {
+      return;
+    }
+    let filename = compose[component].filename || 'compose.yaml';
+    let { root } = compose[component];
+    filesToUp.push('-f');
+    filesToUp.push(`${root}/${filename}`);
+  } else {
+    const SRC = Deno.env.get('SRC') || Deno.cwd();
+    const folders = await recursiveDirectoriesDiscovery(SRC);
+
+    for (const folder of folders) {
+      let metaConfig = await verifyIfMetaJsonExists(folder);
+      if (metaConfig === undefined) {
+        continue;
+      }
+
+      let { compose } = metaConfig;
+
+      for (const component in compose) {
+        let filename = compose[component].filename || 'compose.yaml';
+
+        // change the current directory to the folder
+        cd(folder);
+
+        await setSecretsOnLocal('local');
+
+        // now that the envrionment variables are set, we can continue
+
+        // we need to create a /temp/random_number.compose.yaml
+        const randomNumber = await createUUID(12);
+        const tempComposeFile = `/tmp/${randomNumber}.compose.yaml`;
+
+        // variable substitution
+        const composeFileContent = readFileSync(
+          `${folder}/${compose[component].root}/${filename}`,
+          'utf8'
+        );
+        const composeFileContentWithVariables = composeFileContent.replace(
+          /(\$\{\w+\})/g,
+          (match) => Deno.env.get(match.slice(2, -1)) || match
+        );
+
+        await Deno.writeTextFile(
+          tempComposeFile,
+          composeFileContentWithVariables
+        );
+
+        filesToUp.push(`-f`);
+        filesToUp.push(tempComposeFile);
+      }
+    }
   }
 
-  let { file, forceRecreate, detach } = options || {};
+  const baseCommand = ['docker', 'compose', ...filesToUp, 'up'];
 
-  if (file === undefined) {
-    file = 'compose.yaml';
-  }
-
-  let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
-
-  if (metaConfig === undefined) {
-    return;
-  }
-
-  let { compose } = metaConfig;
-  component = component || 'default';
-  await dockerComposeDown(component, { file, forceRecreate });
-  let { root } = compose[component];
-  const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'up'];
   if (forceRecreate) {
     baseCommand.push('--force-recreate');
   }
   if (detach) {
     baseCommand.push('--detach');
   }
+  if (build || all) {
+    baseCommand.push('--build');
+  }
+
   $.verbose = true;
+
   await $`${baseCommand}`;
 }
 
@@ -865,10 +927,11 @@ export default async function commandDocker(program: any) {
     .command('up')
     .description('docker compose up')
     .argument('[component]', 'Component to build')
-    .option('-f, --file [file]', 'docker compose file')
+    .option('--build', 'build before up')
     .option('--force-recreate', 'force recreate')
     .option('-e, --envfile [file]', 'env filename')
     .option('-d, --detach', 'detach')
+    .option('--all', 'all components')
     .action(dockerComposeUp);
 
   dockerCompose
