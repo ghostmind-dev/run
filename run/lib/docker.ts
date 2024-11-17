@@ -44,6 +44,7 @@ export interface DockerComposeUpOptions {
   forceRecreate?: boolean;
   detach?: boolean;
   all?: boolean;
+  group?: string;
 }
 
 export interface DockerComposeUpOptionsComponent
@@ -624,7 +625,7 @@ export async function dockerComposeUp(
     }
   }
 
-  let { forceRecreate, detach, all, build } = options || {};
+  let { forceRecreate, detach, all, build, group } = options || {};
 
   let filesToUp = [];
 
@@ -645,8 +646,7 @@ export async function dockerComposeUp(
     filesToUp.push('-f');
     filesToUp.push(`${root}/${filename}`);
   } else {
-    const SRC = Deno.env.get('SRC') || Deno.cwd();
-    const folders = await recursiveDirectoriesDiscovery(SRC);
+    const folders = await recursiveDirectoriesDiscovery(Deno.cwd());
 
     for (const folder of folders) {
       let metaConfig = await verifyIfMetaJsonExists(folder);
@@ -663,6 +663,16 @@ export async function dockerComposeUp(
         cd(folder);
 
         await setSecretsOnLocal('local');
+
+        if (group) {
+          if (
+            !compose[component].groups ||
+            compose[component].groups.length === 0 ||
+            !compose[component].groups.includes(group)
+          ) {
+            break;
+          }
+        }
 
         // now that the envrionment variables are set, we can continue
 
@@ -691,6 +701,12 @@ export async function dockerComposeUp(
     }
   }
 
+  if (filesToUp.length === 0) {
+    return;
+  }
+
+  const commandDown = ['docker', 'compose', ...filesToUp, 'down'];
+
   const baseCommand = ['docker', 'compose', ...filesToUp, 'up'];
 
   if (forceRecreate) {
@@ -704,6 +720,8 @@ export async function dockerComposeUp(
   }
 
   $.verbose = true;
+
+  await $`${commandDown}`;
 
   await $`${baseCommand}`;
 }
@@ -893,6 +911,43 @@ export async function dockerComposeBuild(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// DOCKER COMPOSE LOGS
+////////////////////////////////////////////////////////////////////////////////
+
+export async function dockerComposeLogs(component: any, options: any) {
+  //  get meta config
+  let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
+  if (metaConfig === undefined) {
+    return;
+  }
+  let { compose } = metaConfig;
+
+  if (!compose) {
+    return;
+  }
+
+  if (component === undefined) {
+    component = 'default';
+  }
+
+  let { root } = compose[component];
+
+  let filename = compose[component].filename || 'compose.yaml';
+
+  const baseCommand = [
+    'docker',
+    'compose',
+    '-f',
+    `${root}/${filename}`,
+    'logs',
+  ];
+
+  $.verbose = true;
+
+  await $`${baseCommand}`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -932,6 +987,10 @@ export default async function commandDocker(program: any) {
     .option('-e, --envfile [file]', 'env filename')
     .option('-d, --detach', 'detach')
     .option('--all', 'all components')
+    .option(
+      '-g, --group <group>',
+      'group to start. Can only be used with --all'
+    )
     .action(dockerComposeUp);
 
   dockerCompose
@@ -961,4 +1020,10 @@ export default async function commandDocker(program: any) {
     .action(dockerComposeBuild)
     .option('-f, --file [file]', 'docker compose file')
     .option('--cache', 'enable cache');
+
+  dockerCompose
+    .command('logs')
+    .argument('[component]', 'component to logs')
+    .description('docker compose logs')
+    .action(dockerComposeLogs);
 }
