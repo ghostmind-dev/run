@@ -118,15 +118,13 @@ export async function generateTreeCommands(
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function npm(program: any) {
+export default async function routine(program: any) {
   $.verbose = false;
   const routine = program.command('routine');
   routine
     .description('run npm scripts')
     .argument('<script...>', 'script to run')
-    .option('--parallel', 'Run scripts in parallel')
-    .option('--sequence', 'Run scripts in sequence')
-    .action(async (scripts: string[], options: any) => {
+    .action(async (scripts: string[], _options: any) => {
       $.verbose = false;
 
       Deno.env.set('FORCE_COLOR', '1');
@@ -147,7 +145,7 @@ export default async function npm(program: any) {
 
         if (command.startsWith('cd ')) {
           const directory = command.slice(3);
-          await cd(directory);
+          cd(directory);
           return;
         } else {
           const isCustomCommand = cmd`${command}`;

@@ -45,6 +45,7 @@ export interface DockerComposeUpOptions {
   detach?: boolean;
   all?: boolean;
   group?: string;
+  exclude?: string[];
 }
 
 export interface DockerComposeUpOptionsComponent
@@ -625,7 +626,7 @@ export async function dockerComposeUp(
     }
   }
 
-  let { forceRecreate, detach, all, build, group } = options || {};
+  let { forceRecreate, detach, all, build, group, exclude } = options || {};
 
   let filesToUp = [];
 
@@ -646,12 +647,20 @@ export async function dockerComposeUp(
     filesToUp.push('-f');
     filesToUp.push(`${root}/${filename}`);
   } else {
-    const folders = await recursiveDirectoriesDiscovery(Deno.cwd());
+    let folders = await recursiveDirectoriesDiscovery(Deno.cwd());
+
+    folders.push(Deno.cwd());
 
     for (const folder of folders) {
       let metaConfig = await verifyIfMetaJsonExists(folder);
       if (metaConfig === undefined) {
         continue;
+      }
+
+      if (exclude && exclude.length > 0) {
+        if (exclude.includes(metaConfig.name)) {
+          continue;
+        }
       }
 
       let { compose } = metaConfig;
@@ -720,6 +729,8 @@ export async function dockerComposeUp(
   }
 
   $.verbose = true;
+
+
 
   await $`${commandDown}`;
 
@@ -990,6 +1001,10 @@ export default async function commandDocker(program: any) {
     .option(
       '-g, --group <group>',
       'group to start. Can only be used with --all'
+    )
+    .option(
+      '--exclude <apps...>',
+      'apps to exclude. Can only be used with --all'
     )
     .action(dockerComposeUp);
 
