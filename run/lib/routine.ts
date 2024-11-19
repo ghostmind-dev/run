@@ -1,5 +1,8 @@
 import { $, cd, within } from 'npm:zx@8.1.0';
-import { verifyIfMetaJsonExists } from '../utils/divers.ts';
+import {
+  verifyIfMetaJsonExists,
+  recursiveDirectoriesDiscovery,
+} from '../utils/divers.ts';
 import { cmd } from './custom.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -29,22 +32,23 @@ export async function generateTreeCommands(
   scripts: string[],
   routineMap: any
 ): Promise<any> {
-  function resolveRoutine(task: string, routines: any): any {
+  async function resolveRoutine(task: string, routines: any): Promise<any> {
     const command = routines[task];
 
     if (!command) {
-      return task; // If it's not a routine, return the task itself
+      return task;
     }
 
-    // If the command starts with 'parallel ' or 'sequence ', handle them specially
     if (command.startsWith('parallel ')) {
       const parallelTasks = command
         .slice(9)
         .split(' ')
         .map((task: string) => task.trim());
       return {
-        tasks: parallelTasks.map((task: string) =>
-          resolveRoutine(task, routines)
+        tasks: await Promise.all(
+          parallelTasks.map((task: string) => {
+            return resolveRoutine(task, routines);
+          })
         ),
         mode: 'parallel',
       };
@@ -56,62 +60,124 @@ export async function generateTreeCommands(
         .split(' ')
         .map((task: string) => task.trim());
       return {
-        tasks: sequenceTasks.map((task: string) =>
-          resolveRoutine(task, routines)
+        tasks: await Promise.all(
+          sequenceTasks.map((task: string) => resolveRoutine(task, routines))
         ),
         mode: 'sequence',
       };
     }
 
-    // Split the command string by && for sequence
+    if (command.startsWith('every ')) {
+      const parallelTasks = command
+        .slice(6)
+        .split(' ')
+        .map((task: string) => task.trim());
+      let routinesTorun = [];
+      let appToExclude = [];
+
+      for (const task of parallelTasks) {
+        if (task.startsWith('!')) {
+          appToExclude.push(task.slice(1));
+        } else {
+          routinesTorun.push(task);
+        }
+      }
+
+      let directories = await recursiveDirectoriesDiscovery(Deno.cwd());
+
+      directories.push(Deno.cwd());
+
+      // // from command, extract 2 types of string. One starting with ! and one not.
+
+      let routinesToRun = [];
+      for (const directory of directories) {
+        const metaConfig = await verifyIfMetaJsonExists(directory);
+        if (!metaConfig) {
+          continue;
+        }
+
+        if (appToExclude.includes(metaConfig.name)) {
+          continue;
+        }
+
+        // verify if routine exists in metaConfig.routines
+        for (const routine of routinesTorun) {
+          if (metaConfig.routines[routine]) {
+            routinesToRun.push({
+              task: 'default',
+              routines: {
+                default: `cd ${directory} && ${metaConfig.routines[routine]}`,
+              },
+            });
+          }
+        }
+      }
+
+      return {
+        tasks: await Promise.all(
+          routinesToRun.map(async (defaultTask) => {
+            const routineResolved = await resolveRoutine(
+              defaultTask.task,
+              defaultTask.routines
+            );
+            console.log(routineResolved);
+            return routineResolved;
+          })
+        ),
+        mode: 'parallel',
+      };
+    }
+
     const sequenceParts = command
       .split('&&')
       .map((part: string) => part.trim());
     if (sequenceParts.length > 1) {
       return {
-        tasks: sequenceParts.map((part: string) =>
-          resolveRoutine(part, routines)
+        tasks: await Promise.all(
+          sequenceParts.map((part: string) => resolveRoutine(part, routines))
         ),
         mode: 'sequence',
       };
     }
 
-    // Split the command string by & for parallel
     const parallelParts = command.split('&').map((part: string) => part.trim());
     if (parallelParts.length > 1) {
       return {
-        tasks: parallelParts.map((part: any) => resolveRoutine(part, routines)),
+        tasks: await Promise.all(
+          parallelParts.map((part: any) => resolveRoutine(part, routines))
+        ),
         mode: 'parallel',
       };
     }
 
-    // If the command does not contain any of the above patterns, return the command itself
     return command;
   }
 
-  function buildTaskTree(tasks: string[], routines: any) {
-    return tasks.map((task: string) => {
-      if (routines[task]) {
-        return resolveRoutine(task, routines);
-      } else {
-        return task;
-      }
-    });
+  async function buildTaskTree(tasks: string[], routines: any) {
+    return await Promise.all(
+      tasks.map(async (task: string) => {
+        if (routines[task]) {
+          return await resolveRoutine(task, routines);
+        } else {
+          return task;
+        }
+      })
+    );
   }
 
-  function generateObjectTree(
+  async function generateObjectTree(
     tasks: string[],
     routines: any,
     initialMode = 'parallel'
   ) {
-    const taskTree = buildTaskTree(tasks, routines);
+    const taskTree = await buildTaskTree(tasks, routines);
     return {
       tasks: taskTree,
       mode: initialMode,
     };
   }
 
-  return generateObjectTree(scripts, routineMap);
+  return await generateObjectTree(scripts, routineMap);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

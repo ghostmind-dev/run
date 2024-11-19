@@ -626,89 +626,25 @@ export async function dockerComposeUp(
     }
   }
 
-  let { forceRecreate, detach, all, build, group, exclude } = options || {};
+  let { forceRecreate, detach, build } = options || {};
 
   let filesToUp = [];
 
-  if (!all) {
-    let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
+  let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
 
-    if (metaConfig === undefined) {
-      return;
-    }
-
-    let { compose } = metaConfig;
-
-    if (compose === undefined) {
-      return;
-    }
-    let filename = compose[component].filename || 'compose.yaml';
-    let { root } = compose[component];
-    filesToUp.push('-f');
-    filesToUp.push(`${root}/${filename}`);
-  } else {
-    let folders = await recursiveDirectoriesDiscovery(Deno.cwd());
-
-    folders.push(Deno.cwd());
-
-    for (const folder of folders) {
-      let metaConfig = await verifyIfMetaJsonExists(folder);
-      if (metaConfig === undefined) {
-        continue;
-      }
-
-      if (exclude && exclude.length > 0) {
-        if (exclude.includes(metaConfig.name)) {
-          continue;
-        }
-      }
-
-      let { compose } = metaConfig;
-
-      for (const component in compose) {
-        let filename = compose[component].filename || 'compose.yaml';
-
-        // change the current directory to the folder
-        cd(folder);
-
-        await setSecretsOnLocal('local');
-
-        if (group) {
-          if (
-            !compose[component].groups ||
-            compose[component].groups.length === 0 ||
-            !compose[component].groups.includes(group)
-          ) {
-            break;
-          }
-        }
-
-        // now that the envrionment variables are set, we can continue
-
-        // we need to create a /temp/random_number.compose.yaml
-        const randomNumber = await createUUID(12);
-        const tempComposeFile = `/tmp/${randomNumber}.compose.yaml`;
-
-        // variable substitution
-        const composeFileContent = readFileSync(
-          `${folder}/${compose[component].root}/${filename}`,
-          'utf8'
-        );
-        const composeFileContentWithVariables = composeFileContent.replace(
-          /(\$\{\w+\})/g,
-          (match) => Deno.env.get(match.slice(2, -1)) || match
-        );
-
-        await Deno.writeTextFile(
-          tempComposeFile,
-          composeFileContentWithVariables
-        );
-
-        filesToUp.push(`-f`);
-        filesToUp.push(tempComposeFile);
-      }
-    }
+  if (metaConfig === undefined) {
+    return;
   }
+
+  let { compose } = metaConfig;
+
+  if (compose === undefined) {
+    return;
+  }
+  let filename = compose[component].filename || 'compose.yaml';
+  let { root } = compose[component];
+  filesToUp.push('-f');
+  filesToUp.push(`${root}/${filename}`);
 
   if (filesToUp.length === 0) {
     return;
@@ -724,13 +660,11 @@ export async function dockerComposeUp(
   if (detach) {
     baseCommand.push('--detach');
   }
-  if (build || all) {
+  if (build) {
     baseCommand.push('--build');
   }
 
   $.verbose = true;
-
-
 
   await $`${commandDown}`;
 
@@ -742,10 +676,12 @@ export async function dockerComposeUp(
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function dockerComposeDown(component: any, options: any) {
-  let { file, forceRecreate } = options;
+  let { forceRecreate, all } = options;
 
-  if (file === undefined) {
-    file = 'compose.yaml';
+  let filesToDown: string[] = [];
+
+  if (component === undefined) {
+    component = 'default';
   }
 
   let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
@@ -756,16 +692,19 @@ export async function dockerComposeDown(component: any, options: any) {
 
   let { compose } = metaConfig;
 
-  component = component || 'default';
-
+  if (compose === undefined) {
+    return;
+  }
+  let filename = compose[component].filename || 'compose.yaml';
   let { root } = compose[component];
+  filesToDown.push('-f');
+  filesToDown.push(`${root}/${filename}`);
 
-  const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'down'];
-  if (forceRecreate) {
-    baseCommand.push('--force-recreate');
+  if (filesToDown.length === 0) {
+    return;
   }
 
-  $.verbose = true;
+  const baseCommand = ['docker', 'compose', ...filesToDown, 'down'];
 
   await $`${baseCommand}`;
 }
@@ -997,15 +936,6 @@ export default async function commandDocker(program: any) {
     .option('--force-recreate', 'force recreate')
     .option('-e, --envfile [file]', 'env filename')
     .option('-d, --detach', 'detach')
-    .option('--all', 'all components')
-    .option(
-      '-g, --group <group>',
-      'group to start. Can only be used with --all'
-    )
-    .option(
-      '--exclude <apps...>',
-      'apps to exclude. Can only be used with --all'
-    )
     .action(dockerComposeUp);
 
   dockerCompose
@@ -1013,9 +943,7 @@ export default async function commandDocker(program: any) {
     .description('docker compose down')
     .action(dockerComposeDown)
     .argument('[component]', 'Component to build')
-    .option('-f, --file <file>', 'docker compose file')
-    .option('--force-recreate', 'force recreate')
-    .option('-e, --envfile <file>', 'env filename');
+    .option('--force-recreate', 'force recreate');
 
   dockerCompose
     .command('exec')
