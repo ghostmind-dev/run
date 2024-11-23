@@ -31,46 +31,18 @@ export interface CustomOptionsEnv {
   [key: string]: string;
 }
 
-export interface CustomOptionsUtils {
-  extract: (inputName: string) => string | undefined;
-  has: (arg: string) => boolean;
-  cmd: (
-    template: string | TemplateStringsArray,
-    ...substitutions: any[]
-  ) => Promise<string[]>;
-  // start take a argument of type string or string[]
-  // start return an async function that take a config object
-  // start function being retur a Void Promise
-  // the config object has to property (commands, groups)
-  // the commands property is an object with key value pair
-  // the groups object is an object with key value pair
-  // value is an array of string
-
-  start: (config: CustomStartConfig) => Promise<void>;
-}
-
 export interface CustomOptions {
   env: CustomOptionsEnv;
   run?: string;
   main: typeof main;
-  utils: CustomOptionsUtils;
   metaConfig?: any;
   currentPath: string;
-  test?: boolean;
   extract: (inputName: string) => string | undefined;
   has: (arg: string) => boolean;
   cmd: (
     template: string | TemplateStringsArray,
     ...substitutions: any[]
   ) => Promise<string[]>;
-  // start take a argument of type string or string[]
-  // start return an async function that take a config object
-  // start function being retur a Void Promise
-  // the config object has to property (commands, groups)
-  // the commands property is an object with key value pair
-  // the groups object is an object with key value pair
-  // value is an array of string
-
   start: (config: CustomStartConfig) => Promise<void>;
 }
 
@@ -423,23 +395,18 @@ async function runScript(script: string, argument: string[], options: any) {
 
     cd(currentPath);
 
-    const utils = {
-      extract: await extract(argument),
-      has: has(argument),
-      cmd,
-      start: await start(argument, options),
-    };
-
     let env = Deno.env.toObject();
 
     await custom_function.default(argument, {
+      metaConfig,
+      currentPath,
       env,
       run,
       main,
-      utils,
-      ...utils,
-      metaConfig,
-      currentPath,
+      cmd,
+      extract: await extract(argument),
+      has: has(argument),
+      start: await start(argument, options),
     });
   } catch (e) {
     console.log(e);
