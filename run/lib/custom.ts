@@ -54,7 +54,6 @@ export interface CustomOptions {
   run?: string;
   main: typeof main;
   utils: CustomOptionsUtils;
-  input?: string[];
   metaConfig?: any;
   currentPath: string;
   test?: boolean;
@@ -79,7 +78,6 @@ export type CustomArgs = string[];
 
 export interface CommandOptions {
   priority?: number;
-  groups?: string[];
 }
 
 export interface CustomStartConfigCommandFunction extends CommandOptions {
@@ -111,7 +109,7 @@ export interface CustomStart {
 }
 
 export interface CustomCommanderOptions {
-  input?: string[];
+  root?: string;
   all?: boolean;
   dev?: boolean;
 }
@@ -139,18 +137,6 @@ export async function start(
     if (args === undefined) {
       console.log('no args');
       return;
-    }
-
-    let group_from_command = [];
-
-    for (let command in commands) {
-      let { groups = [] } = commands[
-        command
-      ] as CustomStartConfigCommandCommand;
-
-      if (groups.length > 0) {
-        group_from_command.push(...groups);
-      }
     }
 
     if (all === true) {
@@ -273,22 +259,22 @@ export async function start(
 
 /**
  * Extract the value of an input
- * @param {string[]} input - The input to extract
- * @param {string[]} argument - The argument to extract
+ * @param {string[]}   - The arguments to extract
+ * @param {string} inputName - The input name to extract
  * @returns {function(string): any} - A function that extract the value of an input
  * @returns {Promise<any>} - The value of the input
  */
 
-export async function extract(input: string[]): Promise<any> {
-  return async function extract(inputName: string) {
+export async function extract(args: string[]): Promise<any> {
+  return function extract(inputName: string) {
     // return the value of the input
     // format of each input is: INPUT_NAME=INPUT_VALUE
 
-    if (input === undefined) {
+    if (args === undefined) {
       return undefined;
     }
 
-    let foundElement = _.find(input, (element: any) => {
+    let foundElement = _.find(args, (element: any) => {
       // if the element is not a string
       // return false
       if (typeof element !== 'string') {
@@ -319,18 +305,18 @@ export async function extract(input: string[]): Promise<any> {
 
 /**
  * Verify if the argumentation is equal to the argument
- * @param {string | string[]} argumentation - The argumentation to verify
+ * @param {string[]} args - The argumentation to verify
  * @returns {function(string): boolean} - A function that verify if the argumentation is equal to the argument
  */
 
-export function has(argumentation: string[]): (arg: string) => boolean {
+export function has(args: string[]): (arg: string) => boolean {
   return function (arg: string): boolean {
-    if (argumentation === undefined) {
+    if (args === undefined) {
       return false;
     }
 
-    if (Array.isArray(argumentation)) {
-      return argumentation.includes(arg);
+    if (Array.isArray(args)) {
+      return args.includes(arg);
     }
 
     return false;
@@ -385,7 +371,7 @@ async function runScript(script: string, argument: string[], options: any) {
 
   let currentPath = Deno.cwd();
 
-  let { input, dev } = options;
+  let { dev } = options;
 
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -438,7 +424,7 @@ async function runScript(script: string, argument: string[], options: any) {
     cd(currentPath);
 
     const utils = {
-      extract: await extract(input),
+      extract: await extract(argument),
       has: has(argument),
       cmd,
       start: await start(argument, options),
@@ -446,15 +432,12 @@ async function runScript(script: string, argument: string[], options: any) {
 
     let env = Deno.env.toObject();
 
-    input = input === undefined ? [] : input;
-
     await custom_function.default(argument, {
       env,
       run,
       main,
       utils,
       ...utils,
-      input,
       metaConfig,
       currentPath,
     });
@@ -473,7 +456,6 @@ export default async function commandScript(program: any) {
     .description('run custom script')
     .argument('[script]', 'script to perform')
     .argument('[argument...]', 'arguments for the script')
-    .option('-i, --input <items...>', 'multiple arguments for the script')
     .option('--all', 'run all start commands')
     .option('--dev', 'run in dev mode')
     .option('--root <path>', 'root path for the custom script')
