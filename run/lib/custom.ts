@@ -49,23 +49,15 @@ export interface CustomOptionsUtils {
   start: (config: CustomStartConfig) => Promise<void>;
 }
 
-export interface CustomOptionsUrl {
-  docker: string;
-  local: string;
-  tunnel: string;
-}
-
 export interface CustomOptions {
   env: CustomOptionsEnv;
   run?: string;
-  url: CustomOptionsUrl;
   main: typeof main;
   utils: CustomOptionsUtils;
   input?: string[];
   metaConfig?: any;
   currentPath: string;
   test?: boolean;
-  port: string;
   extract: (inputName: string) => string | undefined;
   has: (arg: string) => boolean;
   cmd: (
@@ -83,7 +75,7 @@ export interface CustomOptions {
   start: (config: CustomStartConfig) => Promise<void>;
 }
 
-export type CustomArgs = string | string[];
+export type CustomArgs = string[];
 
 export interface CommandOptions {
   priority?: number;
@@ -122,7 +114,6 @@ export interface CustomCommanderOptions {
   input?: string[];
   all?: boolean;
   dev?: boolean;
-  test?: boolean;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -131,7 +122,7 @@ export interface CustomCommanderOptions {
 
 /**
  * Start function
- * @param {string | string[]} args - The arguments for the start function
+ * @param {string[]} args - The arguments for the start function
  * @param {CustomCommanderOptions} options - The options for the start function
  * @returns {CustomStart} - The start function
  */
@@ -166,23 +157,6 @@ export async function start(
       let allCommands = Object.keys(commands);
 
       commandsToRun.push(...allCommands);
-    } else if (typeof args === 'string') {
-      if (group_from_command.includes(args)) {
-        for (let command in commands) {
-          let { groups = [] } = commands[
-            command
-          ] as CustomStartConfigCommandCommand;
-
-          if (groups.includes(args)) {
-            commandsToRun.push(command);
-          }
-        }
-      } else if (commands[args] !== undefined) {
-        commandsToRun.push(args);
-      } else {
-        console.log('command or group does not exist');
-        return;
-      }
     } else if (Array.isArray(args)) {
       // verify if one of the args is a group
       // the first group found will be run
@@ -300,7 +274,7 @@ export async function start(
 /**
  * Extract the value of an input
  * @param {string[]} input - The input to extract
- * @param {string | string[]} argument - The argument to extract
+ * @param {string[]} argument - The argument to extract
  * @returns {function(string): any} - A function that extract the value of an input
  * @returns {Promise<any>} - The value of the input
  */
@@ -309,6 +283,11 @@ export async function extract(input: string[]): Promise<any> {
   return async function extract(inputName: string) {
     // return the value of the input
     // format of each input is: INPUT_NAME=INPUT_VALUE
+
+    if (input === undefined) {
+      return undefined;
+    }
+
     let foundElement = _.find(input, (element: any) => {
       // if the element is not a string
       // return false
@@ -344,14 +323,12 @@ export async function extract(input: string[]): Promise<any> {
  * @returns {function(string): boolean} - A function that verify if the argumentation is equal to the argument
  */
 
-export function has(argumentation: any): (arg: string) => boolean {
+export function has(argumentation: string[]): (arg: string) => boolean {
   return function (arg: string): boolean {
     if (argumentation === undefined) {
       return false;
     }
-    if (typeof argumentation === 'string') {
-      return argumentation === arg;
-    }
+
     if (Array.isArray(argumentation)) {
       return argumentation.includes(arg);
     }
@@ -398,11 +375,7 @@ export function cmd(
  * @param {Object} options - The options for the script
  */
 
-async function runScript(
-  script: string,
-  argument: string[] | string,
-  options: any
-) {
+async function runScript(script: string, argument: string[], options: any) {
   if (!script) {
     console.log('specify a script to run');
     return;
@@ -412,7 +385,7 @@ async function runScript(
 
   let currentPath = Deno.cwd();
 
-  let { test, input, dev } = options;
+  let { input, dev } = options;
 
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -430,35 +403,6 @@ async function runScript(
 
   const run =
     dev === true ? `${SRC}/dev/run/bin/cmd.ts` : `${HOME}/run/run/bin/cmd.ts`;
-
-  const port = Deno.env.get('PORT');
-
-  let url: CustomOptionsUrl = {
-    docker: `http://host.docker.internal`,
-    local: `http://localhost`,
-    tunnel: await getTunnelUrl(),
-  };
-
-  async function getTunnelUrl(): Promise<string> {
-    const defaultTunnelUrl = 'http://whereisthetunnelgotdamnit';
-    if (metaConfig?.tunnel) {
-      let subdomain = metaConfig.tunnel.subdomain;
-
-      let tunnelUrl = defaultTunnelUrl;
-
-      if (subdomain) {
-        tunnelUrl = `https://${subdomain}.${Deno.env.get(
-          'CLOUDFLARED_TUNNEL_URL'
-        )}`;
-      } else {
-        tunnelUrl = `https://${Deno.env.get('CLOUDFLARED_TUNNEL_URL')}`;
-      }
-
-      return tunnelUrl;
-    } else {
-      return defaultTunnelUrl;
-    }
-  }
 
   const { root }: any = {
     ...customConfigDefault,
@@ -491,10 +435,6 @@ async function runScript(
 
     $.verbose = true;
 
-    if (argument.length === 1) {
-      argument = argument[0];
-    }
-
     cd(currentPath);
 
     const utils = {
@@ -511,12 +451,9 @@ async function runScript(
     await custom_function.default(argument, {
       env,
       run,
-      url,
-      test,
       main,
       utils,
       ...utils,
-      port,
       input,
       metaConfig,
       currentPath,
@@ -539,7 +476,6 @@ export default async function commandScript(program: any) {
     .option('-i, --input <items...>', 'multiple arguments for the script')
     .option('--all', 'run all start commands')
     .option('--dev', 'run in dev mode')
-    .option('--test', 'run in test mode')
     .option('--root <path>', 'root path for the custom script')
     .action(runScript);
 }
