@@ -304,6 +304,25 @@ export default async function misc(program: any) {
       console.log('URL is ready!');
       Deno.exit(0);
     });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // STOP A PROCESS RUNNING ON A SPECIFIC PORT
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('stop')
+    .description('stop a process running on a specific port')
+    .argument('<port>', 'port to stop')
+    .action(async (port: number) => {
+      const processExists = (await $`lsof -ti:${port}`.exitCode) === 0;
+
+      if (processExists) {
+        console.log(`Found process on port ${port}, killing it...`);
+        await $`lsof -ti:${port} | xargs kill -9`;
+      } else {
+        console.log(`No existing process on port ${port}`);
+      }
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
