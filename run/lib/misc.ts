@@ -267,13 +267,30 @@ export default async function misc(program: any) {
     .command('wait')
     .description('wait for a url to be ready')
     .argument('<url>', 'url to wait for')
-    .action(async (target: string) => {
+    .option('--mode <mode>', 'mode of the wait', 'deno')
+    .action(async (target: string, options: any) => {
+      let mode = options.mode || 'deno';
+
       async function isUrlReady() {
-        try {
-          const response = await fetch(target);
-          return response.ok;
-        } catch {
-          return false;
+        if (mode === 'fetch') {
+          try {
+            const response = await fetch(target);
+            return response.ok;
+          } catch {
+            return false;
+          }
+        } else {
+          const url = new URL(target);
+          const hostname = url.hostname;
+          const port = parseInt(url.port) || 80;
+
+          try {
+            const conn = await Deno.connect({ hostname, port });
+            conn.close();
+            return true;
+          } catch {
+            return false;
+          }
         }
       }
 
