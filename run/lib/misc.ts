@@ -323,6 +323,20 @@ export default async function misc(program: any) {
         console.log(`No existing process on port ${port}`);
       }
     });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // GENERATE .env.template
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('template')
+    .description('generate .env.template')
+    .argument('[env]', 'environment file to use', '.env.prod')
+    .action(async (env: string) => {
+      $.verbose = true;
+
+      await $`rm -f .env.template && cp ${env} .env.template && sed -i 's/=.*/=/' .env.template`;
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
