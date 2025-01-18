@@ -189,10 +189,9 @@ export default async function routine(program: any) {
   const routine = program.command('routine');
   routine
     .description('run npm scripts')
-    .argument('<script...>', 'script to run')
+    .argument('[script...]', 'script to run')
     .action(async (scripts: string[], _options: any) => {
       $.verbose = false;
-
       Deno.env.set('FORCE_COLOR', '1');
 
       const routines = metaConfig?.routines;
@@ -200,6 +199,28 @@ export default async function routine(program: any) {
       if (!routines) {
         console.log('No routines found');
         Deno.exit(0);
+      }
+
+      // Add interactive script selection when no scripts are provided
+      if (scripts.length === 0) {
+        const inquirer = await import('npm:inquirer');
+        const availableScripts = Object.keys(routines);
+
+        if (availableScripts.length === 0) {
+          console.log('No scripts available to run');
+          Deno.exit(0);
+        }
+
+        const { selectedScript } = await inquirer.default.prompt([
+          {
+            type: 'list',
+            name: 'selectedScript',
+            message: 'Select a script to run:',
+            choices: availableScripts,
+          },
+        ]);
+
+        scripts = [selectedScript];
       }
 
       const result = await generateTreeCommands(scripts, routines);
@@ -253,9 +274,11 @@ export default async function routine(program: any) {
       executeTasks(JSON.parse(JSON.stringify(result)))
         .then(() => {
           console.log('All tasks executed successfully.');
+          Deno.exit(0);
         })
         .catch((error) => {
           console.error('Error executing tasks:', error);
+          Deno.exit(1);
         });
     });
 }
