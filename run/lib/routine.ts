@@ -211,7 +211,7 @@ export default async function routine(program: any) {
           Deno.exit(0);
         }
 
-        const { selectedScript } = await inquirer.default.prompt([
+        const { selectedScript } = await inquirer.prompt([
           {
             type: 'list',
             name: 'selectedScript',
