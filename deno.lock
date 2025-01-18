@@ -4,7 +4,9 @@
     "jsr:@std/assert@~0.225.2": "0.225.3",
     "jsr:@std/path@0.225.1": "0.225.1",
     "npm:@google-cloud/storage@7.11.1": "7.11.1",
+    "npm:@types/node@*": "22.5.4",
     "npm:cli-table3@0.6.5": "0.6.5",
+    "npm:commander@12.1.0": "12.1.0",
     "npm:dotenv-expand@11.0.6": "11.0.6",
     "npm:dotenv@16.4.5": "16.4.5",
     "npm:fs-extra@11.2.0": "11.2.0",
@@ -16,6 +18,7 @@
     "npm:nanoid@5.0.7": "5.0.7",
     "npm:prettier@3.3.2": "3.3.2",
     "npm:yaml@2.4.2": "2.4.2",
+    "npm:zx@*": "8.1.0",
     "npm:zx@8.1.0": "8.1.0"
   },
   "jsr": {
@@ -252,6 +255,9 @@
       "dependencies": [
         "delayed-stream"
       ]
+    },
+    "commander@12.1.0": {
+      "integrity": "sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA=="
     },
     "debug@4.4.0": {
       "integrity": "sha512-6WTZ/IxCY/T6BALoZHaE4ctp9xm+Z5kY/pzYaCHRFeyVhojxlrm+46y68HA6hr0TcwEssoxNiDEUJQjfPZ/RYA==",

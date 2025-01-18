@@ -1,4 +1,5 @@
 import { $, cd, within } from 'npm:zx@8.1.0';
+import inquirer from 'npm:inquirer@9.2.22';
 import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
@@ -203,7 +204,6 @@ export default async function routine(program: any) {
 
       // Add interactive script selection when no scripts are provided
       if (scripts.length === 0) {
-        const inquirer = await import('npm:inquirer');
         const availableScripts = Object.keys(routines);
 
         if (availableScripts.length === 0) {
