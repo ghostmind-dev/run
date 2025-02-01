@@ -4,6 +4,7 @@
     "jsr:@std/assert@~0.225.2": "0.225.3",
     "jsr:@std/path@0.225.1": "0.225.1",
     "npm:@google-cloud/storage@7.11.1": "7.11.1",
+    "npm:@google-cloud/storage@7.15.0": "7.15.0",
     "npm:@types/node@*": "22.5.4",
     "npm:cli-table3@0.6.5": "0.6.5",
     "npm:commander@12.1.0": "12.1.0",
@@ -51,6 +52,26 @@
     },
     "@google-cloud/storage@7.11.1": {
       "integrity": "sha512-tibLSvgw7nDohMyIelt26kBpJ59YGWA2Rzep++DFNzEzKaSuCSp56Se9iM13ZlM3j5nLzR21IBkpRN58CmvCIw==",
+      "dependencies": [
+        "@google-cloud/paginator",
+        "@google-cloud/projectify",
+        "@google-cloud/promisify",
+        "abort-controller",
+        "async-retry",
+        "duplexify",
+        "fast-xml-parser",
+        "gaxios",
+        "google-auth-library",
+        "html-entities",
+        "mime",
+        "p-limit",
+        "retry-request",
+        "teeny-request",
+        "uuid@8.3.2"
+      ]
+    },
+    "@google-cloud/storage@7.15.0": {
+      "integrity": "sha512-/j/+8DFuEOo33fbdX0V5wjooOoFahEaMEdImHBmM2tH9MPHJYNtmXOf2sGUmZmiufSukmBEvdlzYgDkkgeBiVQ==",
       "dependencies": [
         "@google-cloud/paginator",
         "@google-cloud/projectify",

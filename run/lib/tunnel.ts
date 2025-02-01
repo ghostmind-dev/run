@@ -5,7 +5,6 @@ import {
   setSecretsOnLocal,
 } from '../utils/divers.ts';
 import yaml from 'npm:js-yaml@4.1.0';
-import meta from './meta.ts';
 
 ///////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
