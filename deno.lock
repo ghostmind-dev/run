@@ -3,7 +3,6 @@
   "specifiers": {
     "jsr:@std/assert@~0.225.2": "0.225.3",
     "jsr:@std/path@0.225.1": "0.225.1",
-    "npm:@google-cloud/storage@7.11.1": "7.11.1",
     "npm:@google-cloud/storage@7.15.0": "7.15.0",
     "npm:@types/node@*": "22.5.4",
     "npm:cli-table3@0.6.5": "0.6.5",
@@ -11,7 +10,6 @@
     "npm:dotenv-expand@11.0.6": "11.0.6",
     "npm:dotenv@16.4.5": "16.4.5",
     "npm:fs-extra@11.2.0": "11.2.0",
-    "npm:inquirer@*": "9.2.22",
     "npm:inquirer@9.2.22": "9.2.22",
     "npm:js-yaml@4.1.0": "4.1.0",
     "npm:jsonfile@6.1.0": "6.1.0",
@@ -50,26 +48,6 @@
     "@google-cloud/promisify@4.0.0": {
       "integrity": "sha512-Orxzlfb9c67A15cq2JQEyVc7wEsmFBmHjZWZYQMUyJ1qivXyMwdyNOs9odi79hze+2zqdTtu1E19IM/FtqZ10g=="
     },
-    "@google-cloud/storage@7.11.1": {
-      "integrity": "sha512-tibLSvgw7nDohMyIelt26kBpJ59YGWA2Rzep++DFNzEzKaSuCSp56Se9iM13ZlM3j5nLzR21IBkpRN58CmvCIw==",
-      "dependencies": [
-        "@google-cloud/paginator",
-        "@google-cloud/projectify",
-        "@google-cloud/promisify",
-        "abort-controller",
-        "async-retry",
-        "duplexify",
-        "fast-xml-parser",
-        "gaxios",
-        "google-auth-library",
-        "html-entities",
-        "mime",
-        "p-limit",
-        "retry-request",
-        "teeny-request",
-        "uuid@8.3.2"
-      ]
-    },
     "@google-cloud/storage@7.15.0": {
       "integrity": "sha512-/j/+8DFuEOo33fbdX0V5wjooOoFahEaMEdImHBmM2tH9MPHJYNtmXOf2sGUmZmiufSukmBEvdlzYgDkkgeBiVQ==",
       "dependencies": [
@@ -90,8 +68,8 @@
         "uuid@8.3.2"
       ]
     },
-    "@inquirer/figures@1.0.9": {
-      "integrity": "sha512-BXvGj0ehzrngHTPTDqUoDT3NXL8U0RxUk2zJm2A66RhCEIWdtU1v6GuUqNAgArW4PQ9CinqIWyHdQgdwOj06zQ=="
+    "@inquirer/figures@1.0.10": {
+      "integrity": "sha512-Ey6176gZmeqZuY/W/nZiUyvmb1/qInjcpiZjXWi6nON+nxJpD1bxtSoBxNliGISae32n6OwbY+TSXPZ1CfS4bw=="
     },
     "@ljharb/through@2.3.13": {
       "integrity": "sha512-/gKJun8NNiWGZJkGzI/Ragc53cOdcLNdzjLaIa+GEjguQs0ulsurx8WN0jijdK9yPqDvziX995sMRLyLt1uZMQ==",
@@ -118,8 +96,8 @@
         "@types/node@22.5.4"
       ]
     },
-    "@types/node@22.10.7": {
-      "integrity": "sha512-V09KvXxFiutGp6B7XkpaDXlNadZxrzajcY50EuoLIpQ6WWYCSvf19lVIazzfIzQvhUN2HjX12spLojTnhuKlGg==",
+    "@types/node@22.13.0": {
+      "integrity": "sha512-ClIbNe36lawluuvq3+YYhnIN2CELi+6q8NpnM7PYp4hBn/TatfboPgVSm2rwKRfnV2M+Ty9GWDFI64KEe+kysA==",
       "dependencies": [
         "undici-types@6.20.0"
       ]
@@ -406,10 +384,11 @@
         "uuid@9.0.1"
       ]
     },
-    "gcp-metadata@6.1.0": {
-      "integrity": "sha512-Jh/AIwwgaxan+7ZUUmRLCjtchyDiqh4KjBJ5tW3plBZb5iL/BPcso8A5DlzeD9qlw0duCamnNdpFjxwaT0KyKg==",
+    "gcp-metadata@6.1.1": {
+      "integrity": "sha512-a4tiq7E0/5fTjxPAaH4jpjkSv/uCaU2p5KC6HVGrvl0cDjA8iBZv4vv1gyzlmK0ZUKqwpOyQMKzZQe3lTit77A==",
       "dependencies": [
         "gaxios",
+        "google-logging-utils",
         "json-bigint"
       ]
     },
@@ -435,8 +414,8 @@
         "es-object-atoms"
       ]
     },
-    "google-auth-library@9.15.0": {
-      "integrity": "sha512-7ccSEJFDFO7exFbO6NRyC+xH8/mZ1GZGG2xxx9iHxZWcjUjJpjWxIMw3cofAKcueZ6DATiukmmprD7yavQHOyQ==",
+    "google-auth-library@9.15.1": {
+      "integrity": "sha512-Jb6Z0+nvECVz+2lzSMt9u98UsoakXxA2HGHMCxh+so3n90XgYWkq5dur19JAJV7ONiJY22yBTyJB1TSkvPq9Ng==",
       "dependencies": [
         "base64-js",
         "ecdsa-sig-formatter",
@@ -445,6 +424,9 @@
         "gtoken",
         "jws"
       ]
+    },
+    "google-logging-utils@0.0.2": {
+      "integrity": "sha512-NEgUnEcBiP5HrPzufUkBzJOD/Sxsco3rLNo1F1TNf7ieU8ryUzBhqba8r756CjLX7rn3fHl6iLEwPYuqpoKgQQ=="
     },
     "gopd@1.2.0": {
       "integrity": "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg=="
@@ -837,7 +819,7 @@
       "integrity": "sha512-2BCoOK6JTWikAkwPCV2dFr+1ou29WoY+6XltLu+Ou9dvxrqm/p+HuHCgBtMRMIVFexQzUSGfB5VbYeY8XmGBPQ==",
       "dependencies": [
         "@types/fs-extra",
-        "@types/node@22.10.7"
+        "@types/node@22.13.0"
       ]
     }
   }

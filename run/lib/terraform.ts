@@ -8,7 +8,6 @@ import {
 import { getAppName } from '../utils/divers.ts';
 import { getDockerImageDigest } from '../main.ts';
 import _ from 'npm:lodash@4.17.21';
-import { Storage } from 'npm:@google-cloud/storage@7.15.0';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -366,47 +365,6 @@ export async function cleanDotTerraformFolders() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// UNLOCK TERRAFORM
-////////////////////////////////////////////////////////////////////////////////
-
-export async function terraformUnlock(component: string, options: any) {
-  let { env } = options;
-
-  const storage = new Storage({});
-
-  // read the meta.json file
-
-  const metaConfig = await verifyIfMetaJsonExists(currentPath);
-
-  if (metaConfig === undefined) {
-    return;
-  }
-
-  const { id } = metaConfig;
-
-  if (env === undefined) {
-    env = Deno.env.get('ENVIRONMENT');
-  }
-
-  const filename = `${id}/${env}/terraform/${component}/default.tflock`;
-
-  const bucketName: any = Deno.env.get('TERRAFORM_BUCKET_NAME');
-
-  const bucket = storage.bucket(bucketName);
-  const file = bucket.file(filename);
-
-  const [exists] = await file.exists();
-  if (!exists) {
-    console.log(`File ${filename} does not exist.`);
-    return;
-  }
-
-  await file.delete();
-
-  console.log(`gs://${bucketName}/${filename} deleted.`);
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -451,11 +409,4 @@ export default async function commandTerraform(program: any) {
     .option('--clean', 'delete the .terraform folder before destroy')
     .description('terminate the infrastructure')
     .action(terraformDestroy);
-
-  terraform
-    .command('unlock')
-    .description('delete the lock file')
-    .argument('[component]', 'component to unlock')
-    .action(terraformUnlock)
-    .option('--env <env>', 'environment');
 }

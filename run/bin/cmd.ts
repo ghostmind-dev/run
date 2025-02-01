@@ -66,7 +66,7 @@ await commandMachine(program);
 await commandMeta(program);
 await commandMisc(program);
 await commandRoutine(program);
-// await commandTerraform(program);
+await commandTerraform(program);
 await commandTunnel(program);
 await commmandVault(program);
 
