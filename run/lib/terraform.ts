@@ -8,7 +8,7 @@ import {
 import { getAppName } from '../utils/divers.ts';
 import { getDockerImageDigest } from '../main.ts';
 import _ from 'npm:lodash@4.17.21';
-import { Storage } from 'npm:@google-cloud/storage@7.11.1';
+import { Storage } from 'npm:@google-cloud/storage@7.15.0';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
