@@ -916,6 +916,45 @@ export async function dockerComposeLogs(component: any, options: any) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// DOCKER BUILD
+////////////////////////////////////////////////////////////////////////////////
+
+export interface DockerBuildOptions {
+  component?: string;
+}
+
+export async function dockerBuild(
+  componentOrOptions?: string | DockerBuildOptions,
+  options?: DockerBuildOptions
+) {
+  let component: string;
+
+  // Handle different input types
+  if (typeof componentOrOptions === 'string') {
+    component = componentOrOptions;
+    options = options || {};
+  } else {
+    options = componentOrOptions || {};
+    component = options.component || 'default';
+  }
+
+  const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(
+    component
+  );
+
+  const baseCommand = [
+    'docker',
+    'build',
+    `--file=${dockerfile}`,
+    `--tag=${image}`,
+    dockerContext,
+  ];
+
+  $.verbose = true;
+  await $`${baseCommand}`;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -925,7 +964,7 @@ export default async function commandDocker(program: any) {
 
   docker
     .command('register')
-    .description('build and push docker image')
+    .description('build and push docker image with buildx')
     .option('-a, --all', 'Build all docker images')
     .option('--build-args <build_args...>', 'build arguments')
     .option('--amd64', 'build amd64 docker image')
@@ -942,6 +981,12 @@ export default async function commandDocker(program: any) {
       'component to build. It has priority over --component'
     )
     .action(dockerRegister);
+
+  docker
+    .command('build')
+    .description('docker build commands')
+    .argument('[component]', 'component to build')
+    .action(dockerBuild);
 
   const dockerCompose = docker.command('compose');
   dockerCompose.description('docker compose commands');
