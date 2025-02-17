@@ -56,12 +56,24 @@ export default async function tunnel(program: any) {
     $.verbose = true;
     let ingress = [];
     if (options.all) {
-      const directories = await withMetaMatching({ property: 'tunnel' });
+      const inADevcontainer = Deno.env.get('REMOTE_CONTAINERS');
+
+      if (!inADevcontainer) {
+        console.log(
+          "This commabnd cannot be used out of a devcontainer, please use the 'dev run tunnel run --name <name>' command instead"
+        );
+        return;
+      }
+
+      const directories = await withMetaMatching({
+        property: 'tunnel',
+        path: '/workspaces',
+      });
+
       for (const directory of directories) {
         cd(directory);
         await setSecretsOnLocal('local');
         const metaConfig: any = await verifyIfMetaJsonExists(directory);
-
         for (const tunnel in metaConfig.tunnel) {
           await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${metaConfig.tunnel[tunnel].hostname}`;
           ingress.push({
