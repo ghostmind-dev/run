@@ -21,12 +21,6 @@ let currentPath = Deno.cwd();
 cd(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
-// CURRENT METADATA
-////////////////////////////////////////////////////////////////////////////////
-
-let metaConfig = await verifyIfMetaJsonExists(currentPath);
-
-////////////////////////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////////////////////////
 export async function generateTreeCommands(
@@ -34,6 +28,12 @@ export async function generateTreeCommands(
   routineMap: any
 ): Promise<any> {
   async function resolveRoutine(task: string, routines: any): Promise<any> {
+    ////////////////////////////////////////////////////////////////////////////////
+    // CURRENT METADATA
+    ////////////////////////////////////////////////////////////////////////////////
+
+    let metaConfig = await verifyIfMetaJsonExists(currentPath);
+
     const command = routines[task];
 
     if (!command) {
@@ -195,7 +195,11 @@ export default async function routine(program: any) {
       $.verbose = false;
       Deno.env.set('FORCE_COLOR', '1');
 
+      let metaConfig = await verifyIfMetaJsonExists(currentPath);
+
       const routines = metaConfig?.routines;
+
+      console.log(routines);
 
       if (!routines) {
         console.log('No routines found');
