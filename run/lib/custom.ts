@@ -425,7 +425,7 @@ export default async function commandScript(program: any) {
     .argument('[argument...]', 'arguments for the script')
     .option('--all', 'run all start commands')
     .option('--dev', 'run in dev mode')
-    .option('--root <path>', 'root path for the custom script')
+    .option('-r,--root <path>', 'root path for the custom script')
     .action(runScript);
 }
 

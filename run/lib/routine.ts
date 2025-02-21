@@ -199,8 +199,6 @@ export default async function routine(program: any) {
 
       const routines = metaConfig?.routines;
 
-      console.log(routines);
-
       if (!routines) {
         console.log('No routines found');
         Deno.exit(0);
