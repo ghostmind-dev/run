@@ -1,26 +1,17 @@
 {
   "name": "@ghostmind/run",
-  "version": "0.3.20",
+  "version": "0.3.21",
   "license": "MIT",
   "exports": {
     ".": "./run/main.ts",
     "./cmd": "./run/bin/cmd.ts"
   },
   "lint": {
-    "include": [
-      "**/run/**",
-      "**/.devcontainer/**"
-    ],
-    "exclude": [
-      "**/run/test/**"
-    ],
+    "include": ["**/run/**", "**/.devcontainer/**"],
+    "exclude": ["**/run/test/**"],
     "rules": {
-      "tags": [
-        "recommended"
-      ],
-      "include": [
-        "ban-untagged-todo"
-      ],
+      "tags": ["recommended"],
+      "include": ["ban-untagged-todo"],
       "exclude": [
         "no-unused-vars",
         "no-explicit-any",

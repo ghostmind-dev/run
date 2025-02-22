@@ -1,9 +1,9 @@
 #!/usr/bin/env -S deno run --allow-all
 
-import { $ } from 'npm:zx@8.1.0';
-import { Command } from 'npm:commander@12.1.0';
-import { setSecretsOnLocal } from '../utils/divers.ts';
-import { argv } from 'node:process';
+import { $ } from "npm:zx@8.1.0";
+import { Command } from "npm:commander@12.1.0";
+import { setSecretsOnLocal } from "../utils/divers.ts";
+import { argv } from "node:process";
 
 ////////////////////////////////////////////////////////////////////////////////
 // VERBOSE BY DEFAULT
@@ -21,37 +21,37 @@ const program = new Command();
 // COMMAND
 ////////////////////////////////////////////////////////////////////////////////
 
-import commandAction from '../lib/action.ts';
-import commandCustom from '../lib/custom.ts';
-import commandDocker from '../lib/docker.ts';
-import commandMachine from '../lib/machine.ts';
-import commandMeta from '../lib/meta.ts';
-import commandMisc from '../lib/misc.ts';
-import commandRoutine from '../lib/routine.ts';
-import commandTerraform from '../lib/terraform.ts';
-import commandTunnel from '../lib/tunnel.ts';
-import commmandVault from '../lib/vault.ts';
+import commandAction from "../lib/action.ts";
+import commandCustom, { commandScript } from "../lib/custom.ts";
+import commandDocker from "../lib/docker.ts";
+import commandMachine from "../lib/machine.ts";
+import commandMeta from "../lib/meta.ts";
+import commandMisc from "../lib/misc.ts";
+import commandRoutine from "../lib/routine.ts";
+import commandTerraform from "../lib/terraform.ts";
+import commandTunnel from "../lib/tunnel.ts";
+import commmandVault from "../lib/vault.ts";
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-const run = program.name('run');
+const run = program.name("run");
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
 program
-  .option('-c, --cible <env context>', 'target environment context')
-  .hook('preAction', async (thisCommand: any) => {
+  .option("-c, --cible <env context>", "target environment context")
+  .hook("preAction", async (thisCommand: any) => {
     if (
-      !Deno.env.get('GITHUB_ACTIONS') &&
-      Deno.env.get('CUSTOM_STATUS') !== 'in_progress'
+      !Deno.env.get("GITHUB_ACTIONS") &&
+      Deno.env.get("CUSTOM_STATUS") !== "in_progress"
     ) {
       const { cible } = thisCommand.opts();
-      await setSecretsOnLocal(cible || 'local');
-      Deno.env.set('ENV', cible || 'local');
+      await setSecretsOnLocal(cible || "local");
+      Deno.env.set("ENV", cible || "local");
     }
   });
 
@@ -61,6 +61,7 @@ program
 
 await commandAction(program);
 await commandCustom(program);
+await commandScript(program);
 await commandDocker(program);
 await commandMachine(program);
 await commandMeta(program);
@@ -82,12 +83,12 @@ program.exitOverride();
 
 try {
   if (argv.length === 2) {
-    console.error('No command provided');
+    console.error("No command provided");
     console.log(program.helpInformation());
     Deno.exit(0);
   }
 
-  if (argv.length === 3 && argv[2] === '--help') {
+  if (argv.length === 3 && argv[2] === "--help") {
     console.log(program.helpInformation());
     Deno.exit(0);
   }
