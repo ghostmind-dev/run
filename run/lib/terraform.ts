@@ -5,6 +5,7 @@ import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
 } from '../utils/divers.ts';
+import type { MetaJson } from '../utils/divers.ts';
 import { getAppName } from '../utils/divers.ts';
 import { getDockerImageDigest } from '../main.ts';
 import _ from 'npm:lodash@4.17.21';
@@ -354,12 +355,23 @@ export async function terraformVariables(component: any, options: any) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function cleanDotTerraformFolders() {
-  const folders = await recursiveDirectoriesDiscovery(currentPath);
+  // Check if path ends with /.terraform (with forward slash)
+  const metaconfig: MetaJson | undefined = await verifyIfMetaJsonExists(
+    currentPath
+  );
 
-  for (let folder of folders) {
-    // if path finish with .terraform
-    if (folder.match(/\.terraform$/)) {
-      await $`rm -rf ${folder}`;
+  if (metaconfig) {
+    // get the terraform object
+    const terraform = metaconfig?.terraform;
+
+    if (terraform) {
+      for (const component of Object.keys(terraform)) {
+        const { path } = terraform[component];
+
+        await $`rm -rf ${currentPath}/${path}/.terraform`;
+
+        console.log(`State cleaned for ${component}`);
+      }
     }
   }
 }
