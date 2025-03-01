@@ -6,6 +6,7 @@ import { nanoid } from 'npm:nanoid@5.0.7';
 import { readFileSync } from 'node:fs';
 import crypto from 'node:crypto';
 import { Buffer } from 'node:buffer';
+import { parse as parseJsonWithComments } from 'npm:comment-json@4.2.3';
 
 ////////////////////////////////////////////////////////////////////////////////
 // iNTRODUCE
@@ -317,7 +318,8 @@ export async function verifyIfMetaJsonExists(
 ): Promise<MetaJson | undefined> {
   try {
     await fs.access(`${path}/meta.json`);
-    let metaconfig = fs.readJsonSync(`${path}/meta.json`);
+    const fileContent = readFileSync(`${path}/meta.json`, 'utf8');
+    let metaconfig = parseJsonWithComments(fileContent);
 
     // replace the field that containers ${} with the value of the field
 

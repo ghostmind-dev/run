@@ -35,22 +35,92 @@
   "deno.cache": "/deno/.cache",
   "deno.config": "/home/vscode/deno.json",
   "vsicons.associations.folders": [
-    { "icon": "app", "extensions": ["potion"], "format": "svg" },
-    { "icon": "log", "extensions": ["scripts"], "format": "svg" },
-    { "icon": "buildkite", "extensions": ["state"], "format": "svg" },
-    { "icon": "audio", "extensions": ["dev"], "format": "svg" },
-    { "icon": "bloc", "extensions": ["ui"], "format": "svg" },
-    { "icon": "docker", "extensions": ["container"], "format": "svg" },
-    { "icon": "e2e", "extensions": ["workflows"], "format": "svg" },
-    { "icon": "cubit", "extensions": ["library-scripts"], "format": "svg" }
+    {
+      "icon": "app",
+      "extensions": [
+        "potion"
+      ],
+      "format": "svg"
+    },
+    {
+      "icon": "log",
+      "extensions": [
+        "scripts"
+      ],
+      "format": "svg"
+    },
+    {
+      "icon": "buildkite",
+      "extensions": [
+        "state"
+      ],
+      "format": "svg"
+    },
+    {
+      "icon": "audio",
+      "extensions": [
+        "dev"
+      ],
+      "format": "svg"
+    },
+    {
+      "icon": "bloc",
+      "extensions": [
+        "ui"
+      ],
+      "format": "svg"
+    },
+    {
+      "icon": "docker",
+      "extensions": [
+        "container"
+      ],
+      "format": "svg"
+    },
+    {
+      "icon": "e2e",
+      "extensions": [
+        "workflows"
+      ],
+      "format": "svg"
+    },
+    {
+      "icon": "cubit",
+      "extensions": [
+        "library-scripts"
+      ],
+      "format": "svg"
+    }
   ],
   "vsicons.associations.files": [
-    { "icon": "config", "extensions": [".env.local"], "format": "svg" },
-    { "icon": "config", "extensions": [".env.template"], "format": "svg" },
-    { "icon": "pytyped", "extensions": [".toml"], "format": "svg" }
+    {
+      "icon": "config",
+      "extensions": [
+        ".env.local"
+      ],
+      "format": "svg"
+    },
+    {
+      "icon": "config",
+      "extensions": [
+        ".env.template"
+      ],
+      "format": "svg"
+    },
+    {
+      "icon": "pytyped",
+      "extensions": [
+        ".toml"
+      ],
+      "format": "svg"
+    }
   ],
-  "python.analysis.diagnosticSeverityOverrides": {
-    "reportMissingImports": "none",
-    "reportMissingModuleSource": "none"
-  }
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "**/meta.json"
+      ],
+      "url": "https://raw.githubusercontent.com/ghostmind-dev/config/main/config/meta/schema.json"
+    }
+  ]
 }
