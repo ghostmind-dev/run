@@ -435,6 +435,8 @@ export async function withMetaMatching({
 
   let directories = [];
 
+  allDirectories.push(directoryEntryPath);
+
   for (let directory of allDirectories) {
     const metaConfig = await verifyIfMetaJsonExists(directory);
 

@@ -40,6 +40,8 @@ export default async function tunnel(program: any) {
   run.action(async (tunnelToRun: string, options: any) => {
     const CLOUDFLARED_TUNNEL_NAME = options.name;
 
+    Deno.env.set('CLOUDFLARED_TUNNEL_NAME', CLOUDFLARED_TUNNEL_NAME);
+
     interface Ingress {
       // add hostname (optional)
       hostname?: string;
@@ -55,19 +57,44 @@ export default async function tunnel(program: any) {
     };
     $.verbose = true;
     let ingress = [];
+
+    // List tunnels and check if the specified tunnel exists
+    try {
+      const tunnelList = await $`cloudflared tunnel list`;
+      const tunnelExists = tunnelList.stdout.includes(CLOUDFLARED_TUNNEL_NAME);
+
+      if (!tunnelExists) {
+        console.log(`Creating new tunnel: ${CLOUDFLARED_TUNNEL_NAME}`);
+        try {
+          await $`cloudflared tunnel create ${CLOUDFLARED_TUNNEL_NAME}`;
+          console.log(
+            `Successfully created tunnel: ${CLOUDFLARED_TUNNEL_NAME}`
+          );
+        } catch (createError) {
+          console.error('Failed to create tunnel:', createError.message);
+          Deno.exit(1);
+        }
+      } else {
+        console.log(`Found existing tunnel: ${CLOUDFLARED_TUNNEL_NAME}`);
+      }
+    } catch (error) {
+      console.error('Failed to list tunnels:', error.message);
+      Deno.exit(1);
+    }
+
+    $.verbose = false;
+
+    const CLOUDFLARED_TUNNEL_TOKEN =
+      await $`cloudflared tunnel token ${CLOUDFLARED_TUNNEL_NAME}`;
+
+    $.verbose = true;
+
     if (options.all) {
       const inADevcontainer = Deno.env.get('REMOTE_CONTAINERS');
 
-      if (!inADevcontainer) {
-        console.log(
-          "This commabnd cannot be used out of a devcontainer, please use the 'dev run tunnel run --name <name>' command instead"
-        );
-        return;
-      }
-
       const directories = await withMetaMatching({
         property: 'tunnel',
-        path: '/workspaces',
+        path: currentPath,
       });
 
       for (const directory of directories) {
@@ -96,12 +123,15 @@ export default async function tunnel(program: any) {
       config.ingress = ingress;
     }
     config.ingress.push({ service: 'http_status:404' });
-    console.log(config);
-    await $`rm -f /home/vscode/.cloudflared/config.yaml`;
+
+    const HOME = Deno.env.get('HOME');
+
+    const configFileName = `${HOME}/.cloudflared/${CLOUDFLARED_TUNNEL_NAME}.config.yaml`;
+
+    await $`rm -f ${configFileName}`;
     const yamlStr = yaml.dump(config);
 
-    const CLOUDFLARED_TUNNEL_TOKEN = Deno.env.get('CLOUDFLARED_TUNNEL_TOKEN');
-    await fs.writeFile('/home/vscode/.cloudflared/config.yaml', yamlStr);
-    await $`cloudflared tunnel --config /home/vscode/.cloudflared/config.yaml --protocol http2 run --token ${CLOUDFLARED_TUNNEL_TOKEN} ${CLOUDFLARED_TUNNEL_NAME}`;
+    await fs.writeFile(configFileName, yamlStr);
+    await $`cloudflared tunnel --config ${configFileName} --protocol http2 run --token ${CLOUDFLARED_TUNNEL_TOKEN} ${CLOUDFLARED_TUNNEL_NAME}`;
   });
 }
