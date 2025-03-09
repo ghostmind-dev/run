@@ -70,14 +70,14 @@ export default async function tunnel(program: any) {
           console.log(
             `Successfully created tunnel: ${CLOUDFLARED_TUNNEL_NAME}`
           );
-        } catch (createError) {
+        } catch (createError: any) {
           console.error('Failed to create tunnel:', createError.message);
           Deno.exit(1);
         }
       } else {
         console.log(`Found existing tunnel: ${CLOUDFLARED_TUNNEL_NAME}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to list tunnels:', error.message);
       Deno.exit(1);
     }
