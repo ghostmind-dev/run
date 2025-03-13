@@ -650,21 +650,9 @@ export async function dockerComposeUp(
     return;
   }
 
-  const commandDown = [
-    'docker',
-    'compose',
-    ...filesToUp,
-    'down',
-    '--remove-orphans',
-  ];
+  const commandDown = ['docker', 'compose', ...filesToUp, 'down'];
 
-  const baseCommand = [
-    'docker',
-    'compose',
-    ...filesToUp,
-    'up',
-    '--remove-orphans',
-  ];
+  const baseCommand = ['docker', 'compose', ...filesToUp, 'up'];
 
   if (forceRecreate) {
     baseCommand.push('--force-recreate');
@@ -716,13 +704,7 @@ export async function dockerComposeDown(component: any, options: any) {
     return;
   }
 
-  const baseCommand = [
-    'docker',
-    'compose',
-    ...filesToDown,
-    'down',
-    '--remove-orphans',
-  ];
+  const baseCommand = ['docker', 'compose', ...filesToDown, 'down'];
 
   await $`${baseCommand}`;
 }
