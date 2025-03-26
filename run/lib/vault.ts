@@ -20,6 +20,19 @@ cd(currentPath);
 // UTILS
 ////////////////////////////////////////////////////////////////////////////////
 
+async function checkVaultInstalled() {
+  try {
+    $.verbose = false;
+    await $`vault -v`;
+    return true;
+  } catch (e) {
+    console.error(
+      'Error: Vault CLI is not installed. Please install HashiCorp Vault first.'
+    );
+    return false;
+  }
+}
+
 async function defineSecretNamespace(target?: string) {
   let currentPath = Deno.cwd();
   cd(currentPath);
@@ -48,6 +61,10 @@ async function defineSecretNamespace(target?: string) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function vaultKvLocalToVault(options: any) {
+  if (!(await checkVaultInstalled())) {
+    return;
+  }
+
   const { target, envfile } = options;
 
   let envfilePath = '';
@@ -87,6 +104,10 @@ export async function vaultKvLocalToVault(options: any) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function vaultKvVaultToLocal(options: any) {
+  if (!(await checkVaultInstalled())) {
+    return;
+  }
+
   let currentPath = Deno.cwd();
 
   cd(currentPath);
