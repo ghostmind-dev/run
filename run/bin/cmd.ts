@@ -44,7 +44,14 @@ const run = program.name('run');
 
 program
   .option('-c, --cible <env context>', 'target environment context')
+  .option('-p, --path <path>', 'run the script from a specific path')
   .hook('preAction', async (thisCommand: any) => {
+    const { path } = thisCommand.opts();
+
+    if (path) {
+      Deno.chdir(path);
+    }
+
     if (
       !Deno.env.get('GITHUB_ACTIONS') &&
       Deno.env.get('CUSTOM_STATUS') !== 'in_progress'

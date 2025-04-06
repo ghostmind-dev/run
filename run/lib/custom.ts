@@ -369,22 +369,10 @@ async function runScript(script: string, argument: string[], options: any) {
   let isAbsolutePath = false;
 
   if (options.root) {
-    // Check if root is an absolute path
-    isAbsolutePath =
-      options.root.startsWith('/') || /^[A-Za-z]:/.test(options.root);
-    const rootPath = isAbsolutePath
-      ? options.root
-      : `${currentPath}/${options.root}`;
 
-    // If root is absolute, change the current path
-    if (isAbsolutePath) {
-      currentPath = rootPath;
-      cd(currentPath);
-    }
-
-    // Try both direct path and subfolder path
-    const directPath = `${rootPath}/${script}.ts`;
-    const subfolderPath = `${rootPath}/${scriptsFolder}/${script}.ts`;
+    // If root is specified, try direct path first
+    const directPath = `${currentPath}/${options.root}/${script}.ts`;
+    const subfolderPath = `${currentPath}/${options.root}/${scriptsFolder}/${script}.ts`
 
     try {
       await Deno.stat(directPath);
@@ -418,7 +406,8 @@ async function runScript(script: string, argument: string[], options: any) {
 
     const custom_function = await import(specifier);
 
-    $.verbose = true;
+    // Keep verbose mode off to avoid zx interfering with stdio output
+    $.verbose = false;
 
     // Set the working directory to the current path which may have been changed
     cd(currentPath);
