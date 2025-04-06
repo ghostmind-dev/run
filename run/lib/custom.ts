@@ -366,11 +366,13 @@ async function runScript(script: string, argument: string[], options: any) {
   const scriptsFolder = custom?.root || 'scripts';
 
   let scriptPath = '';
+  let isAbsolutePath = false;
 
   if (options.root) {
+
     // If root is specified, try direct path first
     const directPath = `${currentPath}/${options.root}/${script}.ts`;
-    const subfolderPath = `${currentPath}/${options.root}/${scriptsFolder}/${script}.ts`;
+    const subfolderPath = `${currentPath}/${options.root}/${scriptsFolder}/${script}.ts`
 
     try {
       await Deno.stat(directPath);
@@ -407,6 +409,7 @@ async function runScript(script: string, argument: string[], options: any) {
     // Keep verbose mode off to avoid zx interfering with stdio output
     $.verbose = false;
 
+    // Set the working directory to the current path which may have been changed
     cd(currentPath);
 
     let env = Deno.env.toObject();
