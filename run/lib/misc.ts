@@ -1,4 +1,4 @@
-import { $ } from 'npm:zx@8.1.0';
+import { $, cd } from 'npm:zx@8.1.0';
 import * as inquirer from 'npm:inquirer@9.2.22';
 import { createUUID } from '../utils/divers.ts';
 import {
@@ -7,7 +7,7 @@ import {
   findProjectDirectory,
 } from '../utils/divers.ts';
 import fs from 'node:fs';
-
+import { Buffer } from 'node:buffer';
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
@@ -307,6 +307,47 @@ export default async function misc(program: any) {
       $.verbose = true;
 
       await $`rm -f .env.template && cp ${env} .env.template && sed -i 's/=.*/=/' .env.template`;
+    });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // GENERATE MCP.JSON
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('encode')
+    .description('encode a file to base64')
+    .argument('<file>', 'file to ')
+    .action(async (file: string) => {
+      const currentPath = Deno.cwd();
+
+      const content = Deno.readTextFileSync(`${currentPath}/${file}`);
+      const base64 = Buffer.from(content).toString('base64');
+      console.log(base64);
+    });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // GENERATE MCP.JSON
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('decode')
+    .description('decode a base64 string')
+    .argument('<env_name>', 'env file name to decode')
+    .argument('<file_name>', 'decode to this file name')
+    .action(async (env_name: string, file_name: string) => {
+      const currentPath = Deno.cwd();
+
+      const env = Deno.env.get(env_name);
+
+      if (!env) {
+        console.log(`${env_name} not found`);
+        Deno.exit(0);
+      }
+
+      // decode and write to file
+      const decoded = Buffer.from(env, 'base64').toString('utf-8');
+      Deno.writeTextFileSync(`${currentPath}/${file_name}`, decoded);
+      console.log(`${file_name} decoded and written to ${currentPath}`);
     });
 }
 
