@@ -59,13 +59,18 @@ export async function machineInit() {
 
   cd(`${currentPath}/${projectName}`);
 
-  // Always create .env template
-  await fs.writeFile(
-    `.env.template`,
-    `# Environment variables
-`,
-    'utf8'
+  // Always create .env template from repository
+  const envTemplateResponse = await fetch(
+    'https://raw.githubusercontent.com/ghostmind-dev/config/refs/heads/main/config/env/template.md',
+    {
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    }
   );
+  const envTemplateContent = await envTemplateResponse.text();
+
+  await fs.writeFile(`.env.template`, envTemplateContent, 'utf8');
 
   // Conditionally create devcontainer
   if (needsDevcontainer) {
