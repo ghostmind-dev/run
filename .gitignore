@@ -110,3 +110,5 @@ __pycache__
 !**/.env.template
 
 **/dist
+
+**/.data

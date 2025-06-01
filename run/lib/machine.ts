@@ -30,14 +30,26 @@ cd(currentPath);
 
 export async function machineInit() {
   // ask for the project name
-
-  const { projectName } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'projectName',
-      message: 'What is the name of the project?',
-    },
-  ]);
+  const { projectName, needsDevcontainer, needsGitRepo } =
+    await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'projectName',
+        message: 'What is the name of the project?',
+      },
+      {
+        type: 'confirm',
+        name: 'needsDevcontainer',
+        message: 'Do you need a devcontainer?',
+        default: true,
+      },
+      {
+        type: 'confirm',
+        name: 'needsGitRepo',
+        message: 'Do you want to initialize a Git repository?',
+        default: true,
+      },
+    ]);
 
   const pathFromHome = currentPath.replace(`${Deno.env.get('HOME')}/`, '');
 
@@ -47,50 +59,66 @@ export async function machineInit() {
 
   cd(`${currentPath}/${projectName}`);
 
-  await $`mkdir -p ${currentPath}/${projectName}/.devcontainer`;
-
-  const defaultDevcontainerJsonRaw = await fetch(
-    'https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/devcontainer.json',
+  // Always create .env template from repository
+  const envTemplateResponse = await fetch(
+    'https://raw.githubusercontent.com/ghostmind-dev/config/refs/heads/main/config/env/template.md',
     {
       headers: {
         'Cache-Control': 'no-cache',
       },
     }
   );
+  const envTemplateContent = await envTemplateResponse.text();
 
-  let devcontainer = await defaultDevcontainerJsonRaw.json();
+  await fs.writeFile(`.env.template`, envTemplateContent, 'utf8');
 
-  // // Change the name of the container
+  // Conditionally create devcontainer
+  if (needsDevcontainer) {
+    await $`mkdir -p ${currentPath}/${projectName}/.devcontainer`;
 
-  devcontainer.name = projectName;
-  devcontainer.build.args.PROJECT_DIR =
-    '${env:HOME}${env:USERPROFILE}/' + pathFromHome + '/' + projectName;
-  devcontainer.remoteEnv.LOCALHOST_SRC =
-    '${env:HOME}${env:USERPROFILE}/' + pathFromHome + '/' + projectName;
-  devcontainer.mounts[2] = `source=ghostmind-${projectName}-history,target=/commandhistory,type=volume`;
-  devcontainer.mounts[3] =
-    'source=${env:HOME}${env:USERPROFILE}/' +
-    pathFromHome +
-    '/' +
-    projectName +
-    ',' +
-    `target=${Deno.env.get('HOME')}/${pathFromHome}/${projectName},type=bind`;
+    const defaultDevcontainerJsonRaw = await fetch(
+      'https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/devcontainer.json',
+      {
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      }
+    );
 
-  devcontainer.runArgs[3] = `--name=${projectName}`;
+    let devcontainer = await defaultDevcontainerJsonRaw.json();
 
-  // // write the file back
+    // // Change the name of the container
 
-  await fs.writeFile(
-    `${currentPath}/${projectName}/.devcontainer/devcontainer.json`,
-    JSON.stringify(devcontainer, null, 2),
-    'utf8'
-  );
+    devcontainer.name = projectName;
+    devcontainer.build.args.PROJECT_DIR =
+      '${env:HOME}${env:USERPROFILE}/' + pathFromHome + '/' + projectName;
+    devcontainer.remoteEnv.LOCALHOST_SRC =
+      '${env:HOME}${env:USERPROFILE}/' + pathFromHome + '/' + projectName;
+    devcontainer.mounts[2] = `source=ghostmind-${projectName}-history,target=/commandhistory,type=volume`;
+    devcontainer.mounts[3] =
+      'source=${env:HOME}${env:USERPROFILE}/' +
+      pathFromHome +
+      '/' +
+      projectName +
+      ',' +
+      `target=${Deno.env.get('HOME')}/${pathFromHome}/${projectName},type=bind`;
 
-  await $`curl -o ${currentPath}/${projectName}/.devcontainer/Dockerfile https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/Dockerfile`;
+    devcontainer.runArgs[3] = `--name=${projectName}`;
 
-  await $`mkdir -p ${currentPath}/${projectName}/.devcontainer/library-scripts`;
+    // // write the file back
 
-  await $`curl -o ${currentPath}/${projectName}/.devcontainer/library-scripts/post-create.ts https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/library-scripts/post-create.ts`;
+    await fs.writeFile(
+      `${currentPath}/${projectName}/.devcontainer/devcontainer.json`,
+      JSON.stringify(devcontainer, null, 2),
+      'utf8'
+    );
+
+    await $`curl -o ${currentPath}/${projectName}/.devcontainer/Dockerfile https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/Dockerfile`;
+
+    await $`mkdir -p ${currentPath}/${projectName}/.devcontainer/library-scripts`;
+
+    await $`curl -o ${currentPath}/${projectName}/.devcontainer/library-scripts/post-create.ts https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/library-scripts/post-create.ts`;
+  }
 
   // // now , we need to modify ./meta.json
 
@@ -118,9 +146,11 @@ export async function machineInit() {
 
   $.verbose = true;
 
-  await $`rm -rf .git`;
-
-  await $`git init`;
+  // Conditionally initialize Git repository
+  if (needsGitRepo) {
+    await $`rm -rf .git`;
+    await $`git init`;
+  }
 
   Deno.exit(0);
 }

@@ -1,7 +1,7 @@
-import { $, cd, within } from "npm:zx@8.1.0";
-import { verifyIfMetaJsonExists } from "../utils/divers.ts";
-import _ from "npm:lodash@4.17.21";
-import * as main from "../main.ts";
+import { $, cd, within } from 'npm:zx@8.1.0';
+import { verifyIfMetaJsonExists } from '../utils/divers.ts';
+import _ from 'npm:lodash@4.17.21';
+import * as main from '../main.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -14,7 +14,7 @@ $.verbose = false;
 ////////////////////////////////////////////////////////////////////////////////
 
 const customConfigDefault = {
-  root: "scripts",
+  root: 'scripts',
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -107,7 +107,7 @@ export async function start(
     let commandsToRun: string[] = [];
 
     if (args === undefined) {
-      console.log("no args");
+      console.log('no args');
       return;
     }
 
@@ -164,25 +164,25 @@ export async function start(
       await Promise.all(
         groupedCommandsPerPriority[key].map(
           async (command_from_config: any) => {
-            if (typeof commands[command_from_config] === "string") {
+            if (typeof commands[command_from_config] === 'string') {
               const commandToRun = cmd`${commands[command_from_config]}`;
               await within(async () => {
                 await $`${commandToRun}`;
               });
-            } else if (typeof commands[command_from_config] === "function") {
+            } else if (typeof commands[command_from_config] === 'function') {
               const function_to_call: any = commands[command_from_config];
               await within(async () => {
                 cd(currentPath);
                 await function_to_call();
               });
-            } else if (typeof commands[command_from_config] === "object") {
+            } else if (typeof commands[command_from_config] === 'object') {
               const command_to_run = commands[command_from_config];
 
               const { command, options, variables } = command_to_run as
                 | CustomStartConfigCommandFunction
                 | CustomStartConfigCommandCommand;
 
-              if (command !== undefined && typeof command === "function") {
+              if (command !== undefined && typeof command === 'function') {
                 let options_to_pass = options === undefined ? {} : options;
                 const function_to_call: any = command;
 
@@ -192,7 +192,7 @@ export async function start(
                 });
               }
 
-              if (command !== undefined && typeof command === "string") {
+              if (command !== undefined && typeof command === 'string') {
                 const commandToRun = cmd`${command}`;
 
                 // variables is an object with key value pair
@@ -205,7 +205,7 @@ export async function start(
 
                     // in the example, we need to replace ${this} by the value of the variable this
 
-                    const variableToReplace = "$" + variable + "";
+                    const variableToReplace = '$' + variable + '';
 
                     const indexOfVariable =
                       commandToRun.indexOf(variableToReplace);
@@ -249,7 +249,7 @@ export async function extract(args: string[]): Promise<any> {
     let foundElement = _.find(args, (element: any) => {
       // if the element is not a string
       // return false
-      if (typeof element !== "string") {
+      if (typeof element !== 'string') {
         return false;
       }
 
@@ -269,7 +269,7 @@ export async function extract(args: string[]): Promise<any> {
       return undefined;
     }
 
-    foundElement = foundElement.replace(`${inputName}=`, "");
+    foundElement = foundElement.replace(`${inputName}=`, '');
 
     return foundElement;
   };
@@ -308,7 +308,7 @@ export function cmd(
 ): string[] {
   let result: string;
 
-  if (typeof template === "string") {
+  if (typeof template === 'string') {
     result = template;
   } else {
     result = template[0];
@@ -317,7 +317,7 @@ export function cmd(
     });
   }
 
-  return result.split(" ");
+  return result.split(' ');
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -335,11 +335,11 @@ export function cmd(
 
 async function runScript(script: string, argument: string[], options: any) {
   if (!script) {
-    console.log("specify a script to run");
+    console.log('specify a script to run');
     return;
   }
 
-  Deno.env.set("CUSTOM_STATUS", "in_progress");
+  Deno.env.set('CUSTOM_STATUS', 'in_progress');
 
   let currentPath = Deno.cwd();
 
@@ -353,8 +353,8 @@ async function runScript(script: string, argument: string[], options: any) {
 
   let { custom } = metaConfig;
 
-  const SRC = Deno.env.get("SRC");
-  const HOME = Deno.env.get("HOME");
+  const SRC = Deno.env.get('SRC');
+  const HOME = Deno.env.get('HOME');
 
   let NODE_PATH: any = await $`npm root -g`;
   NODE_PATH = NODE_PATH.stdout.trim();
@@ -363,14 +363,16 @@ async function runScript(script: string, argument: string[], options: any) {
     dev === true ? `${SRC}/dev/run/bin/cmd.ts` : `${HOME}/run/run/bin/cmd.ts`;
 
   // Get the scripts subfolder from meta.json or default
-  const scriptsFolder = custom?.root || "scripts";
+  const scriptsFolder = custom?.root || 'scripts';
 
-  let scriptPath = "";
+  let scriptPath = '';
+  let isAbsolutePath = false;
 
   if (options.root) {
+
     // If root is specified, try direct path first
     const directPath = `${currentPath}/${options.root}/${script}.ts`;
-    const subfolderPath = `${currentPath}/${options.root}/${scriptsFolder}/${script}.ts`;
+    const subfolderPath = `${currentPath}/${options.root}/${scriptsFolder}/${script}.ts`
 
     try {
       await Deno.stat(directPath);
@@ -400,12 +402,14 @@ async function runScript(script: string, argument: string[], options: any) {
   // if there is a custom script
   // try to run the custom script
   try {
-    const specifier = script !== "DO_NOT_SET_TO_THIS_VALUE" ? scriptPath : "";
+    const specifier = script !== 'DO_NOT_SET_TO_THIS_VALUE' ? scriptPath : '';
 
     const custom_function = await import(specifier);
 
-    $.verbose = true;
+    // Keep verbose mode off to avoid zx interfering with stdio output
+    $.verbose = false;
 
+    // Set the working directory to the current path which may have been changed
     cd(currentPath);
 
     let env = Deno.env.toObject();
@@ -423,7 +427,7 @@ async function runScript(script: string, argument: string[], options: any) {
     });
   } catch (e) {
     console.log(e);
-    console.log("something went wrong");
+    console.log('something went wrong');
   }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -431,26 +435,26 @@ async function runScript(script: string, argument: string[], options: any) {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function commandCustom(program: any) {
-  const custom = program.command("custom");
+  const custom = program.command('custom');
   custom
-    .description("[DEPRECATED] run custom script")
-    .argument("[script]", "script to perform")
-    .argument("[argument...]", "arguments for the script")
-    .option("--all", "run all start commands")
-    .option("--dev", "run in dev mode")
-    .option("-r,--root <path>", "root path for the custom script")
+    .description('[DEPRECATED] run custom script')
+    .argument('[script]', 'script to perform')
+    .argument('[argument...]', 'arguments for the script')
+    .option('--all', 'run all start commands')
+    .option('--dev', 'run in dev mode')
+    .option('-r,--root <path>', 'root path for the custom script')
     .action(runScript);
 }
 
 export async function commandScript(program: any) {
-  const script = program.command("script");
+  const script = program.command('script');
   script
-    .description("run custom script")
-    .argument("[script]", "script to perform")
-    .argument("[argument...]", "arguments for the script")
-    .option("--all", "run all start commands")
-    .option("--dev", "run in dev mode")
-    .option("-r,--root <path>", "root path for the custom script")
+    .description('run custom script')
+    .argument('[script]', 'script to perform')
+    .argument('[argument...]', 'arguments for the script')
+    .option('--all', 'run all start commands')
+    .option('--dev', 'run in dev mode')
+    .option('-r,--root <path>', 'root path for the custom script')
     .action(runScript);
 }
 
