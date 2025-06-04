@@ -18,6 +18,7 @@ export * from './lib/machine.ts';
 export * from './lib/meta.ts';
 export * from './lib/misc.ts';
 export * from './lib/routine.ts';
+export * from './lib/scripts.ts';
 export * from './lib/terraform.ts';
 export * from './lib/tunnel.ts';
 export * from './lib/vault.ts';
