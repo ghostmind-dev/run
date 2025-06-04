@@ -22,7 +22,7 @@ const program = new Command();
 ////////////////////////////////////////////////////////////////////////////////
 
 import commandAction from '../lib/action.ts';
-import commandCustom, { commandScript } from '../lib/custom.ts';
+import commandCustom from '../lib/custom.ts';
 import commandDocker from '../lib/docker.ts';
 import commandMachine from '../lib/machine.ts';
 import commandMeta from '../lib/meta.ts';
