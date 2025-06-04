@@ -189,7 +189,7 @@ export default async function routine(program: any) {
   $.verbose = false;
   const routine = program.command('routine');
   routine
-    .description('run npm scripts')
+    .description('run npm style scripts')
     .argument('[script...]', 'script to run')
     .action(async (scripts: string[], _options: any) => {
       $.verbose = false;

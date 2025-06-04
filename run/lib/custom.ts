@@ -369,10 +369,9 @@ async function runScript(script: string, argument: string[], options: any) {
   let isAbsolutePath = false;
 
   if (options.root) {
-
     // If root is specified, try direct path first
     const directPath = `${currentPath}/${options.root}/${script}.ts`;
-    const subfolderPath = `${currentPath}/${options.root}/${scriptsFolder}/${script}.ts`
+    const subfolderPath = `${currentPath}/${options.root}/${scriptsFolder}/${script}.ts`;
 
     try {
       await Deno.stat(directPath);
@@ -437,18 +436,6 @@ async function runScript(script: string, argument: string[], options: any) {
 export default async function commandCustom(program: any) {
   const custom = program.command('custom');
   custom
-    .description('[DEPRECATED] run custom script')
-    .argument('[script]', 'script to perform')
-    .argument('[argument...]', 'arguments for the script')
-    .option('--all', 'run all start commands')
-    .option('--dev', 'run in dev mode')
-    .option('-r,--root <path>', 'root path for the custom script')
-    .action(runScript);
-}
-
-export async function commandScript(program: any) {
-  const script = program.command('script');
-  script
     .description('run custom script')
     .argument('[script]', 'script to perform')
     .argument('[argument...]', 'arguments for the script')
