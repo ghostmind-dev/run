@@ -9,6 +9,7 @@
     "npm:commander@12.1.0": "12.1.0",
     "npm:comment-json@4.2.3": "4.2.3",
     "npm:dotenv-expand@11.0.6": "11.0.6",
+    "npm:dotenv@*": "16.4.5",
     "npm:dotenv@16.4.5": "16.4.5",
     "npm:fs-extra@11.2.0": "11.2.0",
     "npm:inquirer@9.2.22": "9.2.22",
