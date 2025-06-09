@@ -1,6 +1,6 @@
 import { $, cd } from 'npm:zx@8.1.0';
 import * as inquirer from 'npm:inquirer@9.2.22';
-import dotenv from 'npm:dotenv';
+import dotenv from 'npm:dotenv@16.5.0';
 import { createUUID } from '../utils/divers.ts';
 import {
   verifyIfMetaJsonExists,
