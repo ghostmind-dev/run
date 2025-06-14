@@ -32,6 +32,7 @@ Options:
   -h, --help                               display help for command
 
 Commands:
+  version                                  show version information
   action                                   run a github action
   custom [options] [script] [argument...]  run custom script
   docker                                   docker commands
