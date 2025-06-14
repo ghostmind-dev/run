@@ -65,7 +65,10 @@ async function getVersion(): Promise<string> {
 
     return denoJson.version || 'unknown';
   } catch (error) {
-    console.error('Error reading version from deno.json:', error.message);
+    console.error(
+      'Error reading version from deno.json:',
+      error instanceof Error ? error.message : String(error)
+    );
     return 'unknown';
   }
 }
