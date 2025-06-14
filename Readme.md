@@ -21,56 +21,30 @@ npx jsr add @ghostmind/run
 deno install --allow-all -n run jsr:@ghostmind/run/cmd
 ```
 
-## Usage
-
-### Programmatic API
-
-```typescript
-import { dockerBuild, actionRunLocal, terraformActivate } from '@ghostmind/run';
-
-await dockerBuild('my-component');
-await actionRunLocal('test-workflow');
-await terraformActivate('infrastructure');
-```
-
-### CLI Usage
-
-```bash
-run docker build --component my-app
-run action local test-workflow
-run terraform activate --component infrastructure
-```
-
-## Configuration
-
-Create a `meta.json` file in your project root:
-
-```json
-{
-  "id": "my-project",
-  "name": "my-project",
-  "type": "application"
-}
-```
-
 ## Available Commands
 
-- `action` - GitHub Actions operations
-- `docker` - Docker and Docker Compose management
-- `terraform` - Infrastructure as code operations
-- `vault` - HashiCorp Vault secret management
-- `tunnel` - Cloudflare Tunnel management
-- `custom` - Custom script execution
-- `template` - Project template management
-- `machine` - Development environment setup
-- `meta` - Configuration file management
+```
+Usage: run [options] [command]
 
-## Requirements
+Options:
+  -c, --cible <env context>                target environment context
+  -p, --path <path>                        run the script from a specific path
+  -h, --help                               display help for command
 
-- Deno 1.40+ or Node.js 18+
-- Docker (for Docker operations)
-- Terraform (for infrastructure operations)
-- HashiCorp Vault (for secret management)
+Commands:
+  action                                   run a github action
+  custom [options] [script] [argument...]  run custom script
+  docker                                   docker commands
+  machine                                  create a devcontainer for the project
+  meta                                     manage meta.json files
+  misc                                     miscellaneous commands
+  routine [script...]                      run npm style scripts
+  template                                 template management commands
+  terraform                                infrastructure definition
+  tunnel                                   Run a cloudflared tunnel to a local service
+  vault                                    manage project secrets
+  help [command]                           display help for command
+```
 
 ## License
 
