@@ -181,7 +181,7 @@ export default async function template(program: any) {
     .command('add')
     .description('add a new template')
     .action(async () => {
-      // Step 1: Get template types
+      // Step 1: Get template types (folders)
       const templateTypes = await listTemplateTypes();
 
       if (templateTypes.length === 0) {
@@ -191,73 +191,69 @@ export default async function template(program: any) {
         return;
       }
 
-      console.log('\nAvailable template types:');
-      console.log('========================');
+      // Step 2: For each folder, fetch and parse meta.json
+      const templatesWithMeta = [];
+      for (const type of templateTypes) {
+        try {
+          const metaJsonUrl = `https://raw.githubusercontent.com/ghostmind-dev/templates/main/templates/${type}/meta.json`;
+          const response = await fetch(metaJsonUrl);
+          if (!response.ok) {
+            templatesWithMeta.push({
+              folder: type,
+              name: '(no meta.json)',
+              tags: [],
+              error: true,
+            });
+            continue;
+          }
+          const meta = await response.json();
+          templatesWithMeta.push({
+            folder: type,
+            name: meta.name || type,
+            tags: meta.tags || [],
+            error: false,
+          });
+        } catch (e) {
+          templatesWithMeta.push({
+            folder: type,
+            name: '(error reading meta.json)',
+            tags: [],
+            error: true,
+          });
+        }
+      }
 
-      templateTypes.forEach((type, index) => {
-        console.log(`${index + 1}. ${type}`);
+      // Step 3: Display as a nice list
+      console.log('\nAvailable templates:');
+      console.log('====================');
+      templatesWithMeta.forEach((tpl, idx) => {
+        const tagStr = tpl.tags.length > 0 ? ` [${tpl.tags.join(', ')}]` : '';
+        const errorStr = tpl.error ? ' ⚠️' : '';
+        console.log(`${idx + 1}. ${tpl.name}${tagStr}${errorStr}`);
       });
 
-      // Step 2: Select template type
-      const typeSelection = await promptUser(
-        '\nSelect a template type by number'
-      );
-      const selectedTypeIndex = parseInt(typeSelection) - 1;
-
-      if (selectedTypeIndex < 0 || selectedTypeIndex >= templateTypes.length) {
+      // Step 4: Prompt user to select one
+      const selection = await promptUser('\nSelect a template by number');
+      const selectedIdx = parseInt(selection) - 1;
+      if (selectedIdx < 0 || selectedIdx >= templatesWithMeta.length) {
         console.log('Invalid selection. Please try again.');
         return;
       }
-
-      const selectedType = templateTypes[selectedTypeIndex];
-      console.log(`\nSelected type: ${selectedType}`);
-
-      // Step 3: Get templates in the selected type
-      const templates = await listTemplatesInType(selectedType);
-
-      if (templates.length === 0) {
-        console.log(`No templates found in ${selectedType}.`);
-        return;
-      }
-
-      console.log(`\nAvailable templates in ${selectedType}:`);
-      console.log('=====================================');
-
-      templates.forEach((template, index) => {
-        const typeIcon = template.type === 'dir' ? '📁' : '📄';
-        console.log(`${index + 1}. ${typeIcon} ${template.name}`);
-      });
-
-      // Step 4: Select specific template
-      const templateSelection = await promptUser(
-        '\nSelect a template by number'
-      );
-      const selectedTemplateIndex = parseInt(templateSelection) - 1;
-
-      if (
-        selectedTemplateIndex < 0 ||
-        selectedTemplateIndex >= templates.length
-      ) {
-        console.log('Invalid selection. Please try again.');
-        return;
-      }
-
-      const selectedTemplate = templates[selectedTemplateIndex];
+      const selectedTemplate = templatesWithMeta[selectedIdx];
       console.log(`\nSelected template: ${selectedTemplate.name}`);
 
-      // Step 5: Ask for target path
+      // Step 5: Ask for target path (default to template name)
       const targetPath = await promptUser(
         'Where do you want to copy this template? (relative to current directory)',
-        'default'
+        selectedTemplate.folder
       );
 
-      // Step 6: Download and copy
-      const isFile = selectedTemplate.type === 'file';
+      // Step 6: Copy all files from the selected template folder into the specified local directory
       await downloadAndCopyTemplate(
-        selectedType,
-        selectedTemplate.name,
+        selectedTemplate.folder, // templateType
+        '', // templateName (empty string to copy the whole folder)
         targetPath,
-        isFile
+        false // isFile
       );
     });
 }
