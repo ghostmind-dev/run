@@ -9,7 +9,6 @@ import {
 } from '../utils/divers.ts';
 import fs from 'node:fs';
 import { Buffer } from 'node:buffer';
-import dotenv from 'npm:dotenv@16.5.0';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
