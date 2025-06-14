@@ -52,41 +52,13 @@ const program = new Command();
  */
 async function getVersion(): Promise<string> {
   try {
-    // Get the directory of the current script
-    const currentDir = Deno.cwd();
+    // Get the directory of the current script (cmd.ts is in run/bin/)
+    const scriptPath = import.meta.url;
+    const scriptDir = dirname(fileURLToPath(scriptPath));
 
-    // Look for deno.json in the current directory and parent directories
-    let denoJsonPath = join(currentDir, 'deno.json');
-
-    // Try current directory first
-    try {
-      await Deno.stat(denoJsonPath);
-    } catch {
-      // If not found, try parent directories
-      let searchDir = currentDir;
-      let found = false;
-
-      for (let i = 0; i < 5; i++) {
-        // Limit search to 5 levels up
-        const parentDir = dirname(searchDir);
-        if (parentDir === searchDir) break; // Reached root
-
-        searchDir = parentDir;
-        denoJsonPath = join(searchDir, 'deno.json');
-
-        try {
-          await Deno.stat(denoJsonPath);
-          found = true;
-          break;
-        } catch {
-          continue;
-        }
-      }
-
-      if (!found) {
-        throw new Error('deno.json not found');
-      }
-    }
+    // Go up two levels from run/bin/ to reach the root where deno.json is located
+    const rootDir = dirname(dirname(scriptDir));
+    const denoJsonPath = join(rootDir, 'deno.json');
 
     const denoJsonContent = await Deno.readTextFile(denoJsonPath);
     const denoJson = JSON.parse(denoJsonContent);
