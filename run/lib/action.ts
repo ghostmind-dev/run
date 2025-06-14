@@ -39,10 +39,9 @@ export interface ActionRunRemoteOptions {
 
 /**
  * Run a remote action
- * @param {string} workflow - The workflow name
- * @param {Object} options - The options for the action
+ * @param {string} workflow - The workflow name.
+ * @param {ActionRunRemoteOptions} options - The options for the action.
  */
-
 export async function actionRunRemote(
   workflow: string,
   options: ActionRunRemoteOptions
@@ -87,12 +86,32 @@ export async function actionRunRemote(
 // RUN ACTION LOCALLY WITH ACT
 ////////////////////////////////////////////////////////////////////////////////
 
+export interface ActionRunLocalOptions {
+  live?: boolean;
+  input?: string[];
+  reuse?: boolean;
+  secure?: boolean;
+  event?: string;
+  push?: boolean;
+  custom?: boolean;
+  workaround?: boolean;
+  env?: string;
+}
+
+/**
+ * Run an action locally using act.
+ * @param {string} target - The workflow or job name.
+ * @param {string[]} actArguments - Arguments to pass to act.
+ * @param {string} [event] - The event to trigger.
+ * @param {boolean} [custom] - Whether to use a custom act container.
+ * @param {boolean} [workaround] - Whether to use the workaround for specifying workflow file path.
+ */
 export async function actionRunLocal(
-  target: any,
-  actArguments: any,
-  event: any,
-  custom: any,
-  workaround: any
+  target: string,
+  actArguments: string[],
+  event?: string,
+  custom?: boolean,
+  workaround?: boolean
 ): Promise<void> {
   const actArgmentsArray = [...actArgmentsDefault, ...actArguments];
 
@@ -157,7 +176,12 @@ export async function actionRunLocal(
   }
 }
 
-export async function actionRunLocalEntry(target: any, options: any) {
+/**
+ * Entry point for running an action locally.
+ * @param {string} target - The workflow or job name.
+ * @param {ActionRunLocalOptions} options - Options for running the action locally.
+ */
+export async function actionRunLocalEntry(target: string, options: ActionRunLocalOptions): Promise<void> {
   const { live, input, reuse, secure, event, push, custom, workaround, env } =
     options;
 
@@ -217,7 +241,11 @@ export async function actionRunLocalEntry(target: any, options: any) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function act(program: any) {
+/**
+ * Sets up the 'act' command and its subcommands.
+ * @param {object} program - The program instance, expected to have a `command` method.
+ */
+export default async function act(program: { command: (name: string) => any }) {
   const act = program.command('action');
   act.description('run a github action');
 

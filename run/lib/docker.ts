@@ -72,7 +72,7 @@ export interface DockerRegisterOptions {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function getDockerfileAndImageName(
-  component: any,
+  component: string | undefined,
   modifier?: string,
   skip_tag_modifiers?: boolean
 ): Promise<{
@@ -147,8 +147,8 @@ export async function getDockerfileAndImageName(
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function getDockerImageDigest(
-  arch: any,
-  component: any,
+  arch: string,
+  component: string | undefined,
   modifier?: string
 ): Promise<string> {
   let { image } = await getDockerfileAndImageName(component, modifier);
@@ -207,6 +207,14 @@ export async function getDockerImageDigest(
 ////////////////////////////////////////////////////////////////////////////////
 // DOCKER BUILD UNIT
 ////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Builds and pushes a Docker image using buildx.
+ * Supports multi-architecture builds (amd64, arm64) and cloud builds via Google Cloud Build.
+ *
+ * @param {string | DockerRegisterOptions} [componentOrOptions] - The component name or options object.
+ * @param {DockerRegisterOptions} [options] - Options for the Docker register process.
+ */
 export async function dockerRegister(
   componentOrOptions?: string | DockerRegisterOptions,
   options?: DockerRegisterOptions
@@ -608,6 +616,12 @@ export async function dockerRegister(
 // DOCKER COMPOSE UP
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Starts services defined in a Docker Compose file.
+ *
+ * @param {string | DockerComposeUpOptionsComponent} [componentOrOptions] - The component name or options object.
+ * @param {DockerComposeUpOptions} [options] - Options for the Docker Compose up command.
+ */
 export async function dockerComposeUp(
   componentOrOptions?: string | DockerComposeUpOptionsComponent,
   options?: DockerComposeUpOptions
@@ -675,7 +689,21 @@ export async function dockerComposeUp(
 // DOCKER COMPOSE DOWN
 ////////////////////////////////////////////////////////////////////////////////
 
-export async function dockerComposeDown(component: any, options: any) {
+export interface DockerComposeDownOptions {
+  forceRecreate?: boolean;
+  all?: boolean;
+}
+
+/**
+ * Stops and removes containers, networks, images, and volumes defined in a Docker Compose file.
+ *
+ * @param {string | undefined} component - The component name.
+ * @param {DockerComposeDownOptions} options - Options for the Docker Compose down command.
+ */
+export async function dockerComposeDown(
+  component: string | undefined,
+  options: DockerComposeDownOptions
+) {
   let { forceRecreate, all } = options;
 
   let filesToDown: string[] = [];
@@ -727,6 +755,12 @@ export interface DockerComposeExecOptionsComponent
   instructions: string;
 }
 
+/**
+ * Executes a command in a running container defined by a Docker Compose service.
+ *
+ * @param {string | DockerComposeExecOptionsComponent} instructionsOrOptions - The command to execute or an options object.
+ * @param {DockerComposeExecOptions} [options] - Options for the Docker Compose exec command.
+ */
 export async function dockerComposeExec(
   instructionsOrOptions: string | DockerComposeExecOptionsComponent,
   options?: DockerComposeExecOptions
@@ -813,8 +847,14 @@ export async function dockerComposeExec(
 // DOCKER COMPOSE BUILD
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Builds services defined in a Docker Compose file.
+ *
+ * @param {string | DockerComposeBuildOptionsComponent} componentOrOptions - The component name or options object.
+ * @param {DockerComposeBuildOptions} [options] - Options for the Docker Compose build command.
+ */
 export async function dockerComposeBuild(
-  componentOrOptions: DockerComposeBuildOptionsComponent,
+  componentOrOptions: string | DockerComposeBuildOptionsComponent, // Allow string here
   options?: DockerComposeBuildOptions
 ) {
   let component: string;
@@ -863,8 +903,20 @@ export async function dockerComposeBuild(
 ////////////////////////////////////////////////////////////////////////////////
 // DOCKER COMPOSE LOGS
 ////////////////////////////////////////////////////////////////////////////////
+export interface DockerComposeLogsOptions {
+  // Add any specific options for logs if needed in the future
+}
 
-export async function dockerComposeLogs(component: any, options: any) {
+/**
+ * Displays log output from services defined in a Docker Compose file.
+ *
+ * @param {string | undefined} component - The component name.
+ * @param {DockerComposeLogsOptions} options - Options for the Docker Compose logs command.
+ */
+export async function dockerComposeLogs(
+  component: string | undefined,
+  options: DockerComposeLogsOptions
+) {
   //  get meta config
   let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
   if (metaConfig === undefined) {
@@ -905,6 +957,12 @@ export interface DockerBuildOptions {
   component?: string;
 }
 
+/**
+ * Builds a Docker image from a Dockerfile.
+ *
+ * @param {string | DockerBuildOptions} [componentOrOptions] - The component name or options object.
+ * @param {DockerBuildOptions} [options] - Options for the Docker build command.
+ */
 export async function dockerBuild(
   componentOrOptions?: string | DockerBuildOptions,
   options?: DockerBuildOptions
@@ -940,7 +998,13 @@ export async function dockerBuild(
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function commandDocker(program: any) {
+/**
+ * Sets up the 'docker' command and its subcommands.
+ * @param {object} program - The program instance, expected to have a `command` method.
+ */
+export default async function commandDocker(program: {
+  command: (name: string) => any;
+}) {
   const docker = program.command('docker');
   docker.description('docker commands');
 
@@ -1005,7 +1069,14 @@ export default async function commandDocker(program: any) {
     .command('build')
     .description('docker compose build')
     .argument('[component]', 'Component to build')
-    .action(dockerComposeBuild)
+    .action(
+      (
+        component?: string,
+        options?: DockerComposeBuildOptionsComponent
+      ) => {
+        dockerComposeBuild(component || options || {}, options);
+      }
+    )
     .option('-f, --file [file]', 'docker compose file')
     .option('--cache', 'enable cache');
 

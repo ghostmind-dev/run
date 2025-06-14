@@ -19,6 +19,10 @@ cd(currentPath);
 // SCRIPT TEMPLATE MANAGEMENT
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Fetches and lists available script templates from the ghostmind-dev/config GitHub repository.
+ * @returns {Promise<string[]>} A promise that resolves to an array of script template names (e.g., "example.ts").
+ */
 export async function listScriptTemplates(): Promise<string[]> {
   try {
     const repoUrl =
@@ -48,6 +52,13 @@ export async function listScriptTemplates(): Promise<string[]> {
   }
 }
 
+/**
+ * Downloads a specific script template from the ghostmind-dev/config GitHub repository.
+ * @param {string} scriptName - The name of the script template to download (e.g., "example.ts").
+ * @param {string} [targetFolder="scripts"] - The folder where the script should be saved, relative to the current working directory.
+ * @param {string} fileName - The name to give the downloaded script file.
+ * @returns {Promise<void>} A promise that resolves when the script is downloaded and saved.
+ */
 export async function downloadScriptTemplate(
   scriptName: string,
   targetFolder: string = 'scripts',
@@ -88,6 +99,12 @@ export async function downloadScriptTemplate(
   }
 }
 
+/**
+ * Prompts the user with a question and returns their input.
+ * @param {string} question - The question to ask the user.
+ * @param {string} [defaultValue] - A default value to use if the user provides no input.
+ * @returns {Promise<string>} A promise that resolves to the user's input or the default value.
+ */
 async function promptUser(
   question: string,
   defaultValue?: string
@@ -107,6 +124,12 @@ async function promptUser(
   return input || defaultValue || '';
 }
 
+/**
+ * Interactively guides the user to select and download a script template.
+ * It lists available templates, prompts for selection, target folder, and file name,
+ * then downloads the chosen script.
+ * @returns {Promise<void>} A promise that resolves when the process is complete or an error occurs.
+ */
 export async function scriptsAdd(): Promise<void> {
   try {
     const scripts = await listScriptTemplates();
@@ -166,7 +189,13 @@ export async function scriptsAdd(): Promise<void> {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function commandScripts(program: any) {
+/**
+ * Sets up the 'scripts' command and its subcommands for managing script templates.
+ * @param {object} program - The program instance, expected to have a `command` method.
+ */
+export default async function commandScripts(program: {
+  command: (name: string) => any;
+}) {
   const scripts = program.command('scripts');
   scripts.description('script template management');
 

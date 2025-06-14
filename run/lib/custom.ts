@@ -91,12 +91,15 @@ export interface CustomCommanderOptions {
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Start function
- * @param {string[]} args - The arguments for the start function
- * @param {CustomCommanderOptions} options - The options for the start function
- * @returns {CustomStart} - The start function
+ * Initializes and returns a function to run custom commands based on the provided configuration.
+ *
+ * This function processes arguments and options to determine which commands to execute.
+ * It supports running all commands or a specific set of commands, and handles command priorities.
+ *
+ * @param {string | string[]} args - The arguments specifying which commands to run. Can be a single command name or an array of command names.
+ * @param {CustomCommanderOptions} options - Options for starting the custom commands, such as running all commands (`all`).
+ * @returns {CustomStart} An asynchronous function that takes a `CustomStartConfig` object and executes the configured commands.
  */
-
 export async function start(
   args: string | string[],
   options: CustomCommanderOptions
@@ -231,14 +234,13 @@ export async function start(
 
 /**
  * Extract the value of an input
- * @param {string[]}   - The arguments to extract
- * @param {string} inputName - The input name to extract
- * @returns {function(string): any} - A function that extract the value of an input
- * @returns {Promise<any>} - The value of the input
+ * @param {string[]} args - The arguments to extract from.
+ * @returns {Promise<(inputName: string) => string | undefined>} A function that takes an input name and returns its value or undefined.
  */
-
-export async function extract(args: string[]): Promise<any> {
-  return function extract(inputName: string) {
+export async function extract(
+  args: string[]
+): Promise<(inputName: string) => string | undefined> {
+  return function extractValue(inputName: string): string | undefined {
     // return the value of the input
     // format of each input is: INPUT_NAME=INPUT_VALUE
 
@@ -327,13 +329,24 @@ export function cmd(
 // document runScript with JSDoc
 
 /**
- * Run a custom script
- * @param {string} script - The script to run
- * @param {string[]} argument - The arguments for the script
- * @param {Object} options - The options for the script
+ * Options for running a custom script.
  */
+export interface RunScriptOptions extends CustomCommanderOptions {
+  dev?: boolean;
+  root?: string;
+}
 
-async function runScript(script: string, argument: string[], options: any) {
+/**
+ * Run a custom script.
+ * @param {string} script - The script to run.
+ * @param {string[]} argument - The arguments for the script.
+ * @param {RunScriptOptions} options - The options for the script.
+ */
+async function runScript(
+  script: string,
+  argument: string[],
+  options: RunScriptOptions
+) {
   if (!script) {
     console.log('specify a script to run');
     return;
@@ -433,7 +446,13 @@ async function runScript(script: string, argument: string[], options: any) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function commandCustom(program: any) {
+/**
+ * Sets up the 'custom' command and its subcommands.
+ * @param {object} program - The program instance, expected to have a `command` method.
+ */
+export default async function commandCustom(program: {
+  command: (name: string) => any;
+}) {
   const custom = program.command('custom');
   custom
     .description('run custom script')

@@ -13,7 +13,20 @@ import { Buffer } from 'node:buffer';
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function misc(program: any) {
+/**
+ * Interface for options of the 'mcp' (misc command proxy) subcommand.
+ */
+interface McpOptions {
+  env?: string;
+}
+
+/**
+ * Sets up miscellaneous utility commands.
+ * @param {object} program - The program instance, expected to have a `command` method.
+ */
+export default async function misc(program: {
+  command: (name: string) => any;
+}) {
   const misc = program.command('misc');
   misc.description('miscellaneous commands');
 
@@ -361,7 +374,7 @@ export default async function misc(program: any) {
     .argument('<command>', 'command to run (e.g., npx, deno, node)')
     .argument('[args...]', 'arguments to pass to the command')
     .option('--env <path>', 'path to environment file', '.env')
-    .action(async (command: string, args: string[], options: any) => {
+    .action(async (command: string, args: string[], options: McpOptions) => {
       try {
         const envPathInput = options.env || '.env';
         const SRC = Deno.env.get('SRC') || '';

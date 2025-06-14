@@ -28,6 +28,13 @@ cd(currentPath);
 // INIT
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Initializes a new project with optional devcontainer and Git repository setup.
+ * Prompts the user for project name and configuration preferences.
+ * Creates project directory, .env.template, .devcontainer configuration (if requested),
+ * .gitignore, meta.json, a basic Readme.md, and .vscode/settings.json.
+ * Initializes a Git repository if requested.
+ */
 export async function machineInit() {
   // ask for the project name
   const { projectName, needsDevcontainer, needsGitRepo } =
@@ -159,7 +166,13 @@ export async function machineInit() {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function machine(program: any) {
+/**
+ * Sets up the 'machine' command and its subcommands.
+ * @param {object} program - The program instance, expected to have a `command` method.
+ */
+export default async function machine(program: {
+  command: (name: string) => any;
+}) {
   const machine = program.command('machine');
   machine.description('create a devcontainer for the project');
 

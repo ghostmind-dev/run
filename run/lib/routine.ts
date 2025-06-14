@@ -23,11 +23,24 @@ cd(currentPath);
 ////////////////////////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Represents a node in the command execution tree.
+ * It can be a single command (string) or a structured node with tasks and execution mode.
+ */
+export interface CommandNode {
+  tasks: (string | CommandNode)[];
+  mode: 'parallel' | 'sequence';
+}
+
 export async function generateTreeCommands(
   scripts: string[],
-  routineMap: any
-): Promise<any> {
-  async function resolveRoutine(task: string, routines: any): Promise<any> {
+  routineMap: Record<string, string>
+): Promise<CommandNode> {
+  async function resolveRoutine(
+    task: string,
+    routines: Record<string, string>
+  ): Promise<string | CommandNode> {
     ////////////////////////////////////////////////////////////////////////////////
     // CURRENT METADATA
     ////////////////////////////////////////////////////////////////////////////////
@@ -185,13 +198,19 @@ export async function generateTreeCommands(
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function routine(program: any) {
+/**
+ * Sets up the 'routine' command for running npm-style scripts defined in meta.json.
+ * @param {object} program - The program instance, expected to have a `command` method.
+ */
+export default async function routine(program: {
+  command: (name: string) => any;
+}) {
   $.verbose = false;
   const routine = program.command('routine');
   routine
     .description('run npm style scripts')
     .argument('[script...]', 'script to run')
-    .action(async (scripts: string[], _options: any) => {
+    .action(async (scripts: string[]) => {
       $.verbose = false;
       Deno.env.set('FORCE_COLOR', '1');
 
@@ -227,7 +246,13 @@ export default async function routine(program: any) {
 
       const result = await generateTreeCommands(scripts, routines);
 
-      async function executeCommand(command: string) {
+      /**
+       * Executes a single command string.
+       * If the command starts with 'cd ', it changes the directory.
+       * Otherwise, it executes the command using zx.
+       * @param {string} command - The command string to execute.
+       */
+      async function executeCommand(command: string): Promise<void> {
         $.verbose = true;
 
         // if command start with cd then change directory
@@ -244,14 +269,14 @@ export default async function routine(program: any) {
 
       /**
        * Recursively execute tasks based on their mode.
-       * @param {object} taskObject - The task object containing tasks and mode.
+       * @param {CommandNode} taskObject - The task object containing tasks and mode.
        */
-      async function executeTasks(taskObject: any) {
+      async function executeTasks(taskObject: CommandNode): Promise<void> {
         const { tasks, mode } = taskObject;
 
         if (mode === 'parallel') {
           await Promise.all(
-            tasks.map((task: any) => {
+            tasks.map((task: string | CommandNode) => {
               if (typeof task === 'string') {
                 return executeCommand(task);
               } else {

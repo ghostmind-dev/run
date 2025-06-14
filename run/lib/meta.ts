@@ -24,6 +24,11 @@ cd(currentPath);
 // CREATE A METADATA FILE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Creates a new meta.json file by prompting the user for necessary information.
+ * This includes project ID, name, type (project, app, or config), and whether it's a global app.
+ * The resulting meta.json file is written to the current directory.
+ */
 export async function createMetaFile() {
   const id = (await createUUID()) || '';
 
@@ -74,6 +79,12 @@ export async function createMetaFile() {
 // CHANGE ALL IDS IN A META.JSON FILE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Changes a specific property in an existing meta.json file.
+ * If no property is provided as an argument, it prompts the user to select a property to change.
+ * Supports changing 'id', 'name', 'type', and 'global' properties.
+ * @param {string} propertyArg - The name of the property to change.
+ */
 export async function metaChangeProperty(propertyArg: string) {
   // ask the user if they want to change all ids
 
@@ -189,6 +200,11 @@ export async function metaChangeProperty(propertyArg: string) {
 // ADD A NEW PROPERTY TO A META.JSON FILE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Adds a Docker configuration section to the meta.json file.
+ * Prompts the user for the Docker configuration name, root path, image name,
+ * and whether a Dockerfile per environment is used.
+ */
 export async function metaAddDocker() {
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -256,6 +272,10 @@ export async function metaAddDocker() {
 // ADD COMPOSE CONFIG
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Adds a Docker Compose configuration section to the meta.json file.
+ * Prompts the user for the Compose configuration name and the root path of the compose file.
+ */
 export async function metaAddCompose() {
   // "compose": {
   //   "default": {
@@ -302,6 +322,10 @@ export async function metaAddCompose() {
 // ADD TUNNEL CONFIG
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Adds a tunnel configuration section to the meta.json file.
+ * Prompts the user for the tunnel subdomain and service URL.
+ */
 export async function metaAddTunnel() {
   // "tunnel": {
   //   "subdomain": "templates-pluto",
@@ -342,6 +366,10 @@ export async function metaAddTunnel() {
 // ADD TERAFORM CONFIG
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Adds a Terraform configuration section to the meta.json file.
+ * Prompts the user for the Terraform configuration name, path, and whether it's a global config.
+ */
 export async function metaAddTerraform() {
   // "terraform": {
   //   "core": {
@@ -428,7 +456,13 @@ export async function metaAddProperty(): Promise<void> {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function meta(program: any) {
+/**
+ * Sets up the 'meta' command and its subcommands.
+ * @param {object} program - The program instance, expected to have a `command` method.
+ */
+export default async function meta(program: {
+  command: (name: string) => any;
+}) {
   const meta = program.command('meta');
   meta.description('manage meta.json files');
 

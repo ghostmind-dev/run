@@ -2,6 +2,30 @@
 // LIST TEMPLATE TYPES
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Represents a file or directory item from the GitHub API.
+ */
+export interface GithubContent {
+  name: string;
+  path: string;
+  sha: string;
+  size: number;
+  url: string;
+  html_url: string;
+  git_url: string;
+  download_url: string | null; // Files have download_url, directories have null
+  type: 'file' | 'dir' | 'symlink' | 'submodule';
+  _links: {
+    self: string;
+    git: string;
+    html: string;
+  };
+}
+
+/**
+ * Fetches and lists available template types (top-level directories) from the ghostmind-dev/templates GitHub repository.
+ * @returns {Promise<string[]>} A promise that resolves to an array of template type names.
+ */
 export async function listTemplateTypes(): Promise<string[]> {
   try {
     const repoUrl =
@@ -15,12 +39,12 @@ export async function listTemplateTypes(): Promise<string[]> {
       throw new Error(`Failed to fetch template types: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data: GithubContent[] = await response.json();
 
     // Filter only directories
     const directories = data
-      .filter((item: any) => item.type === 'dir')
-      .map((item: any) => item.name);
+      .filter((item: GithubContent) => item.type === 'dir')
+      .map((item: GithubContent) => item.name);
 
     return directories;
   } catch (error) {
@@ -33,9 +57,14 @@ export async function listTemplateTypes(): Promise<string[]> {
 // LIST TEMPLATES IN A TYPE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Fetches and lists templates within a specific template type from the ghostmind-dev/templates GitHub repository.
+ * @param {string} templateType - The type (directory name) of templates to list.
+ * @returns {Promise<GithubContent[]>} A promise that resolves to an array of GitHub content items (files and directories).
+ */
 export async function listTemplatesInType(
   templateType: string
-): Promise<any[]> {
+): Promise<GithubContent[]> {
   try {
     const repoUrl = `https://api.github.com/repos/ghostmind-dev/templates/contents/templates/${templateType}`;
 
@@ -59,6 +88,15 @@ export async function listTemplatesInType(
 // DOWNLOAD AND COPY TEMPLATE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Downloads a template (file or folder) from the ghostmind-dev/templates GitHub repository
+ * and copies it to a specified local path.
+ * @param {string} templateType - The type (directory name) of the template.
+ * @param {string} templateName - The name of the template (file or folder name). If copying a whole folder, this can be an empty string when `isFile` is false, or the specific file name.
+ * @param {string} targetPath - The local path (relative to current working directory) where the template should be copied.
+ * @param {boolean} [isFile=false] - Whether the template to download is a single file. If false, assumes it's a folder.
+ * @returns {Promise<void>} A promise that resolves when the template is downloaded and copied.
+ */
 export async function downloadAndCopyTemplate(
   templateType: string,
   templateName: string,
@@ -103,6 +141,13 @@ export async function downloadAndCopyTemplate(
 // DOWNLOAD FOLDER CONTENTS RECURSIVELY
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Recursively downloads the contents of a folder from the ghostmind-dev/templates GitHub repository.
+ * @param {string} templateType - The type (directory name) of the template.
+ * @param {string} folderPath - The path of the folder within the template type to download.
+ * @param {string} targetPath - The local path where the folder contents should be saved.
+ * @returns {Promise<void>} A promise that resolves when all folder contents are downloaded.
+ */
 async function downloadFolderContents(
   templateType: string,
   folderPath: string,
@@ -115,10 +160,10 @@ async function downloadFolderContents(
     throw new Error(`Failed to fetch folder contents: ${response.statusText}`);
   }
 
-  const items = await response.json();
+  const items: GithubContent[] = await response.json();
 
   for (const item of items) {
-    if (item.type === 'file') {
+    if (item.type === 'file' && item.download_url) {
       console.log(`Downloading: ${item.name}`);
 
       const fileResponse = await fetch(item.download_url);
@@ -147,6 +192,12 @@ async function downloadFolderContents(
 // PROMPT USER INPUT
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Prompts the user with a question and returns their input.
+ * @param {string} question - The question to ask the user.
+ * @param {string} [defaultValue] - A default value to use if the user provides no input.
+ * @returns {Promise<string>} A promise that resolves to the user's input or the default value.
+ */
 async function promptUser(
   question: string,
   defaultValue?: string
@@ -169,7 +220,13 @@ async function promptUser(
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
-export default async function template(program: any) {
+/**
+ * Sets up the 'template' command and its subcommands for managing templates.
+ * @param {object} program - The program instance, expected to have a `command` method.
+ */
+export default async function template(program: {
+  command: (name: string) => any;
+}) {
   const template = program.command('template');
   template.description('template management commands');
 
