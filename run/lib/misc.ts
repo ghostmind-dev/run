@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Miscellaneous utility commands module for @ghostmind/run
+ *
+ * This module provides various utility commands including Git operations,
+ * UUID generation, process management, file encoding/decoding, and more.
+ *
+ * @module
+ */
+
 import { $, cd } from 'npm:zx@8.1.0';
 import * as inquirer from 'npm:inquirer@9.2.22';
 import dotenv from 'npm:dotenv@16.5.0';

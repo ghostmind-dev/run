@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Machine operations module for @ghostmind/run
+ *
+ * This module provides functionality for initializing new projects with
+ * devcontainer configurations, Git repositories, and project templates.
+ *
+ * @module
+ */
+
 import { $, cd, spinner, sleep, question } from 'npm:zx@8.1.0';
 import Table from 'npm:cli-table3@0.6.5';
 import {
@@ -28,6 +37,19 @@ cd(currentPath);
 // INIT
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Initialize a new project with devcontainer and configuration files
+ *
+ * This function creates a new project directory with optional devcontainer setup,
+ * Git repository initialization, and standard configuration files including
+ * meta.json, .gitignore, README, and VS Code settings.
+ *
+ * @example
+ * ```typescript
+ * // Initialize a new project (interactive prompts will guide setup)
+ * await machineInit();
+ * ```
+ */
 export async function machineInit() {
   // ask for the project name
   const { projectName, needsDevcontainer, needsGitRepo } =

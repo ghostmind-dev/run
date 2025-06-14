@@ -1,3 +1,12 @@
+/**
+ * @fileoverview GitHub Actions operations module for @ghostmind/run
+ *
+ * This module provides GitHub Actions integration for running workflows
+ * locally with act and triggering remote workflows via GitHub CLI.
+ *
+ * @module
+ */
+
 import { $, sleep, cd } from 'npm:zx@8.1.0';
 import fs from 'npm:fs-extra@11.2.0';
 import { join, extname } from 'jsr:@std/path@0.225.1';
@@ -31,18 +40,37 @@ const actArgmentsDefault: string[] = [
   `--secret=VAULT_ADDR=${Deno.env.get('VAULT_ADDR')}`,
 ];
 
+/**
+ * Options for running remote GitHub Actions
+ */
 export interface ActionRunRemoteOptions {
+  /** Whether to watch the workflow execution */
   watch?: boolean;
+  /** Input parameters to pass to the workflow */
   input?: string[];
+  /** Git branch to run the workflow on */
   branch?: string;
 }
 
 /**
- * Run a remote action
- * @param {string} workflow - The workflow name
- * @param {Object} options - The options for the action
+ * Run a remote GitHub Action workflow
+ *
+ * This function triggers a GitHub Action workflow on the remote repository
+ * and optionally watches its execution progress.
+ *
+ * @param workflow - The name of the workflow to run
+ * @param options - Configuration options for the workflow execution
+ *
+ * @example
+ * ```typescript
+ * // Run a workflow and watch its progress
+ * await actionRunRemote("deploy", {
+ *   watch: true,
+ *   branch: "main",
+ *   input: ["environment=production"]
+ * });
+ * ```
  */
-
 export async function actionRunRemote(
   workflow: string,
   options: ActionRunRemoteOptions
@@ -87,6 +115,27 @@ export async function actionRunRemote(
 // RUN ACTION LOCALLY WITH ACT
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Run a GitHub Action workflow locally using act
+ *
+ * This function executes GitHub Action workflows locally using the `act` tool,
+ * allowing for testing and debugging workflows without pushing to GitHub.
+ *
+ * @param target - The workflow target or job name to run
+ * @param actArguments - Additional arguments to pass to the act command
+ * @param event - The GitHub event type to simulate (e.g., 'push', 'pull_request')
+ * @param custom - Whether to use custom container configuration
+ * @param workaround - Whether to apply specific workarounds for act compatibility
+ *
+ * @example
+ * ```typescript
+ * // Run a specific job locally
+ * await actionRunLocal("test", [], "push", false, false);
+ *
+ * // Run with custom container
+ * await actionRunLocal("build", ["--reuse"], "push", true, false);
+ * ```
+ */
 export async function actionRunLocal(
   target: any,
   actArguments: any,
@@ -157,6 +206,35 @@ export async function actionRunLocal(
   }
 }
 
+/**
+ * Entry point for running GitHub Actions locally with enhanced options
+ *
+ * This function processes command-line options and prepares the environment
+ * for running GitHub Actions locally using act, with support for inputs,
+ * environment variables, and event simulation.
+ *
+ * @param target - The workflow target or job name to run
+ * @param options - Configuration options for the local action execution
+ * @param options.live - Whether to run in live mode
+ * @param options.input - Input parameters for the action
+ * @param options.reuse - Whether to reuse container state
+ * @param options.secure - Whether to hide secrets in logs
+ * @param options.event - The GitHub event type to simulate
+ * @param options.push - Whether to simulate a push event
+ * @param options.custom - Whether to use custom container configuration
+ * @param options.workaround - Whether to apply act compatibility workarounds
+ * @param options.env - Environment name to set
+ *
+ * @example
+ * ```typescript
+ * // Run action with live mode and inputs
+ * await actionRunLocalEntry('test', {
+ *   live: true,
+ *   input: ['environment=staging', 'debug=true'],
+ *   reuse: true
+ * });
+ * ```
+ */
 export async function actionRunLocalEntry(target: any, options: any) {
   const { live, input, reuse, secure, event, push, custom, workaround, env } =
     options;
