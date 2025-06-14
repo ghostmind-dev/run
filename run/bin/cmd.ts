@@ -16,6 +16,9 @@
  *
  * # Execute GitHub Actions locally
  * run action local test-workflow
+ *
+ * # Show version
+ * run version
  * ```
  *
  * @module
@@ -25,6 +28,8 @@ import { $ } from 'npm:zx@8.1.0';
 import { Command } from 'npm:commander@12.1.0';
 import { setSecretsOnLocal } from '../utils/divers.ts';
 import { argv } from 'node:process';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 ////////////////////////////////////////////////////////////////////////////////
 // VERBOSE BY DEFAULT
@@ -37,6 +42,69 @@ $.verbose = false;
 ////////////////////////////////////////////////////////////////////////////////
 
 const program = new Command();
+
+////////////////////////////////////////////////////////////////////////////////
+// VERSION COMMAND
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Read version from deno.json file
+ */
+async function getVersion(): Promise<string> {
+  try {
+    // Get the directory of the current script
+    const currentDir = Deno.cwd();
+
+    // Look for deno.json in the current directory and parent directories
+    let denoJsonPath = join(currentDir, 'deno.json');
+
+    // Try current directory first
+    try {
+      await Deno.stat(denoJsonPath);
+    } catch {
+      // If not found, try parent directories
+      let searchDir = currentDir;
+      let found = false;
+
+      for (let i = 0; i < 5; i++) {
+        // Limit search to 5 levels up
+        const parentDir = dirname(searchDir);
+        if (parentDir === searchDir) break; // Reached root
+
+        searchDir = parentDir;
+        denoJsonPath = join(searchDir, 'deno.json');
+
+        try {
+          await Deno.stat(denoJsonPath);
+          found = true;
+          break;
+        } catch {
+          continue;
+        }
+      }
+
+      if (!found) {
+        throw new Error('deno.json not found');
+      }
+    }
+
+    const denoJsonContent = await Deno.readTextFile(denoJsonPath);
+    const denoJson = JSON.parse(denoJsonContent);
+
+    return denoJson.version || 'unknown';
+  } catch (error) {
+    console.error('Error reading version from deno.json:', error.message);
+    return 'unknown';
+  }
+}
+
+program
+  .command('version')
+  .description('show version information')
+  .action(async () => {
+    const version = await getVersion();
+    console.log(`@ghostmind/run v${version}`);
+  });
 
 ////////////////////////////////////////////////////////////////////////////////
 // COMMAND
