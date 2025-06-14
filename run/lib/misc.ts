@@ -8,6 +8,8 @@ import {
 } from '../utils/divers.ts';
 import fs from 'node:fs';
 import { Buffer } from 'node:buffer';
+import dotenv from 'npm:dotenv@16.5.0';
+
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
@@ -348,6 +350,75 @@ export default async function misc(program: any) {
       const decoded = Buffer.from(env, 'base64').toString('utf-8');
       Deno.writeTextFileSync(`${currentPath}/${file_name}`, decoded);
       console.log(`${file_name} decoded and written to ${currentPath}`);
+    });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // RUN MCP WITH ENVIRONMENT VARIABLES INJECTED
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('mcp')
+    .description('run any command with environment variables injected')
+    .argument('<command>', 'command to run (e.g., npx, deno, node)')
+    .argument('[args...]', 'arguments to pass to the command')
+    .option('--env <path>', 'path to environment file', '.env')
+    .action(async (command: string, args: string[], options: any) => {
+      try {
+        const envPathInput = options.env || '.env';
+        const SRC = Deno.env.get('SRC') || '';
+
+        // Determine if path is absolute or relative
+        let envPath: string;
+        if (envPathInput.startsWith('/')) {
+          // Absolute path - use as is
+          envPath = envPathInput;
+        } else {
+          // Relative path - prepend with SRC
+          envPath = SRC ? `${SRC}/${envPathInput}` : envPathInput;
+        }
+
+        // Check if env file exists before trying to load it
+        try {
+          await Deno.stat(envPath);
+          console.error(`Loading environment variables from: ${envPath}`);
+          dotenv.config({ path: envPath });
+        } catch {
+          console.error(
+            `Environment file ${envPath} not found, proceeding without loading env vars`
+          );
+        }
+
+        console.error(`Running: ${command} ${args.join(' ')}`);
+
+        // Spawn the process with the specified command and arguments
+        const process = new Deno.Command(command, {
+          args: args,
+          stdin: 'piped',
+          stdout: 'piped',
+          stderr: 'piped',
+          env: Deno.env.toObject(), // Pass all environment variables
+        });
+
+        const child = process.spawn();
+
+        // Forward stdin from parent to child
+        Deno.stdin.readable.pipeTo(child.stdin);
+
+        // Forward stdout from child to parent
+        child.stdout.pipeTo(Deno.stdout.writable);
+
+        // Forward stderr from child to parent
+        child.stderr.pipeTo(Deno.stderr.writable);
+
+        // Wait for the child process to complete
+        const status = await child.status;
+
+        // Exit with the same code as the child process
+        Deno.exit(status.code);
+      } catch (error) {
+        console.error(`Error running command '${command}':`, error);
+        Deno.exit(1);
+      }
     });
 }
 
