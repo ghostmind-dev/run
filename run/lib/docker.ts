@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Docker operations module for @ghostmind/run
+ *
+ * This module provides comprehensive Docker and Docker Compose functionality,
+ * including building images, managing containers, multi-architecture builds,
+ * and registry operations.
+ *
+ * @module
+ */
+
 import { $, sleep, cd } from 'npm:zx@8.1.0';
 import {
   verifyIfMetaJsonExists,
@@ -28,9 +38,15 @@ cd(currentPath);
 // INTERFACE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Options for Docker Compose build operations
+ */
 export interface DockerComposeBuildOptions {
+  /** The component/service to build */
   component?: string;
+  /** Path to the Docker Compose file */
   file?: string;
+  /** Whether to use build cache */
   cache?: boolean;
 }
 
@@ -39,12 +55,21 @@ export interface DockerComposeBuildOptionsComponent
   component?: string;
 }
 
+/**
+ * Options for Docker Compose up operations
+ */
 export interface DockerComposeUpOptions {
+  /** Whether to build images before starting */
   build?: boolean;
+  /** Whether to force recreate containers */
   forceRecreate?: boolean;
+  /** Whether to run in detached mode */
   detach?: boolean;
+  /** Whether to start all services */
   all?: boolean;
+  /** Service group to start */
   group?: string;
+  /** Services to exclude from startup */
   exclude?: string[];
 }
 
@@ -53,17 +78,31 @@ export interface DockerComposeUpOptionsComponent
   component?: string;
 }
 
+/**
+ * Options for Docker image registration (build and push)
+ */
 export interface DockerRegisterOptions {
+  /** Whether to build for all architectures */
   all?: boolean;
+  /** Whether to build for AMD64 architecture */
   amd64?: boolean;
+  /** Whether to use build cache */
   cache?: boolean;
+  /** Whether to build for ARM64 architecture */
   arm64?: boolean;
+  /** Whether to use cloud build */
   cloud?: boolean;
+  /** The component to build */
   component?: string;
+  /** Machine type for cloud builds */
   machine_type?: string;
+  /** Build arguments to pass to Docker */
   build_args?: string[];
+  /** Additional tags to apply */
   tags?: string[];
+  /** Tag modifier to append */
   modifier?: string;
+  /** Whether to skip automatic tag modifiers */
   skip_tag_modifiers?: boolean;
 }
 
@@ -71,6 +110,24 @@ export interface DockerRegisterOptions {
 // GET DOCKERFILE NAME AND IMAGE NAME
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Get Docker configuration details for a component
+ *
+ * This function resolves the Dockerfile path, Docker context, image name,
+ * and tags to push based on the component configuration in meta.json.
+ *
+ * @param component - The component name (defaults to 'default')
+ * @param modifier - Optional tag modifier to append to image name
+ * @param skip_tag_modifiers - Whether to skip automatic tag modifiers
+ * @returns Promise resolving to Docker configuration details
+ *
+ * @example
+ * ```typescript
+ * const config = await getDockerfileAndImageName('web');
+ * console.log(config.image); // e.g., 'myapp/web:dev'
+ * console.log(config.dockerfile); // e.g., '/path/to/Dockerfile.dev'
+ * ```
+ */
 export async function getDockerfileAndImageName(
   component: any,
   modifier?: string,
@@ -146,6 +203,23 @@ export async function getDockerfileAndImageName(
 // GET LATEST IMAGE DIGEST
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Get the digest of a Docker image for a specific architecture
+ *
+ * This function retrieves the SHA256 digest of a Docker image for the
+ * specified architecture, useful for pinning exact image versions.
+ *
+ * @param arch - Target architecture ('amd64', 'arm64', or other)
+ * @param component - The component name
+ * @param modifier - Optional tag modifier
+ * @returns Promise resolving to the image digest string
+ *
+ * @example
+ * ```typescript
+ * const digest = await getDockerImageDigest('amd64', 'web');
+ * console.log(digest); // e.g., 'myapp/web@sha256:abc123...'
+ * ```
+ */
 export async function getDockerImageDigest(
   arch: any,
   component: any,
@@ -207,6 +281,30 @@ export async function getDockerImageDigest(
 ////////////////////////////////////////////////////////////////////////////////
 // DOCKER BUILD UNIT
 ////////////////////////////////////////////////////////////////////////////////
+/**
+ * Build and push Docker images to a registry
+ *
+ * This function builds Docker images for multiple architectures and pushes them
+ * to a container registry. It supports multi-arch builds, caching, and cloud builds.
+ *
+ * @param componentOrOptions - Either the component name or register options
+ * @param options - Additional register options (when first param is component name)
+ *
+ * @example
+ * ```typescript
+ * // Register default component for all architectures
+ * await dockerRegister('web', { all: true });
+ *
+ * // Register with specific architecture
+ * await dockerRegister({ component: 'api', amd64: true, cache: true });
+ *
+ * // Register with custom tags and build args
+ * await dockerRegister('worker', {
+ *   tags: ['latest', 'v1.0.0'],
+ *   build_args: ['NODE_ENV=production']
+ * });
+ * ```
+ */
 export async function dockerRegister(
   componentOrOptions?: string | DockerRegisterOptions,
   options?: DockerRegisterOptions
@@ -608,6 +706,27 @@ export async function dockerRegister(
 // DOCKER COMPOSE UP
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Start Docker Compose services
+ *
+ * This function starts Docker Compose services for the specified component,
+ * with options for building, recreating, and running in detached mode.
+ *
+ * @param componentOrOptions - Either the component name or up options
+ * @param options - Additional up options (when first param is component name)
+ *
+ * @example
+ * ```typescript
+ * // Start default services
+ * await dockerComposeUp();
+ *
+ * // Start specific component with build
+ * await dockerComposeUp('web', { build: true, detach: true });
+ *
+ * // Start with options object
+ * await dockerComposeUp({ component: 'api', build: true, forceRecreate: true });
+ * ```
+ */
 export async function dockerComposeUp(
   componentOrOptions?: string | DockerComposeUpOptionsComponent,
   options?: DockerComposeUpOptions
@@ -675,6 +794,26 @@ export async function dockerComposeUp(
 // DOCKER COMPOSE DOWN
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Stop and remove Docker Compose services
+ *
+ * This function stops and removes Docker Compose services for the specified
+ * component, cleaning up containers, networks, and volumes.
+ *
+ * @param component - The component name (defaults to 'default')
+ * @param options - Configuration options for the down operation
+ * @param options.forceRecreate - Whether to force recreate on next up
+ * @param options.all - Whether to stop all services
+ *
+ * @example
+ * ```typescript
+ * // Stop default component services
+ * await dockerComposeDown();
+ *
+ * // Stop specific component
+ * await dockerComposeDown('web', { forceRecreate: true });
+ * ```
+ */
 export async function dockerComposeDown(component: any, options: any) {
   let { forceRecreate, all } = options;
 
@@ -713,20 +852,61 @@ export async function dockerComposeDown(component: any, options: any) {
 // DOCKER COMPOSE EXEC
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Options for Docker Compose exec operations
+ */
 export interface DockerComposeExecOptions {
+  /** The command/instructions to execute */
   instructions: string;
+  /** Specific container to execute in */
   container?: string;
+  /** Component to execute in */
   component?: string;
+  /** Path to Docker Compose file */
   file?: string;
+  /** Whether to force recreate containers */
   forceRecreate?: boolean;
+  /** Environment file to use */
   envfile?: string;
 }
 
+/**
+ * Docker Compose exec options with component specification
+ */
 export interface DockerComposeExecOptionsComponent
   extends DockerComposeExecOptions {
+  /** The command/instructions to execute */
   instructions: string;
 }
 
+/**
+ * Execute commands in Docker Compose containers
+ *
+ * This function executes commands inside running Docker Compose containers,
+ * with support for targeting specific containers or components.
+ *
+ * @param instructionsOrOptions - Either the command string or exec options
+ * @param options - Additional exec options (when first param is command string)
+ *
+ * @example
+ * ```typescript
+ * // Execute a simple command
+ * await dockerComposeExec('ls -la');
+ *
+ * // Execute in specific container
+ * await dockerComposeExec('npm test', {
+ *   container: 'web',
+ *   component: 'frontend'
+ * });
+ *
+ * // Execute with options object
+ * await dockerComposeExec({
+ *   instructions: 'python manage.py migrate',
+ *   component: 'api',
+ *   envfile: '.env.local'
+ * });
+ * ```
+ */
 export async function dockerComposeExec(
   instructionsOrOptions: string | DockerComposeExecOptionsComponent,
   options?: DockerComposeExecOptions
@@ -864,6 +1044,24 @@ export async function dockerComposeBuild(
 // DOCKER COMPOSE LOGS
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * View logs from Docker Compose services
+ *
+ * This function displays logs from Docker Compose services for the specified
+ * component, useful for debugging and monitoring container output.
+ *
+ * @param component - The component name (defaults to 'default')
+ * @param options - Configuration options for log viewing
+ *
+ * @example
+ * ```typescript
+ * // View logs for default component
+ * await dockerComposeLogs();
+ *
+ * // View logs for specific component
+ * await dockerComposeLogs('api', {});
+ * ```
+ */
 export async function dockerComposeLogs(component: any, options: any) {
   //  get meta config
   let metaConfig = await verifyIfMetaJsonExists(Deno.cwd());
@@ -901,10 +1099,35 @@ export async function dockerComposeLogs(component: any, options: any) {
 // DOCKER BUILD
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Options for Docker build operations
+ */
 export interface DockerBuildOptions {
+  /** The component to build */
   component?: string;
 }
 
+/**
+ * Build a Docker image for the specified component
+ *
+ * This function builds a Docker image using the configuration from meta.json.
+ * It automatically determines the Dockerfile path, image name, and build context.
+ *
+ * @param componentOrOptions - Either the component name or build options
+ * @param options - Additional build options (when first param is component name)
+ *
+ * @example
+ * ```typescript
+ * // Build the default component
+ * await dockerBuild();
+ *
+ * // Build a specific component
+ * await dockerBuild("web-service");
+ *
+ * // Build with options
+ * await dockerBuild({ component: "api" });
+ * ```
+ */
 export async function dockerBuild(
   componentOrOptions?: string | DockerBuildOptions,
   options?: DockerBuildOptions

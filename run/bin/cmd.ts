@@ -1,5 +1,26 @@
 #!/usr/bin/env -S deno run --allow-all
 
+/**
+ * @fileoverview CLI entry point for @ghostmind/run
+ *
+ * This module provides the command-line interface for the @ghostmind/run toolkit,
+ * allowing users to execute DevOps operations from the terminal.
+ *
+ * @example
+ * ```bash
+ * # Build Docker containers
+ * run docker build --component my-app
+ *
+ * # Run Docker Compose services
+ * run docker up --component web --build --detach
+ *
+ * # Execute GitHub Actions locally
+ * run action local test-workflow
+ * ```
+ *
+ * @module
+ */
+
 import { $ } from 'npm:zx@8.1.0';
 import { Command } from 'npm:commander@12.1.0';
 import { setSecretsOnLocal } from '../utils/divers.ts';

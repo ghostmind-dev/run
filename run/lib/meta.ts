@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Meta.json management module for @ghostmind/run
+ *
+ * This module provides functionality for creating, modifying, and managing
+ * meta.json configuration files that define project metadata and settings.
+ *
+ * @module
+ */
+
 import { $, cd } from 'npm:zx@8.1.0';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import { nanoid } from 'npm:nanoid@5.0.7';
@@ -24,6 +33,18 @@ cd(currentPath);
 // CREATE A METADATA FILE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Create a new meta.json configuration file interactively
+ *
+ * This function prompts the user for project information and creates
+ * a meta.json file with the specified name, type, and global settings.
+ *
+ * @example
+ * ```typescript
+ * // Create a new meta.json file (interactive prompts will guide setup)
+ * await createMetaFile();
+ * ```
+ */
 export async function createMetaFile() {
   const id = (await createUUID()) || '';
 
@@ -48,10 +69,17 @@ export async function createMetaFile() {
     message: 'Is this a environment-based app ?',
   });
 
+  /**
+   * Interface for meta.json file structure
+   */
   interface TypeMetaJson {
+    /** Unique identifier for the project */
     id: string;
+    /** Name of the project */
     name: string;
+    /** Type of the project (project, app, config) */
     type: string;
+    /** Additional dynamic properties */
     [key: string]: string; // Restricts all dynamic properties to be of type string
   }
 
@@ -74,6 +102,24 @@ export async function createMetaFile() {
 // CHANGE ALL IDS IN A META.JSON FILE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Change a property in the existing meta.json file
+ *
+ * This function allows modification of properties in an existing meta.json file,
+ * including id, name, type, and global settings. If no property is specified,
+ * it will prompt the user to select one.
+ *
+ * @param propertyArg - The property to change (optional, will prompt if not provided)
+ *
+ * @example
+ * ```typescript
+ * // Change the name property
+ * await metaChangeProperty('name');
+ *
+ * // Interactive property selection
+ * await metaChangeProperty();
+ * ```
+ */
 export async function metaChangeProperty(propertyArg: string) {
   // ask the user if they want to change all ids
 
@@ -189,6 +235,18 @@ export async function metaChangeProperty(propertyArg: string) {
 // ADD A NEW PROPERTY TO A META.JSON FILE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Add Docker configuration to meta.json file
+ *
+ * This function interactively adds Docker configuration settings to the meta.json file,
+ * including Dockerfile path, image name, and environment-based configuration options.
+ *
+ * @example
+ * ```typescript
+ * // Add Docker configuration (interactive prompts will guide setup)
+ * await metaAddDocker();
+ * ```
+ */
 export async function metaAddDocker() {
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -256,6 +314,18 @@ export async function metaAddDocker() {
 // ADD COMPOSE CONFIG
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Add Docker Compose configuration to meta.json file
+ *
+ * This function interactively adds Docker Compose configuration settings
+ * to the meta.json file, including the root directory for compose files.
+ *
+ * @example
+ * ```typescript
+ * // Add Docker Compose configuration (interactive prompts will guide setup)
+ * await metaAddCompose();
+ * ```
+ */
 export async function metaAddCompose() {
   // "compose": {
   //   "default": {
@@ -302,6 +372,18 @@ export async function metaAddCompose() {
 // ADD TUNNEL CONFIG
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Add tunnel configuration to meta.json file
+ *
+ * This function interactively adds tunnel configuration settings to the meta.json file,
+ * including subdomain and service URL for Cloudflare tunnel setup.
+ *
+ * @example
+ * ```typescript
+ * // Add tunnel configuration (interactive prompts will guide setup)
+ * await metaAddTunnel();
+ * ```
+ */
 export async function metaAddTunnel() {
   // "tunnel": {
   //   "subdomain": "templates-pluto",
@@ -339,9 +421,21 @@ export async function metaAddTunnel() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// ADD TERAFORM CONFIG
+// ADD TERRAFORM CONFIG
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Add Terraform configuration to meta.json file
+ *
+ * This function interactively adds Terraform configuration settings to the meta.json file,
+ * including the path to Terraform files and global configuration options.
+ *
+ * @example
+ * ```typescript
+ * // Add Terraform configuration (interactive prompts will guide setup)
+ * await metaAddTerraform();
+ * ```
+ */
 export async function metaAddTerraform() {
   // "terraform": {
   //   "core": {
@@ -397,6 +491,18 @@ export async function metaAddTerraform() {
 // ADD
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Add a new property to meta.json file with interactive selection
+ *
+ * This function presents a menu of available properties that can be added
+ * to the meta.json file and delegates to the appropriate specialized function.
+ *
+ * @example
+ * ```typescript
+ * // Interactive property selection and addition
+ * await metaAddProperty();
+ * ```
+ */
 export async function metaAddProperty(): Promise<void> {
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 

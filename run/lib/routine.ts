@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Routine execution module for @ghostmind/run
+ *
+ * This module provides functionality for executing npm-style scripts with
+ * support for parallel and sequential execution, dependency resolution,
+ * and cross-project routine execution.
+ *
+ * @module
+ */
+
 import { $, cd, within } from 'npm:zx@8.1.0';
 import inquirer from 'npm:inquirer@9.2.22';
 import {
@@ -21,8 +31,30 @@ let currentPath = Deno.cwd();
 cd(currentPath);
 
 ////////////////////////////////////////////////////////////////////////////////
-//
+// GENERATE TREE COMMANDS
 ////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Generate a tree structure of commands for execution
+ *
+ * This function processes routine definitions and creates an execution tree
+ * that supports parallel and sequential execution modes, including cross-project
+ * routine execution with the 'every' keyword.
+ *
+ * @param scripts - Array of script names to execute
+ * @param routineMap - Map of routine names to their command definitions
+ * @returns Promise resolving to an execution tree structure
+ *
+ * @example
+ * ```typescript
+ * const routines = {
+ *   build: 'npm run build',
+ *   test: 'parallel build lint',
+ *   deploy: 'sequence build test'
+ * };
+ * const tree = await generateTreeCommands(['test'], routines);
+ * ```
+ */
 export async function generateTreeCommands(
   scripts: string[],
   routineMap: any

@@ -1,3 +1,27 @@
+/**
+ * @fileoverview Main entry point for @ghostmind/run - A comprehensive DevOps automation toolkit
+ *
+ * This module provides a complete set of tools for managing Docker containers, GitHub Actions,
+ * Terraform infrastructure, HashiCorp Vault, SSH tunnels, and more. It supports both
+ * programmatic usage and CLI operations for streamlined development workflows.
+ *
+ * @example
+ * ```typescript
+ * import { dockerBuild, dockerComposeUp, actionRunLocal } from "@ghostmind/run";
+ *
+ * // Build a Docker image
+ * await dockerBuild("my-component");
+ *
+ * // Start Docker Compose services
+ * await dockerComposeUp("web-service", { build: true, detach: true });
+ *
+ * // Run GitHub Action locally
+ * await actionRunLocal("test-workflow", [], "push", false, false);
+ * ```
+ *
+ * @module
+ */
+
 import { config } from 'npm:dotenv@16.4.5';
 import { expand } from 'npm:dotenv-expand@11.0.6';
 

@@ -91,12 +91,27 @@ export interface CustomCommanderOptions {
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Start function
- * @param {string[]} args - The arguments for the start function
- * @param {CustomCommanderOptions} options - The options for the start function
- * @returns {CustomStart} - The start function
+ * Create a start function for executing custom commands with priority ordering
+ *
+ * This function returns a start function that can execute multiple commands
+ * in priority order, supporting both string commands and function calls.
+ *
+ * @param args - The command arguments (string or array of strings)
+ * @param options - Configuration options for command execution
+ * @param options.root - Root directory for script execution
+ * @param options.all - Whether to run all available commands
+ * @param options.dev - Whether to run in development mode
+ * @returns A start function that executes the configured commands
+ *
+ * @example
+ * ```typescript
+ * const startFn = await start(['build', 'test'], { all: false });
+ * await startFn({
+ *   build: { command: 'npm run build', priority: 1 },
+ *   test: { command: 'npm test', priority: 2 }
+ * });
+ * ```
  */
-
 export async function start(
   args: string | string[],
   options: CustomCommanderOptions
@@ -230,13 +245,21 @@ export async function start(
 }
 
 /**
- * Extract the value of an input
- * @param {string[]}   - The arguments to extract
- * @param {string} inputName - The input name to extract
- * @returns {function(string): any} - A function that extract the value of an input
- * @returns {Promise<any>} - The value of the input
+ * Create an extract function for parsing input arguments
+ *
+ * This function returns a function that can extract values from command-line
+ * arguments formatted as KEY=VALUE pairs.
+ *
+ * @param args - Array of command-line arguments to parse
+ * @returns A function that extracts values by input name
+ *
+ * @example
+ * ```typescript
+ * const extractFn = await extract(['env=production', 'debug=true']);
+ * const environment = extractFn('env'); // returns 'production'
+ * const debugMode = extractFn('debug'); // returns 'true'
+ * ```
  */
-
 export async function extract(args: string[]): Promise<any> {
   return function extract(inputName: string) {
     // return the value of the input
@@ -276,11 +299,21 @@ export async function extract(args: string[]): Promise<any> {
 }
 
 /**
- * Verify if the argumentation is equal to the argument
- * @param {string[]} args - The argumentation to verify
- * @returns {function(string): boolean} - A function that verify if the argumentation is equal to the argument
+ * Create a function to check if arguments contain a specific value
+ *
+ * This function returns a function that can check whether a specific
+ * argument exists in the provided arguments array.
+ *
+ * @param args - Array of arguments to search in
+ * @returns A function that checks if a specific argument exists
+ *
+ * @example
+ * ```typescript
+ * const hasFn = has(['--verbose', '--debug', 'production']);
+ * const isVerbose = hasFn('--verbose'); // returns true
+ * const isQuiet = hasFn('--quiet'); // returns false
+ * ```
  */
-
 export function has(args: string[]): (arg: string) => boolean {
   return function (arg: string): boolean {
     if (args === undefined) {
@@ -296,12 +329,27 @@ export function has(args: string[]): (arg: string) => boolean {
 }
 
 /**
- * Create a command
- * @param {string | TemplateStringsArray} template - The template for the command
- * @param {any[]} substitutions - The substitutions for the command
- * @returns {string[]} - The command as an array of string
+ * Create a command array from a template string
+ *
+ * This function converts a command template string into an array of arguments,
+ * supporting both regular strings and template literals with substitutions.
+ *
+ * @param template - The command template (string or template literal)
+ * @param substitutions - Values to substitute in template literals
+ * @returns An array of command arguments split by spaces
+ *
+ * @example
+ * ```typescript
+ * // Simple string command
+ * const command1 = cmd('docker build -t myapp .');
+ * // Returns: ['docker', 'build', '-t', 'myapp', '.']
+ *
+ * // Template literal with substitution
+ * const image = 'myapp:latest';
+ * const command2 = cmd`docker run ${image}`;
+ * // Returns: ['docker', 'run', 'myapp:latest']
+ * ```
  */
-
 export function cmd(
   template: string | TemplateStringsArray,
   ...substitutions: any[]
@@ -324,15 +372,28 @@ export function cmd(
 // RUN CUSTOM SCRIPT
 ////////////////////////////////////////////////////////////////////////////////
 
-// document runScript with JSDoc
-
 /**
- * Run a custom script
- * @param {string} script - The script to run
- * @param {string[]} argument - The arguments for the script
- * @param {Object} options - The options for the script
+ * Execute a custom TypeScript script with enhanced runtime context
+ *
+ * This function dynamically imports and executes a TypeScript script,
+ * providing it with a rich context including meta configuration,
+ * utility functions, and environment access.
+ *
+ * @param script - Name of the script to run (without .ts extension)
+ * @param argument - Arguments to pass to the script
+ * @param options - Execution options
+ * @param options.dev - Whether to run in development mode
+ * @param options.root - Custom root directory for script lookup
+ *
+ * @example
+ * ```typescript
+ * // Run a script called 'deploy.ts' in the scripts folder
+ * await runScript('deploy', ['--env=production'], { dev: false });
+ *
+ * // Run with custom root directory
+ * await runScript('build', [], { root: 'custom-scripts' });
+ * ```
  */
-
 async function runScript(script: string, argument: string[], options: any) {
   if (!script) {
     console.log('specify a script to run');

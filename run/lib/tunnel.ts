@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Cloudflare Tunnel operations module for @ghostmind/run
+ *
+ * This module provides Cloudflare Tunnel (cloudflared) integration for creating
+ * secure tunnels to local services, enabling external access to development
+ * environments and local applications.
+ *
+ * @module
+ */
+
 import { $, cd, fs } from 'npm:zx@8.1.0';
 import {
   verifyIfMetaJsonExists,
@@ -24,6 +34,22 @@ cd(currentPath);
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Configure Cloudflare Tunnel CLI commands and subcommands
+ *
+ * This function sets up the Cloudflare Tunnel (cloudflared) command-line interface
+ * for creating secure tunnels to local services. It handles tunnel creation,
+ * DNS routing, and configuration management.
+ *
+ * @param program - Commander.js program instance
+ *
+ * @example
+ * ```typescript
+ * import { Command } from 'commander';
+ * const program = new Command();
+ * await tunnel(program);
+ * ```
+ */
 export default async function tunnel(program: any) {
   const tunnel = program.command('tunnel');
   tunnel.description('Run a cloudflared tunnel to a local service');

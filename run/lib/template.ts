@@ -1,7 +1,30 @@
+/**
+ * @fileoverview Template management module for @ghostmind/run
+ *
+ * This module provides functionality for downloading and managing project
+ * templates from the ghostmind-dev/templates repository.
+ *
+ * @module
+ */
+
 ////////////////////////////////////////////////////////////////////////////////
 // LIST TEMPLATE TYPES
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * List available template types from the GitHub repository
+ *
+ * This function fetches the list of available template directories
+ * from the ghostmind-dev/templates repository.
+ *
+ * @returns Promise resolving to an array of template type names
+ *
+ * @example
+ * ```typescript
+ * const types = await listTemplateTypes();
+ * console.log(types); // ['react-app', 'node-api', 'deno-cli']
+ * ```
+ */
 export async function listTemplateTypes(): Promise<string[]> {
   try {
     const repoUrl =
@@ -33,6 +56,21 @@ export async function listTemplateTypes(): Promise<string[]> {
 // LIST TEMPLATES IN A TYPE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * List templates within a specific template type
+ *
+ * This function fetches the contents of a specific template type directory
+ * from the ghostmind-dev/templates repository.
+ *
+ * @param templateType - The template type directory to list
+ * @returns Promise resolving to an array of template items
+ *
+ * @example
+ * ```typescript
+ * const templates = await listTemplatesInType('react-app');
+ * console.log(templates); // Array of file/folder objects
+ * ```
+ */
 export async function listTemplatesInType(
   templateType: string
 ): Promise<any[]> {
@@ -59,6 +97,26 @@ export async function listTemplatesInType(
 // DOWNLOAD AND COPY TEMPLATE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Download and copy a template to the local filesystem
+ *
+ * This function downloads a template (file or directory) from the GitHub
+ * repository and copies it to the specified target path.
+ *
+ * @param templateType - The template type directory
+ * @param templateName - The specific template name to download
+ * @param targetPath - Local path where the template should be copied
+ * @param isFile - Whether the template is a single file (defaults to false)
+ *
+ * @example
+ * ```typescript
+ * // Download a full template directory
+ * await downloadAndCopyTemplate('react-app', 'basic', './my-app');
+ *
+ * // Download a single file
+ * await downloadAndCopyTemplate('configs', 'tsconfig.json', './config', true);
+ * ```
+ */
 export async function downloadAndCopyTemplate(
   templateType: string,
   templateName: string,
@@ -103,6 +161,18 @@ export async function downloadAndCopyTemplate(
 // DOWNLOAD FOLDER CONTENTS RECURSIVELY
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Recursively download folder contents from GitHub repository
+ *
+ * This internal function recursively downloads all files and subdirectories
+ * from a template folder in the GitHub repository.
+ *
+ * @param templateType - The template type directory
+ * @param folderPath - The folder path within the template type
+ * @param targetPath - Local target path for the download
+ *
+ * @internal
+ */
 async function downloadFolderContents(
   templateType: string,
   folderPath: string,

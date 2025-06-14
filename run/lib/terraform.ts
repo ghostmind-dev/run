@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Terraform operations module for @ghostmind/run
+ *
+ * This module provides Terraform infrastructure management functionality,
+ * including applying configurations, destroying resources, and managing
+ * container image digests for deployments.
+ *
+ * @module
+ */
+
 import { $, cd } from 'npm:zx@8.1.0';
 import fs from 'npm:fs-extra@11.2.0';
 import { readFileSync } from 'node:fs';
@@ -28,20 +38,36 @@ cd(currentPath);
 // INTERFACE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Options for Terraform activation (apply) operations
+ */
 interface TerraformActivateOptions {
+  /** Target architecture for container images */
   arch?: string;
+  /** Docker configuration */
   docker?: string;
+  /** Image tag modifiers */
   modifiers?: string[];
+  /** Whether to clean .terraform directory before init */
   clean?: boolean;
 }
 
+/**
+ * Terraform activation options with component specification
+ */
 interface TerraformActivateOptionsWithComponent
   extends TerraformActivateOptions {
+  /** The Terraform component to activate */
   component: string;
 }
 
+/**
+ * Options for Terraform destroy operations
+ */
 interface TerraformDestroyOptions {
+  /** Target architecture for container images */
   arch?: string;
+  /** Whether to clean .terraform directory before init */
   clean?: boolean;
 }
 
@@ -49,6 +75,24 @@ interface TerraformDestroyOptions {
 // GET BACKEND BUCKET NAME AND DIRECTORY
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Get Terraform backend bucket configuration for state storage
+ *
+ * This function generates the S3 bucket configuration for Terraform remote state
+ * storage, including bucket name and prefix path based on project ID, environment,
+ * and component.
+ *
+ * @param id - Project identifier
+ * @param global - Whether this is a global configuration
+ * @param component - Terraform component name
+ * @returns Promise resolving to bucket configuration object
+ *
+ * @example
+ * ```typescript
+ * const config = await getBucketConfig('my-project', false, 'web-infrastructure');
+ * // Returns: { bcBucket: 'bucket=my-terraform-bucket', bcPrefix: 'prefix=my-project/dev/terraform/web-infrastructure' }
+ * ```
+ */
 export async function getBucketConfig(
   id: string,
   global: any,
@@ -75,6 +119,24 @@ export async function getBucketConfig(
 // TERRAFORM DESTROY UNIT
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Destroy Terraform infrastructure for the specified component
+ *
+ * This function destroys all resources managed by Terraform for a given component.
+ * It handles backend configuration, container image cleanup, and executes the destroy plan.
+ *
+ * @param component - The Terraform component to destroy
+ * @param options - Destroy operation options
+ *
+ * @example
+ * ```typescript
+ * // Destroy infrastructure with clean init
+ * await terraformDestroy('web-infrastructure', { clean: true });
+ *
+ * // Destroy for specific architecture
+ * await terraformDestroy('api-infrastructure', { arch: 'arm64' });
+ * ```
+ */
 export async function terraformDestroy(
   component: string,
   options: TerraformDestroyOptions
@@ -120,6 +182,35 @@ export async function terraformDestroy(
 // TERRAFORM APPLY UNIT
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Apply Terraform configuration for the specified component
+ *
+ * This function applies Terraform infrastructure changes for a given component.
+ * It handles container image digests, backend configuration, and executes the apply operation.
+ *
+ * @param componentOrOptions - Either the component name or activation options
+ * @param options - Additional activation options (when first param is component name)
+ *
+ * @example
+ * ```typescript
+ * // Apply infrastructure for a component
+ * await terraformActivate('web-infrastructure');
+ *
+ * // Apply with specific architecture and modifiers
+ * await terraformActivate('api-infrastructure', {
+ *   arch: 'arm64',
+ *   modifiers: ['web:v1.2.0', 'api:latest'],
+ *   clean: true
+ * });
+ *
+ * // Apply with options object
+ * await terraformActivate({
+ *   component: 'database-infrastructure',
+ *   arch: 'amd64',
+ *   clean: true
+ * });
+ * ```
+ */
 export async function terraformActivate(
   componentOrOptions: string | TerraformActivateOptionsWithComponent,
   options?: TerraformActivateOptions
@@ -197,10 +288,31 @@ export async function terraformActivate(
     console.log(error);
   }
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 // TERRAFORM VARIABLES
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Generate Terraform variables from environment files
+ *
+ * This function reads environment variables from .env files and generates
+ * corresponding Terraform variable declarations and locals blocks for
+ * infrastructure deployment.
+ *
+ * @param component - Terraform component name
+ * @param options - Configuration options including target environment
+ * @param options.target - Target environment for variable generation
+ *
+ * @example
+ * ```typescript
+ * // Generate variables for production environment
+ * await terraformVariables('web-infrastructure', { target: 'production' });
+ *
+ * // Generate variables for staging
+ * await terraformVariables('api-infrastructure', { target: 'staging' });
+ * ```
+ */
 export async function terraformVariables(component: any, options: any) {
   const { target } = options;
 
@@ -354,6 +466,19 @@ export async function terraformVariables(component: any, options: any) {
 // CLEAN TERRAFORM STATE
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Clean all .terraform directories for project components
+ *
+ * This function removes all .terraform state directories across all
+ * Terraform components defined in the project's meta.json configuration.
+ * Useful for forcing fresh initialization of Terraform state.
+ *
+ * @example
+ * ```typescript
+ * // Clean all terraform state directories
+ * await cleanDotTerraformFolders();
+ * ```
+ */
 export async function cleanDotTerraformFolders() {
   // Check if path ends with /.terraform (with forward slash)
   const metaconfig: MetaJson | undefined = await verifyIfMetaJsonExists(
@@ -380,6 +505,22 @@ export async function cleanDotTerraformFolders() {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Configure Terraform CLI commands and subcommands
+ *
+ * This function sets up the Terraform command-line interface with all
+ * available subcommands including activate, destroy, clean, and env.
+ * It configures Google Cloud credentials and command options.
+ *
+ * @param program - Commander.js program instance
+ *
+ * @example
+ * ```typescript
+ * import { Command } from 'commander';
+ * const program = new Command();
+ * await commandTerraform(program);
+ * ```
+ */
 export default async function commandTerraform(program: any) {
   Deno.env.set('GOOGLE_APPLICATION_CREDENTIALS', '/tmp/gsa_key.json');
 

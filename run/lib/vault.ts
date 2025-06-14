@@ -1,3 +1,12 @@
+/**
+ * @fileoverview HashiCorp Vault operations module for @ghostmind/run
+ *
+ * This module provides HashiCorp Vault integration for managing secrets,
+ * including importing/exporting environment variables and key-value operations.
+ *
+ * @module
+ */
+
 import { $, cd } from 'npm:zx@8.1.0';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import fs from 'npm:fs-extra@11.2.0';
@@ -20,6 +29,18 @@ cd(currentPath);
 // UTILS
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Check if HashiCorp Vault CLI is installed and available
+ *
+ * @returns Promise resolving to true if Vault CLI is available, false otherwise
+ *
+ * @example
+ * ```typescript
+ * if (await checkVaultInstalled()) {
+ *   console.log('Vault CLI is ready');
+ * }
+ * ```
+ */
 async function checkVaultInstalled() {
   try {
     $.verbose = false;
@@ -33,6 +54,24 @@ async function checkVaultInstalled() {
   }
 }
 
+/**
+ * Define the secret namespace path for Vault operations
+ *
+ * This function constructs the appropriate namespace path for storing
+ * secrets in Vault based on project configuration and target environment.
+ *
+ * @param target - Optional target environment override
+ * @returns Promise resolving to the secret namespace path
+ *
+ * @example
+ * ```typescript
+ * // Get namespace for current environment
+ * const namespace = await defineSecretNamespace();
+ *
+ * // Get namespace for specific target
+ * const prodNamespace = await defineSecretNamespace('production');
+ * ```
+ */
 async function defineSecretNamespace(target?: string) {
   let currentPath = Deno.cwd();
   cd(currentPath);
@@ -60,6 +99,28 @@ async function defineSecretNamespace(target?: string) {
 // Import .env FILE to remote vault
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Import environment variables from a local .env file to HashiCorp Vault
+ *
+ * This function reads a local .env file and stores its contents as a secret
+ * in HashiCorp Vault under the project's namespace.
+ *
+ * @param options - Configuration options for the import operation
+ * @param options.target - Target environment (defaults to 'local')
+ * @param options.envfile - Path to the .env file (defaults to '.env.{target}')
+ *
+ * @example
+ * ```typescript
+ * // Import local environment to vault
+ * await vaultKvLocalToVault({ target: 'production' });
+ *
+ * // Import specific env file
+ * await vaultKvLocalToVault({
+ *   target: 'staging',
+ *   envfile: '.env.staging.custom'
+ * });
+ * ```
+ */
 export async function vaultKvLocalToVault(options: any) {
   if (!(await checkVaultInstalled())) {
     return;
@@ -103,6 +164,28 @@ export async function vaultKvLocalToVault(options: any) {
 // Export remote vault credentials to .env file
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Export secrets from HashiCorp Vault to a local .env file
+ *
+ * This function retrieves secrets from HashiCorp Vault and writes them
+ * to a local .env file, creating a backup if the file already exists.
+ *
+ * @param options - Configuration options for the export operation
+ * @param options.target - Target environment to export from
+ * @param options.envfile - Path to the output .env file (defaults to '.env')
+ *
+ * @example
+ * ```typescript
+ * // Export production secrets to .env
+ * await vaultKvVaultToLocal({ target: 'production' });
+ *
+ * // Export to specific file
+ * await vaultKvVaultToLocal({
+ *   target: 'staging',
+ *   envfile: '.env.staging'
+ * });
+ * ```
+ */
 export async function vaultKvVaultToLocal(options: any) {
   if (!(await checkVaultInstalled())) {
     return;
@@ -150,6 +233,22 @@ export async function vaultKvVaultToLocal(options: any) {
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Configure Vault CLI commands and subcommands
+ *
+ * This function sets up the HashiCorp Vault command-line interface with
+ * key-value operations for importing and exporting secrets between
+ * local .env files and remote Vault storage.
+ *
+ * @param program - Commander.js program instance
+ *
+ * @example
+ * ```typescript
+ * import { Command } from 'commander';
+ * const program = new Command();
+ * await vault(program);
+ * ```
+ */
 export default async function vault(program: any) {
   const vault = program.command('vault');
 
