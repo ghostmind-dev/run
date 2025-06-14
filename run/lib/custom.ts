@@ -27,47 +27,85 @@ let currentPath = Deno.cwd();
 // TYPES
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Environment configuration for custom options
+ */
 export interface CustomOptionsEnv {
   [key: string]: string;
 }
 
+/**
+ * Configuration options for custom command execution
+ */
 export interface CustomOptions {
+  /** Environment configuration */
   env: CustomOptionsEnv;
+  /** Run command string */
   run?: string;
+  /** Main execution function */
   main: typeof main;
+  /** Meta configuration object */
   metaConfig?: any;
+  /** Current working path */
   currentPath: string;
+  /** Extract function for parsing arguments */
   extract: (inputName: string) => string | undefined;
+  /** Function to check argument existence */
   has: (arg: string) => boolean;
+  /** Command template function */
   cmd: (
     template: string | TemplateStringsArray,
     ...substitutions: any[]
   ) => Promise<string[]>;
+  /** Start function for initialization */
   start: (config: CustomStartConfig) => Promise<void>;
 }
 
+/**
+ * Arguments passed to custom functions
+ */
 export type CustomArgs = string[];
 
+/**
+ * Command execution options with priority settings
+ */
 export interface CommandOptions {
+  /** Execution priority level */
   priority?: number;
 }
 
+/**
+ * Function-based command configuration with options
+ */
 export interface CustomStartConfigCommandFunction extends CommandOptions {
+  /** Command function to execute */
   command: CustomFunction;
+  /** Function options */
   options?: any;
+  /** Environment variables (not used for functions) */
   variables?: never;
 }
 
+/**
+ * String-based command configuration with variables
+ */
 export interface CustomStartConfigCommandCommand extends CommandOptions {
+  /** Command string to execute */
   command: string;
+  /** Environment variables for command substitution */
   variables?: any;
+  /** Command options (not used for string commands) */
   options?: never;
 }
 
-// create a type function that take a config object
-
+/**
+ * Custom function type for command execution
+ */
 export type CustomFunction = (options: any) => Promise<void>;
 
+/**
+ * Configuration object for custom start operations
+ */
 export interface CustomStartConfig {
   [key: string]:
     | string
@@ -76,13 +114,22 @@ export interface CustomStartConfig {
     | CustomStartConfigCommandCommand;
 }
 
+/**
+ * Custom start function interface
+ */
 export interface CustomStart {
   (config: CustomStartConfig): Promise<void>;
 }
 
+/**
+ * Commander.js options for custom commands
+ */
 export interface CustomCommanderOptions {
+  /** Root directory path */
   root?: string;
+  /** Run all available commands */
   all?: boolean;
+  /** Development mode flag */
   dev?: boolean;
 }
 

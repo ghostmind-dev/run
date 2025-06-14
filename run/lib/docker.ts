@@ -50,8 +50,12 @@ export interface DockerComposeBuildOptions {
   cache?: boolean;
 }
 
+/**
+ * Docker Compose build options with component specification
+ */
 export interface DockerComposeBuildOptionsComponent
   extends DockerComposeBuildOptions {
+  /** The component to build */
   component?: string;
 }
 
@@ -73,8 +77,12 @@ export interface DockerComposeUpOptions {
   exclude?: string[];
 }
 
+/**
+ * Docker Compose up options with component specification
+ */
 export interface DockerComposeUpOptionsComponent
   extends DockerComposeUpOptions {
+  /** The component to start */
   component?: string;
 }
 
@@ -993,6 +1001,27 @@ export async function dockerComposeExec(
 // DOCKER COMPOSE BUILD
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Build Docker Compose services
+ *
+ * This function builds Docker Compose services based on the specified
+ * component configuration and build options.
+ *
+ * @param componentOrOptions - Either the component name or build options
+ * @param options - Additional build configuration options
+ *
+ * @example
+ * ```typescript
+ * // Build with cache disabled
+ * await dockerComposeBuild('web-service', { cache: false });
+ *
+ * // Build specific component with custom file
+ * await dockerComposeBuild({
+ *   component: 'backend',
+ *   file: 'docker-compose.prod.yml'
+ * });
+ * ```
+ */
 export async function dockerComposeBuild(
   componentOrOptions: DockerComposeBuildOptionsComponent,
   options?: DockerComposeBuildOptions
