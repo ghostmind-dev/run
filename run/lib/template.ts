@@ -7,6 +7,9 @@
  * @module
  */
 
+import { $, cd, within } from 'npm:zx';
+import { cmd } from './custom.ts';
+
 ////////////////////////////////////////////////////////////////////////////////
 // LIST TEMPLATE TYPES
 ////////////////////////////////////////////////////////////////////////////////
@@ -150,6 +153,10 @@ export async function downloadAndCopyTemplate(
     } else {
       // Handle folder - recursively download all contents
       await downloadFolderContents(templateType, templateName, fullTargetPath);
+
+      // After downloading, process template configuration
+      await processTemplateConfig(fullTargetPath);
+
       console.log(`✅ Template '${templateName}' copied to '${targetPath}/'`);
     }
   } catch (error) {
@@ -210,6 +217,137 @@ async function downloadFolderContents(
         subDirPath
       );
     }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// PROCESS TEMPLATE CONFIGURATION
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Process template configuration after files are copied
+ *
+ * This function reads the meta.json file from the copied template,
+ * processes ignore files/folders, and executes init commands.
+ *
+ * @param targetPath - The path where the template was copied
+ */
+async function processTemplateConfig(targetPath: string): Promise<void> {
+  try {
+    // Read meta.json from the copied template
+    const metaJsonPath = `${targetPath}/meta.json`;
+    const metaContent = await Deno.readTextFile(metaJsonPath);
+    const meta = JSON.parse(metaContent);
+
+    if (meta.template) {
+      const ignoreFiles = meta.template.ignoreFiles || [];
+      const ignoreFolders = meta.template.ignoreFolders || [];
+
+      // Remove ignored files
+      if (ignoreFiles.length > 0) {
+        console.log(`🧹 Cleaning up ignored files...`);
+        for (const fileName of ignoreFiles) {
+          const filePath = `${targetPath}/${fileName}`;
+          try {
+            await Deno.remove(filePath);
+            console.log(`🗑️  Removed ignored file: ${fileName}`);
+          } catch (error) {
+            console.log(
+              `⚠️  Could not remove file ${fileName}: ${
+                error instanceof Error ? error.message : String(error)
+              }`
+            );
+          }
+        }
+      }
+
+      // Remove ignored folders
+      if (ignoreFolders.length > 0) {
+        console.log(`🧹 Cleaning up ignored folders...`);
+        for (const folderName of ignoreFolders) {
+          const folderPath = `${targetPath}/${folderName}`;
+          try {
+            await Deno.remove(folderPath, { recursive: true });
+            console.log(`🗑️  Removed ignored folder: ${folderName}`);
+          } catch (error) {
+            console.log(
+              `⚠️  Could not remove folder ${folderName}: ${
+                error instanceof Error ? error.message : String(error)
+              }`
+            );
+          }
+        }
+      }
+
+      // Execute init commands AFTER cleanup
+      const initCommands = meta.template.init || [];
+      if (initCommands.length > 0) {
+        console.log(`🚀 Running init commands...`);
+        await executeInitCommands(initCommands, targetPath);
+      }
+    }
+  } catch (error) {
+    console.log(
+      'No meta.json found or error processing template config, proceeding without template processing'
+    );
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// EXECUTE INIT COMMANDS
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Execute init commands sequentially from template configuration
+ *
+ * This function executes an array of commands in sequence, using the same
+ * execution mechanism as routines but without parallel/sequence keywords.
+ *
+ * @param initCommands - Array of commands to execute sequentially
+ * @param targetPath - The path where commands should be executed from
+ */
+async function executeInitCommands(
+  initCommands: string[],
+  targetPath: string
+): Promise<void> {
+  if (!initCommands || initCommands.length === 0) {
+    return;
+  }
+
+  console.log(`🚀 Running ${initCommands.length} init command(s)...`);
+
+  const originalCwd = Deno.cwd();
+
+  try {
+    // Change to target directory for command execution
+    cd(targetPath);
+
+    // Execute commands sequentially (same as routine execution)
+    await within(async () => {
+      for (const command of initCommands) {
+        console.log(`⚡ Executing: ${command}`);
+        $.verbose = true;
+
+        try {
+          if (command.startsWith('cd ')) {
+            const directory = command.slice(3);
+            cd(directory);
+          } else {
+            const isCustomCommand = cmd`${command}`;
+            await $`${isCustomCommand}`;
+          }
+        } catch (error) {
+          console.error(`❌ Error executing command "${command}":`, error);
+          throw error;
+        }
+      }
+    });
+
+    console.log(`✅ All init commands completed successfully`);
+  } finally {
+    // Restore original working directory
+    cd(originalCwd);
+    $.verbose = false;
   }
 }
 
