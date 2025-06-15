@@ -7,7 +7,7 @@
  * @module
  */
 
-import { $, cd, within } from 'npm:zx';
+import { $, cd, within } from 'npm:zx@8.5.5';
 import { cmd } from './custom.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
