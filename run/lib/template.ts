@@ -9,6 +9,130 @@
 
 import { $, cd, within } from 'npm:zx@8.5.5';
 import { cmd } from './custom.ts';
+import { join, resolve } from 'jsr:@std/path@1.0.8';
+
+////////////////////////////////////////////////////////////////////////////////
+// LOCAL TEMPLATE FUNCTIONS (DEV MODE)
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * List available local template types from the filesystem
+ *
+ * This function scans the local templates directory for available template types.
+ *
+ * @param templatesPath - Path to the local templates directory
+ * @returns Promise resolving to an array of template type names
+ */
+async function listLocalTemplateTypes(
+  templatesPath: string
+): Promise<string[]> {
+  try {
+    console.log(`Scanning local templates from: ${templatesPath}`);
+
+    const entries = [];
+    for await (const entry of Deno.readDir(templatesPath)) {
+      if (entry.isDirectory) {
+        entries.push(entry.name);
+      }
+    }
+
+    return entries.sort();
+  } catch (error) {
+    console.error('Error reading local templates directory:', error);
+    return [];
+  }
+}
+
+/**
+ * Copy local template to target directory
+ *
+ * @param templatesPath - Path to the local templates directory
+ * @param templateName - Name of the template to copy
+ * @param targetPath - Target path for the copy
+ */
+async function copyLocalTemplate(
+  templatesPath: string,
+  templateName: string,
+  targetPath: string
+): Promise<void> {
+  try {
+    const sourcePath = join(templatesPath, templateName);
+    const currentDir = Deno.cwd();
+    const fullTargetPath = resolve(currentDir, targetPath);
+
+    // Check if source template exists
+    try {
+      const stat = await Deno.stat(sourcePath);
+      if (!stat.isDirectory) {
+        throw new Error(`Template '${templateName}' is not a directory`);
+      }
+    } catch (error) {
+      throw new Error(
+        `Template '${templateName}' not found in ${templatesPath}`
+      );
+    }
+
+    // Create target directory
+    await Deno.mkdir(fullTargetPath, { recursive: true });
+
+    // Copy template contents recursively
+    await copyDirectoryRecursive(sourcePath, fullTargetPath);
+
+    // Process template configuration
+    await processTemplateConfig(fullTargetPath);
+
+    console.log(
+      `✅ Local template '${templateName}' copied to '${targetPath}/'`
+    );
+  } catch (error) {
+    console.error('Error copying local template:', error);
+    throw error;
+  }
+}
+
+/**
+ * Recursively copy directory contents
+ *
+ * @param sourcePath - Source directory path
+ * @param targetPath - Target directory path
+ */
+async function copyDirectoryRecursive(
+  sourcePath: string,
+  targetPath: string
+): Promise<void> {
+  for await (const entry of Deno.readDir(sourcePath)) {
+    const sourceEntryPath = join(sourcePath, entry.name);
+    const targetEntryPath = join(targetPath, entry.name);
+
+    if (entry.isDirectory) {
+      await Deno.mkdir(targetEntryPath, { recursive: true });
+      await copyDirectoryRecursive(sourceEntryPath, targetEntryPath);
+    } else if (entry.isFile) {
+      console.log(`Copying: ${entry.name}`);
+      await Deno.copyFile(sourceEntryPath, targetEntryPath);
+    }
+  }
+}
+
+/**
+ * Read local template meta.json file
+ *
+ * @param templatesPath - Path to the local templates directory
+ * @param templateName - Name of the template
+ * @returns Promise resolving to meta object or null if not found
+ */
+async function readLocalTemplateMeta(
+  templatesPath: string,
+  templateName: string
+): Promise<any | null> {
+  try {
+    const metaPath = join(templatesPath, templateName, 'meta.json');
+    const metaContent = await Deno.readTextFile(metaPath);
+    return JSON.parse(metaContent);
+  } catch (error) {
+    return null;
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // LIST TEMPLATE TYPES
@@ -388,80 +512,176 @@ export default async function template(program: any) {
   template
     .command('add')
     .description('add a new template')
-    .action(async () => {
-      // Step 1: Get template types (folders)
-      const templateTypes = await listTemplateTypes();
+    .option('--dev', 'use local templates (dev mode)')
+    .option(
+      '--path <path>',
+      'custom path to templates directory (defaults to ./templates in dev mode)'
+    )
+    .action(async (options: { dev?: boolean; path?: string }) => {
+      const isDevMode = options.dev;
+      let templatesPath = options.path;
 
-      if (templateTypes.length === 0) {
-        console.log(
-          'No template types found or failed to fetch template types.'
-        );
-        return;
-      }
+      if (isDevMode) {
+        // Dev mode: use local templates
+        if (!templatesPath) {
+          templatesPath = join(Deno.cwd(), 'templates');
+        } else {
+          templatesPath = resolve(Deno.cwd(), templatesPath);
+        }
 
-      // Step 2: For each folder, fetch and parse meta.json
-      const templatesWithMeta = [];
-      for (const type of templateTypes) {
+        // Check if templates directory exists
         try {
-          const metaJsonUrl = `https://raw.githubusercontent.com/ghostmind-dev/templates/main/templates/${type}/meta.json`;
-          const response = await fetch(metaJsonUrl);
-          if (!response.ok) {
+          const stat = await Deno.stat(templatesPath);
+          if (!stat.isDirectory) {
+            console.log(
+              `❌ Templates path '${templatesPath}' is not a directory`
+            );
+            return;
+          }
+        } catch (error) {
+          console.log(`❌ Templates directory not found: ${templatesPath}`);
+          console.log(
+            '💡 Make sure you have a "templates" folder in your current directory or specify a custom path with --path'
+          );
+          return;
+        }
+
+        // Step 1: Get local template types
+        const templateTypes = await listLocalTemplateTypes(templatesPath);
+
+        if (templateTypes.length === 0) {
+          console.log(`No templates found in ${templatesPath}`);
+          return;
+        }
+
+        // Step 2: Read meta.json for each template
+        const templatesWithMeta = [];
+        for (const type of templateTypes) {
+          const meta = await readLocalTemplateMeta(templatesPath, type);
+          if (meta) {
             templatesWithMeta.push({
               folder: type,
-              name: '(no meta.json)',
+              name: meta.name || type,
+              tags: meta.tags || [],
+              error: false,
+            });
+          } else {
+            templatesWithMeta.push({
+              folder: type,
+              name: type,
               tags: [],
               error: true,
             });
-            continue;
           }
-          const meta = await response.json();
-          templatesWithMeta.push({
-            folder: type,
-            name: meta.name || type,
-            tags: meta.tags || [],
-            error: false,
-          });
-        } catch (e) {
-          templatesWithMeta.push({
-            folder: type,
-            name: '(error reading meta.json)',
-            tags: [],
-            error: true,
-          });
         }
+
+        // Step 3: Display templates
+        console.log('\nAvailable local templates:');
+        console.log('==========================');
+        templatesWithMeta.forEach((tpl, idx) => {
+          const tagStr = tpl.tags.length > 0 ? ` [${tpl.tags.join(', ')}]` : '';
+          const errorStr = tpl.error ? ' (no meta.json)' : '';
+          console.log(`${idx + 1}. ${tpl.name}${tagStr}${errorStr}`);
+        });
+
+        // Step 4: Prompt user to select one
+        const selection = await promptUser('\nSelect a template by number');
+        const selectedIdx = parseInt(selection) - 1;
+        if (selectedIdx < 0 || selectedIdx >= templatesWithMeta.length) {
+          console.log('Invalid selection. Please try again.');
+          return;
+        }
+        const selectedTemplate = templatesWithMeta[selectedIdx];
+        console.log(`\nSelected template: ${selectedTemplate.name}`);
+
+        // Step 5: Ask for target path
+        const targetPath = await promptUser(
+          'Where do you want to copy this template? (relative to current directory)',
+          selectedTemplate.folder
+        );
+
+        // Step 6: Copy local template
+        await copyLocalTemplate(
+          templatesPath,
+          selectedTemplate.folder,
+          targetPath
+        );
+      } else {
+        // Remote mode: use GitHub templates (original behavior)
+        // Step 1: Get template types (folders)
+        const templateTypes = await listTemplateTypes();
+
+        if (templateTypes.length === 0) {
+          console.log(
+            'No template types found or failed to fetch template types.'
+          );
+          return;
+        }
+
+        // Step 2: For each folder, fetch and parse meta.json
+        const templatesWithMeta = [];
+        for (const type of templateTypes) {
+          try {
+            const metaJsonUrl = `https://raw.githubusercontent.com/ghostmind-dev/templates/main/templates/${type}/meta.json`;
+            const response = await fetch(metaJsonUrl);
+            if (!response.ok) {
+              templatesWithMeta.push({
+                folder: type,
+                name: '(no meta.json)',
+                tags: [],
+                error: true,
+              });
+              continue;
+            }
+            const meta = await response.json();
+            templatesWithMeta.push({
+              folder: type,
+              name: meta.name || type,
+              tags: meta.tags || [],
+              error: false,
+            });
+          } catch (e) {
+            templatesWithMeta.push({
+              folder: type,
+              name: '(error reading meta.json)',
+              tags: [],
+              error: true,
+            });
+          }
+        }
+
+        // Step 3: Display as a nice list
+        console.log('\nAvailable remote templates:');
+        console.log('============================');
+        templatesWithMeta.forEach((tpl, idx) => {
+          const tagStr = tpl.tags.length > 0 ? ` [${tpl.tags.join(', ')}]` : '';
+          const errorStr = tpl.error ? ' ⚠️' : '';
+          console.log(`${idx + 1}. ${tpl.name}${tagStr}${errorStr}`);
+        });
+
+        // Step 4: Prompt user to select one
+        const selection = await promptUser('\nSelect a template by number');
+        const selectedIdx = parseInt(selection) - 1;
+        if (selectedIdx < 0 || selectedIdx >= templatesWithMeta.length) {
+          console.log('Invalid selection. Please try again.');
+          return;
+        }
+        const selectedTemplate = templatesWithMeta[selectedIdx];
+        console.log(`\nSelected template: ${selectedTemplate.name}`);
+
+        // Step 5: Ask for target path (default to template name)
+        const targetPath = await promptUser(
+          'Where do you want to copy this template? (relative to current directory)',
+          selectedTemplate.folder
+        );
+
+        // Step 6: Copy all files from the selected template folder into the specified local directory
+        await downloadAndCopyTemplate(
+          selectedTemplate.folder, // templateType
+          '', // templateName (empty string to copy the whole folder)
+          targetPath,
+          false // isFile
+        );
       }
-
-      // Step 3: Display as a nice list
-      console.log('\nAvailable templates:');
-      console.log('====================');
-      templatesWithMeta.forEach((tpl, idx) => {
-        const tagStr = tpl.tags.length > 0 ? ` [${tpl.tags.join(', ')}]` : '';
-        const errorStr = tpl.error ? ' ⚠️' : '';
-        console.log(`${idx + 1}. ${tpl.name}${tagStr}${errorStr}`);
-      });
-
-      // Step 4: Prompt user to select one
-      const selection = await promptUser('\nSelect a template by number');
-      const selectedIdx = parseInt(selection) - 1;
-      if (selectedIdx < 0 || selectedIdx >= templatesWithMeta.length) {
-        console.log('Invalid selection. Please try again.');
-        return;
-      }
-      const selectedTemplate = templatesWithMeta[selectedIdx];
-      console.log(`\nSelected template: ${selectedTemplate.name}`);
-
-      // Step 5: Ask for target path (default to template name)
-      const targetPath = await promptUser(
-        'Where do you want to copy this template? (relative to current directory)',
-        selectedTemplate.folder
-      );
-
-      // Step 6: Copy all files from the selected template folder into the specified local directory
-      await downloadAndCopyTemplate(
-        selectedTemplate.folder, // templateType
-        '', // templateName (empty string to copy the whole folder)
-        targetPath,
-        false // isFile
-      );
     });
 }
