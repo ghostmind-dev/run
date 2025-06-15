@@ -39,6 +39,7 @@ export * from './lib/action.ts';
 export * from './lib/custom.ts';
 export * from './lib/docker.ts';
 export * from './lib/machine.ts';
+export * from './lib/mcp.ts';
 export * from './lib/meta.ts';
 export * from './lib/misc.ts';
 export * from './lib/routine.ts';
