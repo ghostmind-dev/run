@@ -429,6 +429,23 @@ export default async function misc(program: any) {
         Deno.exit(1);
       }
     });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // PRINT ENVIRONMENT VARIABLE
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('env')
+    .description('print the value of an environment variable')
+    .argument('<variable>', 'environment variable name')
+    .action((variable: string) => {
+      const value = Deno.env.get(variable);
+      if (value !== undefined) {
+        console.log(value);
+      } else {
+        console.log(`Environment variable '${variable}' is not set`);
+      }
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
