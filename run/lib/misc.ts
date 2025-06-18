@@ -362,16 +362,35 @@ export default async function misc(program: any) {
     });
 
   ////////////////////////////////////////////////////////////////////////////////
-  // RUN MCP WITH ENVIRONMENT VARIABLES INJECTED
+  // PRINT ENVIRONMENT VARIABLE
   ////////////////////////////////////////////////////////////////////////////////
 
   misc
-    .command('mcp')
-    .description('run any command with environment variables injected')
-    .argument('<command>', 'command to run (e.g., npx, deno, node)')
-    .argument('[args...]', 'arguments to pass to the command')
+    .command('env')
+    .description('print the value of an environment variable')
+    .argument('<variable>', 'environment variable name')
+    .action((variable: string) => {
+      const value = Deno.env.get(variable);
+      if (value !== undefined) {
+        console.log(value);
+      } else {
+        console.log(`Environment variable '${variable}' is not set`);
+      }
+    });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // RUN NATIVE COMMAND WITH ENVIRONMENT VARIABLES INJECTED
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('cmd')
+    .description('run any native command with environment variables injected')
+    .argument(
+      '<command>',
+      'full command to run (wrap in quotes if it contains spaces or special characters)'
+    )
     .option('--env <path>', 'path to environment file', '.env')
-    .action(async (command: string, args: string[], options: any) => {
+    .action(async (commandString: string, options: any) => {
       try {
         const envPathInput = options.env || '.env';
         const SRC = Deno.env.get('SRC') || '';
@@ -397,7 +416,15 @@ export default async function misc(program: any) {
           );
         }
 
-        console.error(`Running: ${command} ${args.join(' ')}`);
+        console.error(`Running: ${commandString}`);
+
+        // Parse the command string into command and arguments
+        // This is a simple split - for more complex parsing, we might need a proper shell parser
+        const parts = commandString
+          .split(' ')
+          .filter((part) => part.length > 0);
+        const command = parts[0];
+        const args = parts.slice(1);
 
         // Spawn the process with the specified command and arguments
         const process = new Deno.Command(command, {
@@ -425,25 +452,8 @@ export default async function misc(program: any) {
         // Exit with the same code as the child process
         Deno.exit(status.code);
       } catch (error) {
-        console.error(`Error running command '${command}':`, error);
+        console.error(`Error running command '${commandString}':`, error);
         Deno.exit(1);
-      }
-    });
-
-  ////////////////////////////////////////////////////////////////////////////////
-  // PRINT ENVIRONMENT VARIABLE
-  ////////////////////////////////////////////////////////////////////////////////
-
-  misc
-    .command('env')
-    .description('print the value of an environment variable')
-    .argument('<variable>', 'environment variable name')
-    .action((variable: string) => {
-      const value = Deno.env.get(variable);
-      if (value !== undefined) {
-        console.log(value);
-      } else {
-        console.log(`Environment variable '${variable}' is not set`);
       }
     });
 }
