@@ -87,6 +87,28 @@ export default async function misc(program: any) {
     });
 
   ////////////////////////////////////////////////////////////////////////////
+  // GENERATE BEARER TOKEN
+  ////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('token')
+    .description('generate a bearer token for authorization')
+    .action(async () => {
+      // Generate a cryptographically secure random token
+      const tokenLength = 32; // 32 bytes = 256 bits
+      const randomBytes = new Uint8Array(tokenLength);
+      crypto.getRandomValues(randomBytes);
+
+      // Convert to base64url (URL-safe base64 without padding)
+      const token = btoa(String.fromCharCode(...randomBytes))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+
+      console.log(token);
+    });
+
+  ////////////////////////////////////////////////////////////////////////////
   // ID COLLISION
   ////////////////////////////////////////////////////////////////////////////
 
