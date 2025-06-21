@@ -1,6 +1,6 @@
 {
   "name": "@ghostmind/run",
-  "version": "0.3.51",
+  "version": "0.3.52",
   "license": "MIT",
   "description": "A comprehensive DevOps automation toolkit for managing Docker containers, GitHub Actions, Terraform infrastructure, HashiCorp Vault, and more",
   "exports": {
