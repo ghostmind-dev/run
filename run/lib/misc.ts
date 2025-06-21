@@ -312,12 +312,223 @@ export default async function misc(program: any) {
 
   misc
     .command('template')
-    .description('generate .env.template')
-    .argument('[env]', 'environment file to use', '.env.prod')
-    .action(async (env: string) => {
+    .description('generate .env.template based on existing environment files')
+    .action(async () => {
       $.verbose = true;
 
-      await $`rm -f .env.template && cp ${env} .env.template && sed -i 's/=.*/=/' .env.template`;
+      const currentPath = Deno.cwd();
+
+      // Check if meta.json exists and has secrets configuration
+      let meta: any = null;
+      let baseFile: string | null = null;
+
+      try {
+        const metaContent = Deno.readTextFileSync(`${currentPath}/meta.json`);
+        meta = JSON.parse(metaContent);
+        if (meta && meta.secrets && meta.secrets.base) {
+          baseFile = `.env.${meta.secrets.base}`;
+        }
+      } catch (e) {
+        console.log('No meta.json found or no secrets configuration');
+      }
+
+      // Helper function to parse env file into key-value pairs
+      function parseEnvFile(filePath: string): Record<string, string> {
+        try {
+          const content = Deno.readTextFileSync(`${currentPath}/${filePath}`);
+          const vars: Record<string, string> = {};
+
+          content.split('\n').forEach((line) => {
+            line = line.trim();
+            if (line && !line.startsWith('#')) {
+              const [key, ...valueParts] = line.split('=');
+              if (key) {
+                vars[key.trim()] = valueParts.join('=').trim();
+              }
+            }
+          });
+
+          return vars;
+        } catch (e) {
+          return {};
+        }
+      }
+
+      // Discover all .env.* files (excluding .env.template)
+      const discoveredEnvFiles: string[] = [];
+      try {
+        for await (const dirEntry of Deno.readDir(currentPath)) {
+          if (
+            dirEntry.isFile &&
+            dirEntry.name.startsWith('.env.') &&
+            dirEntry.name !== '.env.template'
+          ) {
+            discoveredEnvFiles.push(dirEntry.name);
+          }
+        }
+      } catch (e) {
+        console.log('Error reading directory:', e);
+      }
+
+      console.log(
+        `Discovered environment files: ${discoveredEnvFiles.join(', ')}`
+      );
+
+      // Parse base file if it exists
+      const baseVars: Record<string, string> = {};
+      if (baseFile) {
+        const parsedBase = parseEnvFile(baseFile);
+        if (Object.keys(parsedBase).length > 0) {
+          Object.assign(baseVars, parsedBase);
+          console.log(`Using base secrets file: ${baseFile}`);
+        } else {
+          console.log(`Base file ${baseFile} not found or empty`);
+          baseFile = null;
+        }
+      }
+
+      // Parse all discovered environment files (excluding base file)
+      const envVars: Record<string, Record<string, string>> = {};
+      const nonBaseFiles = discoveredEnvFiles.filter(
+        (file) => file !== baseFile
+      );
+
+      for (const envFile of nonBaseFiles) {
+        const envName = envFile.replace('.env.', '');
+        const parsedVars = parseEnvFile(envFile);
+        if (Object.keys(parsedVars).length > 0) {
+          envVars[envName] = parsedVars;
+        }
+      }
+
+      // Check if we have any files to work with
+      if (
+        Object.keys(baseVars).length === 0 &&
+        Object.keys(envVars).length === 0
+      ) {
+        console.log(
+          'No environment files found! Please create at least one .env.* file'
+        );
+        Deno.exit(1);
+      }
+
+      // Find common variables (present in all environment files, excluding base)
+      const allEnvKeys = Object.values(envVars).map((vars) =>
+        Object.keys(vars)
+      );
+      let commonKeys: string[] = [];
+
+      if (allEnvKeys.length > 1) {
+        commonKeys = allEnvKeys.reduce((common, keys) => {
+          return common.filter((key) => keys.includes(key));
+        }, allEnvKeys[0] || []);
+      }
+
+      // Find environment-specific variables
+      const envSpecificKeys: Record<string, string[]> = {};
+      for (const [envName, vars] of Object.entries(envVars)) {
+        envSpecificKeys[envName] = Object.keys(vars).filter(
+          (key) =>
+            !commonKeys.includes(key) && !Object.keys(baseVars).includes(key)
+        );
+      }
+
+      // Generate the template content
+      let templateContent = '';
+
+      // Base secrets section
+      if (Object.keys(baseVars).length > 0) {
+        templateContent += `# ============================================================================\n`;
+        templateContent += `# BASE SECRETS (from ${baseFile})\n`;
+        templateContent += `# Common secrets used across all environments\n`;
+        templateContent += `# ============================================================================\n\n`;
+
+        for (const key of Object.keys(baseVars)) {
+          templateContent += `${key}=\n`;
+        }
+        templateContent += '\n';
+      }
+
+      // Common environment variables section
+      if (commonKeys.length > 0) {
+        templateContent += `# ============================================================================\n`;
+        templateContent += `# COMMON ENVIRONMENT VARIABLES\n`;
+        templateContent += `# Variables present in all environment files\n`;
+        templateContent += `# ============================================================================\n\n`;
+
+        for (const key of commonKeys) {
+          templateContent += `${key}=\n`;
+        }
+        templateContent += '\n';
+      }
+
+      // Environment-specific sections
+      for (const [envName, keys] of Object.entries(envSpecificKeys)) {
+        if (keys.length > 0) {
+          templateContent += `# ============================================================================\n`;
+          templateContent += `# ${envName.toUpperCase()}-SPECIFIC VARIABLES\n`;
+          templateContent += `# Variables unique to the ${envName} environment\n`;
+          templateContent += `# ============================================================================\n\n`;
+
+          for (const key of keys) {
+            templateContent += `${key}=\n`;
+          }
+          templateContent += '\n';
+        }
+      }
+
+      // If we only have one environment file and no base, just create a simple template
+      if (
+        Object.keys(baseVars).length === 0 &&
+        Object.keys(envVars).length === 1
+      ) {
+        const singleEnvName = Object.keys(envVars)[0];
+        const singleEnvVars = envVars[singleEnvName];
+
+        templateContent = `# ============================================================================\n`;
+        templateContent += `# ENVIRONMENT VARIABLES (from .env.${singleEnvName})\n`;
+        templateContent += `# ============================================================================\n\n`;
+
+        for (const key of Object.keys(singleEnvVars)) {
+          templateContent += `${key}=\n`;
+        }
+        templateContent += '\n';
+      }
+
+      // Add final divider comment section
+      templateContent += `# ============================================================================\n`;
+      templateContent += `# END OF TEMPLATE\n`;
+      templateContent += `# ============================================================================\n`;
+
+      // Write the template file
+      Deno.writeTextFileSync(`${currentPath}/.env.template`, templateContent);
+      console.log('Enhanced .env.template generated successfully!');
+
+      // Log summary
+      console.log(`\nTemplate Summary:`);
+      if (Object.keys(baseVars).length > 0) {
+        console.log(`- Base secrets: ${Object.keys(baseVars).length}`);
+      }
+      if (commonKeys.length > 0) {
+        console.log(`- Common variables: ${commonKeys.length}`);
+      }
+      for (const [envName, keys] of Object.entries(envSpecificKeys)) {
+        if (keys.length > 0) {
+          console.log(`- ${envName}-specific: ${keys.length}`);
+        }
+      }
+
+      if (
+        Object.keys(envVars).length === 1 &&
+        Object.keys(baseVars).length === 0
+      ) {
+        const singleEnvName = Object.keys(envVars)[0];
+        console.log(
+          `- Single environment (${singleEnvName}): ${
+            Object.keys(envVars[singleEnvName]).length
+          }`
+        );
+      }
     });
 
   ////////////////////////////////////////////////////////////////////////////////
