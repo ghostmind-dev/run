@@ -1,5 +1,6 @@
 name: Test module installation
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -8,9 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # The OIDC ID token is used for authentication with JSR.   
+      id-token: write # The OIDC ID token is used for authentication with JSR.
     steps:
-      - name: "Check out repository"
+      - name: 'Check out repository'
         uses: actions/checkout@v3
       - uses: denoland/setup-deno@v1
         with:
@@ -21,9 +22,4 @@ jobs:
           $HOME/.deno/bin/run
         if: ${{ github.event.inputs.LOCAL }}
       - run: deno publish --allow-dirty
-        if: ${{ !github.event.inputs.LOCAL }}  
-  
-
-     
-
-
+        if: ${{ !github.event.inputs.LOCAL }}
