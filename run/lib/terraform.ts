@@ -420,9 +420,12 @@ export async function terraformVariables(component: any, options: any) {
     // remove if equal TF_VAR_PROJECT
     .map((varName: string) => {
       const tfName = varName.replace(/^TF_VAR_/, '');
-      return `variable "${tfName}" {}`;
+      return `variable "${tfName}" {
+  type      = string
+  sensitive = true
+}`;
     })
-    .join('\n');
+    .join('\n\n');
 
   // Generate locals block for environment variables
   const localsBlock = `
