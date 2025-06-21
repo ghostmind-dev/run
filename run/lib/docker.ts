@@ -75,6 +75,10 @@ export interface DockerComposeUpOptions {
   group?: string;
   /** Services to exclude from startup */
   exclude?: string[];
+  /** Environment file to use */
+  envfile?: string;
+  /** Environment variables to set (key=value format) */
+  env?: string[];
 }
 
 /**
@@ -718,7 +722,8 @@ export async function dockerRegister(
  * Start Docker Compose services
  *
  * This function starts Docker Compose services for the specified component,
- * with options for building, recreating, and running in detached mode.
+ * with options for building, recreating, running in detached mode, and setting
+ * environment variables or files.
  *
  * @param componentOrOptions - Either the component name or up options
  * @param options - Additional up options (when first param is component name)
@@ -731,8 +736,25 @@ export async function dockerRegister(
  * // Start specific component with build
  * await dockerComposeUp('web', { build: true, detach: true });
  *
+ * // Start with environment variables
+ * await dockerComposeUp('api', {
+ *   env: ['NODE_ENV=production', 'DEBUG=true'],
+ *   detach: true
+ * });
+ *
+ * // Start with environment file
+ * await dockerComposeUp('api', {
+ *   envfile: '.env.production',
+ *   build: true
+ * });
+ *
  * // Start with options object
- * await dockerComposeUp({ component: 'api', build: true, forceRecreate: true });
+ * await dockerComposeUp({
+ *   component: 'api',
+ *   build: true,
+ *   forceRecreate: true,
+ *   env: ['API_KEY=secret123']
+ * });
  * ```
  */
 export async function dockerComposeUp(
@@ -753,7 +775,7 @@ export async function dockerComposeUp(
     }
   }
 
-  let { forceRecreate, detach, build } = options || {};
+  let { forceRecreate, detach, build, envfile, env } = options || {};
 
   let filesToUp = [];
 
@@ -779,7 +801,28 @@ export async function dockerComposeUp(
 
   const commandDown = ['docker', 'compose', ...filesToUp, 'down'];
 
-  const baseCommand = ['docker', 'compose', ...filesToUp, 'up'];
+  const baseCommand = ['docker', 'compose', ...filesToUp];
+
+  // Handle environment file or create temporary one for env variables
+  let tempEnvFile: string | undefined;
+
+  if (env && env.length > 0) {
+    // Create a temporary environment file with the provided variables
+    const tempFileName = `compose-env-${createUUID()}.env`;
+    tempEnvFile = `/tmp/${tempFileName}`;
+
+    const envContent = env.join('\n') + '\n';
+    await Deno.writeTextFile(tempEnvFile, envContent);
+
+    baseCommand.push('--env-file');
+    baseCommand.push(tempEnvFile);
+  } else if (envfile) {
+    // Use the provided environment file
+    baseCommand.push('--env-file');
+    baseCommand.push(envfile);
+  }
+
+  baseCommand.push('up');
 
   if (forceRecreate) {
     baseCommand.push('--force-recreate');
@@ -795,7 +838,22 @@ export async function dockerComposeUp(
 
   await $`${commandDown}`;
 
-  await $`${baseCommand}`;
+  try {
+    await $`${baseCommand}`;
+  } finally {
+    // Clean up temporary environment file if created
+    if (tempEnvFile) {
+      try {
+        await Deno.remove(tempEnvFile);
+      } catch (error) {
+        // Ignore errors when cleaning up temp file
+        console.warn(
+          `Warning: Could not remove temporary file ${tempEnvFile}:`,
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+    }
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1231,7 +1289,8 @@ export default async function commandDocker(program: any) {
     .argument('[component]', 'Component to build')
     .option('--build', 'build before up')
     .option('--force-recreate', 'force recreate')
-    .option('-e, --envfile [file]', 'env filename')
+    .option('--envfile [file]', 'environment file to use')
+    .option('--env <env...>', 'environment variables to set (KEY=VALUE format)')
     .option('-d, --detach', 'detach')
     .action(dockerComposeUp);
 
