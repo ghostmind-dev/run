@@ -2,6 +2,7 @@ import { $, cd, within } from 'npm:zx@8.1.0';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
 import * as main from '../main.ts';
+import { setSecretsOnLocal } from '../utils/divers.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -131,6 +132,8 @@ export interface CustomCommanderOptions {
   all?: boolean;
   /** Development mode flag */
   dev?: boolean;
+  /** Set secrets on local environment (only available in programmatic mode) */
+  setSecretsOnLocal?: boolean;
 }
 
 /**
@@ -456,7 +459,7 @@ export function cmd(
 export async function runScript(
   script: string,
   argument: string[],
-  options: any
+  options: CustomCommanderOptions
 ): Promise<void>;
 
 /**
@@ -470,6 +473,7 @@ export async function runScript(
  * @param config.script - Name of the script to run (without .ts extension)
  * @param config.arguments - Arguments to pass to the script (optional)
  * @param config.options - Execution options (optional)
+ * @param config.options.setSecretsOnLocal - Set secrets on local environment (defaults to true, only available in programmatic mode)
  *
  * @example
  * ```typescript
@@ -477,11 +481,17 @@ export async function runScript(
  * await runScript({
  *   script: 'deploy',
  *   arguments: ['--env=production'],
- *   options: { dev: false }
+ *   options: { dev: false, setSecretsOnLocal: true }
  * });
  *
- * // Simple script execution without arguments
+ * // Simple script execution without arguments (setSecretsOnLocal defaults to true)
  * await runScript({ script: 'build' });
+ *
+ * // Disable setSecretsOnLocal
+ * await runScript({
+ *   script: 'build',
+ *   options: { setSecretsOnLocal: false }
+ * });
  * ```
  */
 export async function runScript(config: RunScriptConfig): Promise<void>;
@@ -492,11 +502,11 @@ export async function runScript(config: RunScriptConfig): Promise<void>;
 export async function runScript(
   scriptOrConfig: string | RunScriptConfig,
   argument?: string[],
-  options?: any
+  options?: CustomCommanderOptions
 ): Promise<void> {
   let script: string;
   let args: string[];
-  let opts: any;
+  let opts: CustomCommanderOptions;
 
   // Determine which mode we're in based on the first parameter
   if (typeof scriptOrConfig === 'string') {
@@ -509,6 +519,12 @@ export async function runScript(
     script = scriptOrConfig.script;
     args = scriptOrConfig.arguments || [];
     opts = scriptOrConfig.options || {};
+
+    // Handle setSecretsOnLocal - only available in programmatic mode
+    if (opts.setSecretsOnLocal !== false) {
+      // Default to true if not explicitly set to false
+      await setSecretsOnLocal();
+    }
   }
   if (!script) {
     console.log('specify a script to run');
