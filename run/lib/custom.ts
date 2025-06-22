@@ -133,6 +133,18 @@ export interface CustomCommanderOptions {
   dev?: boolean;
 }
 
+/**
+ * Configuration object for programmatic runScript execution
+ */
+export interface RunScriptConfig {
+  /** Name of the script to run (without .ts extension) */
+  script: string;
+  /** Arguments to pass to the script */
+  arguments?: string[];
+  /** Execution options */
+  options?: CustomCommanderOptions;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
@@ -420,21 +432,21 @@ export function cmd(
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Execute a custom TypeScript script with enhanced runtime context
+ * Execute a custom TypeScript script with enhanced runtime context (CLI mode)
  *
  * This function dynamically imports and executes a TypeScript script,
  * providing it with a rich context including meta configuration,
  * utility functions, and environment access.
  *
  * @param script - Name of the script to run (without .ts extension)
- * @param argument - Arguments to pass to the script
- * @param options - Execution options
+ * @param argument - Arguments to pass to the script (required, use empty array if none)
+ * @param options - Execution options (required, use empty object if none)
  * @param options.dev - Whether to run in development mode
  * @param options.root - Custom root directory for script lookup
  *
  * @example
  * ```typescript
- * // Run a script called 'deploy.ts' in the scripts folder
+ * // CLI mode - Run a script called 'deploy.ts' in the scripts folder
  * await runScript('deploy', ['--env=production'], { dev: false });
  *
  * // Run with custom root directory
@@ -445,7 +457,59 @@ export async function runScript(
   script: string,
   argument: string[],
   options: any
-) {
+): Promise<void>;
+
+/**
+ * Execute a custom TypeScript script with enhanced runtime context (programmatic mode)
+ *
+ * This function dynamically imports and executes a TypeScript script,
+ * providing it with a rich context including meta configuration,
+ * utility functions, and environment access.
+ *
+ * @param config - Configuration object containing script, arguments, and options
+ * @param config.script - Name of the script to run (without .ts extension)
+ * @param config.arguments - Arguments to pass to the script (optional)
+ * @param config.options - Execution options (optional)
+ *
+ * @example
+ * ```typescript
+ * // Programmatic mode - Run a script with configuration object
+ * await runScript({
+ *   script: 'deploy',
+ *   arguments: ['--env=production'],
+ *   options: { dev: false }
+ * });
+ *
+ * // Simple script execution without arguments
+ * await runScript({ script: 'build' });
+ * ```
+ */
+export async function runScript(config: RunScriptConfig): Promise<void>;
+
+/**
+ * Implementation of runScript supporting both CLI and programmatic modes
+ */
+export async function runScript(
+  scriptOrConfig: string | RunScriptConfig,
+  argument?: string[],
+  options?: any
+): Promise<void> {
+  let script: string;
+  let args: string[];
+  let opts: any;
+
+  // Determine which mode we're in based on the first parameter
+  if (typeof scriptOrConfig === 'string') {
+    // CLI mode: three separate parameters (argument and options should be provided)
+    script = scriptOrConfig;
+    args = argument || []; // Fallback for safety, but CLI should always provide this
+    opts = options || {}; // Fallback for safety, but CLI should always provide this
+  } else {
+    // Programmatic mode: single configuration object
+    script = scriptOrConfig.script;
+    args = scriptOrConfig.arguments || [];
+    opts = scriptOrConfig.options || {};
+  }
   if (!script) {
     console.log('specify a script to run');
     return;
@@ -455,7 +519,7 @@ export async function runScript(
 
   let currentPath = Deno.cwd();
 
-  let { dev } = options;
+  let { dev } = opts;
 
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -480,10 +544,10 @@ export async function runScript(
   let scriptPath = '';
   let isAbsolutePath = false;
 
-  if (options.root) {
+  if (opts.root) {
     // If root is specified, try direct path first
-    const directPath = `${currentPath}/${options.root}/${script}.ts`;
-    const subfolderPath = `${currentPath}/${options.root}/${scriptsFolder}/${script}.ts`;
+    const directPath = `${currentPath}/${opts.root}/${script}.ts`;
+    const subfolderPath = `${currentPath}/${opts.root}/${scriptsFolder}/${script}.ts`;
 
     try {
       await Deno.stat(directPath);
@@ -525,16 +589,16 @@ export async function runScript(
 
     let env = Deno.env.toObject();
 
-    await custom_function.default(argument, {
+    await custom_function.default(args, {
       metaConfig,
       currentPath,
       env,
       run,
       main,
       cmd,
-      extract: await extract(argument),
-      has: has(argument),
-      start: await start(argument, options),
+      extract: await extract(args),
+      has: has(args),
+      start: await start(args, opts),
     });
   } catch (e) {
     console.log(e);
