@@ -441,7 +441,11 @@ export function cmd(
  * await runScript('build', [], { root: 'custom-scripts' });
  * ```
  */
-async function runScript(script: string, argument: string[], options: any) {
+export async function runScript(
+  script: string,
+  argument: string[],
+  options: any
+) {
   if (!script) {
     console.log('specify a script to run');
     return;
