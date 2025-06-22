@@ -133,7 +133,7 @@ export interface CustomCommanderOptions {
   /** Development mode flag */
   dev?: boolean;
   /** Set secrets on local environment (only available in programmatic mode) */
-  setSecretsOnLocal?: boolean;
+  setSecrets?: boolean;
 }
 
 /**
@@ -473,7 +473,7 @@ export async function runScript(
  * @param config.script - Name of the script to run (without .ts extension)
  * @param config.arguments - Arguments to pass to the script (optional)
  * @param config.options - Execution options (optional)
- * @param config.options.setSecretsOnLocal - Set secrets on local environment (defaults to true, only available in programmatic mode)
+ * @param config.options.setSecrets - Set secrets on local environment (defaults to true, only available in programmatic mode)
  *
  * @example
  * ```typescript
@@ -481,16 +481,16 @@ export async function runScript(
  * await runScript({
  *   script: 'deploy',
  *   arguments: ['--env=production'],
- *   options: { dev: false, setSecretsOnLocal: true }
+ *   options: { dev: false, setSecrets: true }
  * });
  *
- * // Simple script execution without arguments (setSecretsOnLocal defaults to true)
+ * // Simple script execution without arguments (setSecrets defaults to true)
  * await runScript({ script: 'build' });
  *
- * // Disable setSecretsOnLocal
+ * // Disable setSecrets
  * await runScript({
  *   script: 'build',
- *   options: { setSecretsOnLocal: false }
+ *   options: { setSecrets: false }
  * });
  * ```
  */
@@ -520,10 +520,16 @@ export async function runScript(
     args = scriptOrConfig.arguments || [];
     opts = scriptOrConfig.options || {};
 
-    // Handle setSecretsOnLocal - only available in programmatic mode
-    if (opts.setSecretsOnLocal !== false) {
+    // Handle setSecrets - only available in programmatic mode
+
+    let currentPath = Deno.cwd();
+
+    cd(currentPath);
+
+    if (opts.setSecrets !== false) {
       // Default to true if not explicitly set to false
-      await setSecretsOnLocal();
+
+      await setSecretsOnLocal(currentPath);
     }
   }
   if (!script) {
@@ -534,7 +540,6 @@ export async function runScript(
   Deno.env.set('CUSTOM_STATUS', 'in_progress');
 
   // Always use the actual current working directory, not the module's location
-  let currentPath = Deno.cwd();
 
   let { dev } = opts;
 
