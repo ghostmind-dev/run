@@ -517,6 +517,7 @@ export async function runScript(
 
   Deno.env.set('CUSTOM_STATUS', 'in_progress');
 
+  // Always use the actual current working directory, not the module's location
   let currentPath = Deno.cwd();
 
   let { dev } = opts;
@@ -542,7 +543,6 @@ export async function runScript(
   const scriptsFolder = custom?.root || 'scripts';
 
   let scriptPath = '';
-  let isAbsolutePath = false;
 
   if (opts.root) {
     // If root is specified, try direct path first
@@ -551,11 +551,11 @@ export async function runScript(
 
     try {
       await Deno.stat(directPath);
-      scriptPath = directPath;
+      scriptPath = new URL(`file://${directPath}`).href;
     } catch {
       try {
         await Deno.stat(subfolderPath);
-        scriptPath = subfolderPath;
+        scriptPath = new URL(`file://${subfolderPath}`).href;
       } catch {
         console.log(
           `Script not found in either:\n${directPath}\nor\n${subfolderPath}`
@@ -565,11 +565,13 @@ export async function runScript(
     }
   } else {
     // If no root specified, only look in scripts folder
-    scriptPath = `${currentPath}/${scriptsFolder}/${script}.ts`;
+    const localScriptPath = `${currentPath}/${scriptsFolder}/${script}.ts`;
     try {
-      await Deno.stat(scriptPath);
+      await Deno.stat(localScriptPath);
+      // Convert to file:// URL for proper import handling
+      scriptPath = new URL(`file://${localScriptPath}`).href;
     } catch {
-      console.log(`Script not found: ${scriptPath}`);
+      console.log(`Script not found: ${localScriptPath}`);
       return;
     }
   }
