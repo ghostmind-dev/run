@@ -2,7 +2,6 @@ import { $, cd, within } from 'npm:zx@8.1.0';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
 import * as main from '../main.ts';
-import { setSecretsOnLocal } from '../utils/divers.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -82,9 +81,16 @@ export interface CustomStartConfigCommandFunction extends CommandOptions {
   /** Command function to execute */
   command: CustomFunction;
   /** Function options */
-  options?: any;
+  options?: CustomFunctionOptions;
   /** Environment variables (not used for functions) */
   variables?: never;
+}
+
+/**
+ * Variables for command substitution
+ */
+export interface CommandVariables {
+  [key: string]: string;
 }
 
 /**
@@ -94,15 +100,22 @@ export interface CustomStartConfigCommandCommand extends CommandOptions {
   /** Command string to execute */
   command: string;
   /** Environment variables for command substitution */
-  variables?: any;
+  variables?: CommandVariables;
   /** Command options (not used for string commands) */
   options?: never;
 }
 
 /**
+ * Options passed to custom functions
+ */
+export interface CustomFunctionOptions {
+  [key: string]: any;
+}
+
+/**
  * Custom function type for command execution
  */
-export type CustomFunction = (options: any) => Promise<void>;
+export type CustomFunction = (options: CustomFunctionOptions) => Promise<void>;
 
 /**
  * Configuration object for custom start operations
@@ -132,20 +145,6 @@ export interface CustomCommanderOptions {
   all?: boolean;
   /** Development mode flag */
   dev?: boolean;
-  /** Set secrets on local environment (only available in programmatic mode) */
-  setSecretsOnLocal?: boolean;
-}
-
-/**
- * Configuration object for programmatic runScript execution
- */
-export interface RunScriptConfig {
-  /** Name of the script to run (without .ts extension) */
-  script: string;
-  /** Arguments to pass to the script */
-  arguments?: string[];
-  /** Execution options */
-  options?: CustomCommanderOptions;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -209,7 +208,7 @@ export async function start(
 
     // for each command to run, group them by priority
 
-    let groupedCommandsPerPriority: any = {};
+    let groupedCommandsPerPriority: { [priority: string]: string[] } = {};
 
     for (let command of commandsToRun) {
       let { priority } = commands[command] as CustomStartConfigCommandCommand;
@@ -240,17 +239,19 @@ export async function start(
     for await (let key of sortedKeys) {
       await Promise.all(
         groupedCommandsPerPriority[key].map(
-          async (command_from_config: any) => {
+          async (command_from_config: string) => {
             if (typeof commands[command_from_config] === 'string') {
               const commandToRun = cmd`${commands[command_from_config]}`;
               await within(async () => {
                 await $`${commandToRun}`;
               });
             } else if (typeof commands[command_from_config] === 'function') {
-              const function_to_call: any = commands[command_from_config];
+              const function_to_call = commands[
+                command_from_config
+              ] as CustomFunction;
               await within(async () => {
                 cd(currentPath);
-                await function_to_call();
+                await function_to_call({});
               });
             } else if (typeof commands[command_from_config] === 'object') {
               const command_to_run = commands[command_from_config];
@@ -261,7 +262,7 @@ export async function start(
 
               if (command !== undefined && typeof command === 'function') {
                 let options_to_pass = options === undefined ? {} : options;
-                const function_to_call: any = command;
+                const function_to_call = command as CustomFunction;
 
                 await within(async () => {
                   cd(currentPath);
@@ -322,8 +323,10 @@ export async function start(
  * const debugMode = extractFn('debug'); // returns 'true'
  * ```
  */
-export async function extract(args: string[]): Promise<any> {
-  return function extract(inputName: string) {
+export async function extract(
+  args: string[]
+): Promise<(inputName: string) => string | undefined> {
+  return function extract(inputName: string): string | undefined {
     // return the value of the input
     // format of each input is: INPUT_NAME=INPUT_VALUE
 
@@ -331,7 +334,7 @@ export async function extract(args: string[]): Promise<any> {
       return undefined;
     }
 
-    let foundElement = _.find(args, (element: any) => {
+    let foundElement = _.find(args, (element: string) => {
       // if the element is not a string
       // return false
       if (typeof element !== 'string') {
@@ -435,97 +438,32 @@ export function cmd(
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Execute a custom TypeScript script with enhanced runtime context (CLI mode)
+ * Execute a custom TypeScript script with enhanced runtime context
  *
  * This function dynamically imports and executes a TypeScript script,
  * providing it with a rich context including meta configuration,
  * utility functions, and environment access.
  *
  * @param script - Name of the script to run (without .ts extension)
- * @param argument - Arguments to pass to the script (required, use empty array if none)
- * @param options - Execution options (required, use empty object if none)
+ * @param argument - Arguments to pass to the script
+ * @param options - Execution options
  * @param options.dev - Whether to run in development mode
  * @param options.root - Custom root directory for script lookup
  *
  * @example
  * ```typescript
- * // CLI mode - Run a script called 'deploy.ts' in the scripts folder
+ * // Run a script called 'deploy.ts' in the scripts folder
  * await runScript('deploy', ['--env=production'], { dev: false });
  *
  * // Run with custom root directory
  * await runScript('build', [], { root: 'custom-scripts' });
  * ```
  */
-export async function runScript(
+async function runScript(
   script: string,
   argument: string[],
   options: CustomCommanderOptions
-): Promise<void>;
-
-/**
- * Execute a custom TypeScript script with enhanced runtime context (programmatic mode)
- *
- * This function dynamically imports and executes a TypeScript script,
- * providing it with a rich context including meta configuration,
- * utility functions, and environment access.
- *
- * @param config - Configuration object containing script, arguments, and options
- * @param config.script - Name of the script to run (without .ts extension)
- * @param config.arguments - Arguments to pass to the script (optional)
- * @param config.options - Execution options (optional)
- * @param config.options.setSecretsOnLocal - Set secrets on local environment (defaults to true, only available in programmatic mode)
- *
- * @example
- * ```typescript
- * // Programmatic mode - Run a script with configuration object
- * await runScript({
- *   script: 'deploy',
- *   arguments: ['--env=production'],
- *   options: { dev: false, setSecretsOnLocal: true }
- * });
- *
- * // Simple script execution without arguments (setSecretsOnLocal defaults to true)
- * await runScript({ script: 'build' });
- *
- * // Disable setSecretsOnLocal
- * await runScript({
- *   script: 'build',
- *   options: { setSecretsOnLocal: false }
- * });
- * ```
- */
-export async function runScript(config: RunScriptConfig): Promise<void>;
-
-/**
- * Implementation of runScript supporting both CLI and programmatic modes
- */
-export async function runScript(
-  scriptOrConfig: string | RunScriptConfig,
-  argument?: string[],
-  options?: CustomCommanderOptions
-): Promise<void> {
-  let script: string;
-  let args: string[];
-  let opts: CustomCommanderOptions;
-
-  // Determine which mode we're in based on the first parameter
-  if (typeof scriptOrConfig === 'string') {
-    // CLI mode: three separate parameters (argument and options should be provided)
-    script = scriptOrConfig;
-    args = argument || []; // Fallback for safety, but CLI should always provide this
-    opts = options || {}; // Fallback for safety, but CLI should always provide this
-  } else {
-    // Programmatic mode: single configuration object
-    script = scriptOrConfig.script;
-    args = scriptOrConfig.arguments || [];
-    opts = scriptOrConfig.options || {};
-
-    // Handle setSecretsOnLocal - only available in programmatic mode
-    if (opts.setSecretsOnLocal !== false) {
-      // Default to true if not explicitly set to false
-      await setSecretsOnLocal();
-    }
-  }
+) {
   if (!script) {
     console.log('specify a script to run');
     return;
@@ -533,10 +471,9 @@ export async function runScript(
 
   Deno.env.set('CUSTOM_STATUS', 'in_progress');
 
-  // Always use the actual current working directory, not the module's location
   let currentPath = Deno.cwd();
 
-  let { dev } = opts;
+  let { dev } = options;
 
   let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -549,8 +486,8 @@ export async function runScript(
   const SRC = Deno.env.get('SRC');
   const HOME = Deno.env.get('HOME');
 
-  let NODE_PATH: any = await $`npm root -g`;
-  NODE_PATH = NODE_PATH.stdout.trim();
+  let NODE_PATH = await $`npm root -g`;
+  const NODE_PATH_STRING = NODE_PATH.stdout.trim();
 
   const run =
     dev === true ? `${SRC}/dev/run/bin/cmd.ts` : `${HOME}/run/run/bin/cmd.ts`;
@@ -559,19 +496,20 @@ export async function runScript(
   const scriptsFolder = custom?.root || 'scripts';
 
   let scriptPath = '';
+  let isAbsolutePath = false;
 
-  if (opts.root) {
+  if (options.root) {
     // If root is specified, try direct path first
-    const directPath = `${currentPath}/${opts.root}/${script}.ts`;
-    const subfolderPath = `${currentPath}/${opts.root}/${scriptsFolder}/${script}.ts`;
+    const directPath = `${currentPath}/${options.root}/${script}.ts`;
+    const subfolderPath = `${currentPath}/${options.root}/${scriptsFolder}/${script}.ts`;
 
     try {
       await Deno.stat(directPath);
-      scriptPath = new URL(`file://${directPath}`).href;
+      scriptPath = directPath;
     } catch {
       try {
         await Deno.stat(subfolderPath);
-        scriptPath = new URL(`file://${subfolderPath}`).href;
+        scriptPath = subfolderPath;
       } catch {
         console.log(
           `Script not found in either:\n${directPath}\nor\n${subfolderPath}`
@@ -581,13 +519,11 @@ export async function runScript(
     }
   } else {
     // If no root specified, only look in scripts folder
-    const localScriptPath = `${currentPath}/${scriptsFolder}/${script}.ts`;
+    scriptPath = `${currentPath}/${scriptsFolder}/${script}.ts`;
     try {
-      await Deno.stat(localScriptPath);
-      // Convert to file:// URL for proper import handling
-      scriptPath = new URL(`file://${localScriptPath}`).href;
+      await Deno.stat(scriptPath);
     } catch {
-      console.log(`Script not found: ${localScriptPath}`);
+      console.log(`Script not found: ${scriptPath}`);
       return;
     }
   }
@@ -607,16 +543,16 @@ export async function runScript(
 
     let env = Deno.env.toObject();
 
-    await custom_function.default(args, {
+    await custom_function.default(argument, {
       metaConfig,
       currentPath,
       env,
       run,
       main,
       cmd,
-      extract: await extract(args),
-      has: has(args),
-      start: await start(args, opts),
+      extract: await extract(argument),
+      has: has(argument),
+      start: await start(argument, options),
     });
   } catch (e) {
     console.log(e);

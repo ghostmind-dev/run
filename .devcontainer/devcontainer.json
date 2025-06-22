@@ -62,7 +62,8 @@
         "prisma.prisma",
         "bradlc.vscode-tailwindcss",
         "mariorodeghiero.vue-theme",
-        "denoland.vscode-deno"
+        "denoland.vscode-deno",
+        "github.vscode-github-actions"
       ]
     }
   }
