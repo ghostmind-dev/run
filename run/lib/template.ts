@@ -426,6 +426,7 @@ async function downloadFolderContents(
  *
  * This function reads the meta.json file from the copied template,
  * processes ignore files/folders, and executes init commands.
+ * After processing, it restores the original meta.json content.
  *
  * @param targetPath - The path where the template was copied
  */
@@ -433,8 +434,8 @@ async function processTemplateConfig(targetPath: string): Promise<void> {
   try {
     // Read meta.json from the copied template
     const metaJsonPath = `${targetPath}/meta.json`;
-    const metaContent = await Deno.readTextFile(metaJsonPath);
-    const meta = JSON.parse(metaContent);
+    const originalMetaContent = await Deno.readTextFile(metaJsonPath);
+    const meta = JSON.parse(originalMetaContent);
 
     if (meta.template) {
       const ignoreFiles = meta.template.ignoreFiles || [];
@@ -483,6 +484,10 @@ async function processTemplateConfig(targetPath: string): Promise<void> {
         await executeInitCommands(initCommands, targetPath);
       }
     }
+
+    // Restore the original meta.json content (without any environment variable substitutions)
+    await Deno.writeTextFile(metaJsonPath, originalMetaContent);
+    console.log(`📄 Restored original meta.json content`);
   } catch (error) {
     console.log(
       'No meta.json found or error processing template config, proceeding without template processing'
