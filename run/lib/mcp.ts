@@ -136,11 +136,19 @@ async function updateCursorMcpJson(
   serverConfig: any
 ): Promise<void> {
   const SRC = Deno.env.get('SRC');
-  const mcpJsonPath = `${SRC}/.cursor/mcp.json`;
+  const cursorDir = `${SRC}/.cursor`;
+  const mcpJsonPath = `${cursorDir}/mcp.json`;
 
   console.log(`📝 Updating .cursor/mcp.json...`);
 
   try {
+    // Ensure .cursor directory exists
+    try {
+      await Deno.mkdir(cursorDir, { recursive: true });
+    } catch (error) {
+      // Directory might already exist, ignore error
+    }
+
     let mcpJson: any = { mcpServers: {} };
 
     // Try to read existing .cursor/mcp.json file
