@@ -86,7 +86,9 @@ export async function machineInit() {
     'https://raw.githubusercontent.com/ghostmind-dev/config/refs/heads/main/config/env/template.md',
     {
       headers: {
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
       },
     }
   );
@@ -102,7 +104,9 @@ export async function machineInit() {
       'https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/devcontainer.json',
       {
         headers: {
-          'Cache-Control': 'no-cache',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
         },
       }
     );
