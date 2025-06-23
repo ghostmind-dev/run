@@ -152,7 +152,9 @@ async function copyLocalTemplate(
     await copyDirectoryRecursive(sourcePath, fullTargetPath);
 
     // Process template configuration
-    await processTemplateConfig(fullTargetPath);
+    // Extract the folder name from targetPath for comparison
+    const targetFolderName = targetPath.split('/').pop() || targetPath;
+    await processTemplateConfig(fullTargetPath, templateName, targetFolderName);
 
     console.log(
       `✅ Local template '${templateName}' copied to '${targetPath}/'`
@@ -352,7 +354,13 @@ export async function downloadAndCopyTemplate(
       await downloadFolderContents(templateType, templateName, fullTargetPath);
 
       // After downloading, process template configuration
-      await processTemplateConfig(fullTargetPath);
+      // Extract the folder name from targetPath for comparison
+      const targetFolderName = targetPath.split('/').pop() || targetPath;
+      await processTemplateConfig(
+        fullTargetPath,
+        templateType,
+        targetFolderName
+      );
 
       console.log(`✅ Template '${templateName}' copied to '${targetPath}/'`);
     }
@@ -426,11 +434,18 @@ async function downloadFolderContents(
  *
  * This function reads the meta.json file from the copied template,
  * processes ignore files/folders, and executes init commands.
- * After processing, it restores the original meta.json content.
+ * After processing, it restores the original meta.json content with
+ * the name property updated to match the target folder name if different.
  *
  * @param targetPath - The path where the template was copied
+ * @param originalTemplateName - The original template name (folder name)
+ * @param targetFolderName - The target folder name specified by user
  */
-async function processTemplateConfig(targetPath: string): Promise<void> {
+async function processTemplateConfig(
+  targetPath: string,
+  originalTemplateName: string,
+  targetFolderName: string
+): Promise<void> {
   try {
     // Read meta.json from the copied template
     const metaJsonPath = `${targetPath}/meta.json`;
@@ -485,9 +500,22 @@ async function processTemplateConfig(targetPath: string): Promise<void> {
       }
     }
 
-    // Restore the original meta.json content (without any environment variable substitutions)
-    await Deno.writeTextFile(metaJsonPath, originalMetaContent);
-    console.log(`📄 Restored original meta.json content`);
+    // Prepare the final meta.json content
+    let finalMetaContent = originalMetaContent;
+
+    // Update the name property if the target folder name is different from the original template name
+    if (targetFolderName !== originalTemplateName && meta.name) {
+      const updatedMeta = JSON.parse(originalMetaContent);
+      updatedMeta.name = targetFolderName;
+      finalMetaContent = JSON.stringify(updatedMeta, null, 2);
+      console.log(
+        `📝 Updated meta.json name from '${originalTemplateName}' to '${targetFolderName}'`
+      );
+    }
+
+    // Write the final meta.json content (original content with potentially updated name)
+    await Deno.writeTextFile(metaJsonPath, finalMetaContent);
+    console.log(`📄 Restored meta.json content`);
   } catch (error) {
     console.log(
       'No meta.json found or error processing template config, proceeding without template processing'
