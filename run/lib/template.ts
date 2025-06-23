@@ -12,6 +12,79 @@ import { cmd } from './custom.ts';
 import { join, resolve } from 'jsr:@std/path@1.0.8';
 
 ////////////////////////////////////////////////////////////////////////////////
+// HELPER FUNCTIONS FOR CACHE BUSTING
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Get the latest commit SHA for the main branch to use in API calls
+ * This helps bypass additional caching layers
+ */
+async function getLatestCommitSha(): Promise<string | null> {
+  try {
+    const response = await fetchFresh(
+      'https://api.github.com/repos/ghostmind-dev/templates/git/refs/heads/main'
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data.object.sha;
+  } catch (error) {
+    console.warn('Could not fetch latest commit SHA, using default branch');
+    return null;
+  }
+}
+
+/**
+ * Get fresh fetch headers with cache busting and optional timestamp
+ */
+function getFreshHeaders(): Record<string, string> {
+  return {
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+    // Add a timestamp query parameter equivalent in headers
+    'X-Requested-At': new Date().toISOString(),
+  };
+}
+
+/**
+ * Add timestamp query parameter to URL for cache busting
+ */
+function addCacheBustingParam(url: string): string {
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}_t=${Date.now()}`;
+}
+
+/**
+ * Create a fresh fetch request with all cache-busting techniques applied
+ * This combines URL cache busting, headers, and other techniques
+ */
+async function fetchFresh(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const freshUrl = addCacheBustingParam(url);
+  const freshHeaders = {
+    ...getFreshHeaders(),
+    ...options.headers,
+  };
+
+  // Log cache busting info in development
+  if (Deno.env.get('DEBUG') === 'true') {
+    console.log(`🔄 Cache-busting fetch: ${freshUrl}`);
+    console.log(`📋 Headers:`, freshHeaders);
+  }
+
+  return fetch(freshUrl, {
+    ...options,
+    headers: freshHeaders,
+  });
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // LOCAL TEMPLATE FUNCTIONS (DEV MODE)
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -154,12 +227,11 @@ async function readLocalTemplateMeta(
  */
 export async function listTemplateTypes(): Promise<string[]> {
   try {
-    const repoUrl =
-      'https://api.github.com/repos/ghostmind-dev/templates/contents/templates';
-
     console.log('Fetching available template types from GitHub...');
 
-    const response = await fetch(repoUrl);
+    const response = await fetchFresh(
+      'https://api.github.com/repos/ghostmind-dev/templates/contents/templates'
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to fetch template types: ${response.statusText}`);
@@ -202,11 +274,11 @@ export async function listTemplatesInType(
   templateType: string
 ): Promise<any[]> {
   try {
-    const repoUrl = `https://api.github.com/repos/ghostmind-dev/templates/contents/templates/${templateType}`;
-
     console.log(`Fetching templates from ${templateType}...`);
 
-    const response = await fetch(repoUrl);
+    const response = await fetchFresh(
+      `https://api.github.com/repos/ghostmind-dev/templates/contents/templates/${templateType}`
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to fetch templates: ${response.statusText}`);
@@ -259,8 +331,9 @@ export async function downloadAndCopyTemplate(
 
     if (isFile) {
       // Handle single file
-      const fileUrl = `https://api.github.com/repos/ghostmind-dev/templates/contents/templates/${templateType}/${templateName}`;
-      const response = await fetch(fileUrl);
+      const response = await fetchFresh(
+        `https://api.github.com/repos/ghostmind-dev/templates/contents/templates/${templateType}/${templateName}`
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to fetch file: ${response.statusText}`);
@@ -309,9 +382,9 @@ async function downloadFolderContents(
   folderPath: string,
   targetPath: string
 ): Promise<void> {
-  const repoUrl = `https://api.github.com/repos/ghostmind-dev/templates/contents/templates/${templateType}/${folderPath}`;
-
-  const response = await fetch(repoUrl);
+  const response = await fetchFresh(
+    `https://api.github.com/repos/ghostmind-dev/templates/contents/templates/${templateType}/${folderPath}`
+  );
   if (!response.ok) {
     throw new Error(`Failed to fetch folder contents: ${response.statusText}`);
   }
@@ -622,8 +695,9 @@ export default async function template(program: any) {
         const templatesWithMeta = [];
         for (const type of templateTypes) {
           try {
-            const metaJsonUrl = `https://raw.githubusercontent.com/ghostmind-dev/templates/main/templates/${type}/meta.json`;
-            const response = await fetch(metaJsonUrl);
+            const response = await fetchFresh(
+              `https://raw.githubusercontent.com/ghostmind-dev/templates/main/templates/${type}/meta.json`
+            );
             if (!response.ok) {
               templatesWithMeta.push({
                 folder: type,
