@@ -83,7 +83,7 @@ export async function machineInit() {
 
   // Always create .env template from repository
   const envTemplateResponse = await fetch(
-    'https://raw.githubusercontent.com/ghostmind-dev/config/refs/heads/main/config/env/template.md',
+    'https://raw.githubusercontent.com/ghostmind-dev/config/refs/heads/main/config/env/.env.template',
     {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
