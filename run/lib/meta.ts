@@ -125,7 +125,7 @@ export async function metaChangeProperty(propertyArg: string) {
 
   let propertyTarget;
 
-  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+  let metaConfig = await readMetaJsonRaw(currentPath);
 
   const prompt = inquirer.createPromptModule();
 
@@ -248,7 +248,7 @@ export async function metaChangeProperty(propertyArg: string) {
  * ```
  */
 export async function metaAddDocker() {
-  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+  let metaConfig = await readMetaJsonRaw(currentPath);
 
   const prompt = inquirer.createPromptModule();
 
@@ -333,7 +333,7 @@ export async function metaAddCompose() {
   //   }
   // },
 
-  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+  let metaConfig = await readMetaJsonRaw(currentPath);
 
   const prompt = inquirer.createPromptModule();
 
@@ -390,7 +390,7 @@ export async function metaAddTunnel() {
   //   "service": "http://host.docker.internal:5001"
   // },
 
-  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+  let metaConfig = await readMetaJsonRaw(currentPath);
 
   const prompt = inquirer.createPromptModule();
 
@@ -444,7 +444,7 @@ export async function metaAddTerraform() {
   //   }
   // }
 
-  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+  let metaConfig = await readMetaJsonRaw(currentPath);
 
   const prompt = inquirer.createPromptModule();
 
@@ -504,7 +504,7 @@ export async function metaAddTerraform() {
  * ```
  */
 export async function metaAddProperty(): Promise<void> {
-  let metaConfig = await verifyIfMetaJsonExists(currentPath);
+  let metaConfig = await readMetaJsonRaw(currentPath);
 
   const prompt = inquirer.createPromptModule();
 
@@ -528,6 +528,36 @@ export async function metaAddProperty(): Promise<void> {
   }
 
   Deno.exit();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// READ META.JSON WITHOUT ENVIRONMENT VARIABLE SUBSTITUTION
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Read meta.json file without performing environment variable substitution
+ *
+ * This function reads the meta.json file and returns its raw content without
+ * replacing environment variables, preserving placeholders like ${SERVER_TOKEN}
+ * for configuration editing operations.
+ *
+ * @param path - The path to the directory containing meta.json
+ * @returns The raw meta.json configuration or undefined if not found
+ *
+ * @example
+ * ```typescript
+ * const rawConfig = await readMetaJsonRaw('/path/to/config');
+ * // Preserves ${SERVER_TOKEN} instead of substituting with actual value
+ * ```
+ */
+async function readMetaJsonRaw(path: string): Promise<any | undefined> {
+  try {
+    const metaJsonPath = join(path, 'meta.json');
+    const fileContent = await Deno.readTextFile(metaJsonPath);
+    return JSON.parse(fileContent);
+  } catch (error) {
+    return undefined;
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
