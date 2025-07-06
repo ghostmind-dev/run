@@ -116,8 +116,6 @@ export async function machineInit() {
     // // Change the name of the container
 
     devcontainer.name = projectName;
-    devcontainer.build.args.PROJECT_DIR =
-      '${env:HOME}${env:USERPROFILE}/' + pathFromHome + '/' + projectName;
     devcontainer.remoteEnv.LOCALHOST_SRC =
       '${env:HOME}${env:USERPROFILE}/' + pathFromHome + '/' + projectName;
     devcontainer.mounts[1] = `source=ghostmind-${projectName}-history,target=/commandhistory,type=volume`;
