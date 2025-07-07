@@ -2,18 +2,30 @@
   "name": "run",
   "build": {
     "dockerfile": "Dockerfile",
-    "args": {
-      "PROJECT_DIR": "${env:HOME}${env:USERPROFILE}/projects/container/run"
-    }
   },
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {},
-    "ghcr.io/ghostmind-dev/features/zsh": {},
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/ghostmind-dev/features/extensions:latest": {},
+    "ghcr.io/ghostmind-dev/features/themes:latest": {},
+    "ghcr.io/ghostmind-dev/features/settings:latest": {},
+    "ghcr.io/ghostmind-dev/features/init:latest": {
+      "resetLive": true
+    },
+    "ghcr.io/ghostmind-dev/features/zsh:latest": {
+      "theme": "codespaces"
+    }
   },
-  "postStartCommand": "deno run --allow-all https://raw.githubusercontent.com/ghostmind-dev/init/main/init/main.ts",
-  "postAttachCommand": "deno run --allow-all /usr/local/share/post-attach.ts",
-  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ghostmind.hide-unhide"
+      ]
+    }
+  },
+  "postStartCommand": "deno run -A -r jsr:@ghostmind/init",
+  "postAttachCommand": "deno run -A /usr/local/share/post-attach.ts",
   "remoteEnv": {
     "SRC": "${containerWorkspaceFolder}",
     "LOCALHOST_SRC": "${env:HOME}${env:USERPROFILE}/projects/container/run",
@@ -22,51 +34,14 @@
     "VAULT_ADDR": "${localEnv:VAULT_ADDR}"
   },
   "mounts": [
-    "source=ghostmind-run-history,target=/commandhistory,type=volume",
-    "source=${env:HOME}${env:USERPROFILE}/projects/container/run,target=/Users/francoisseguin/projects/container/run,type=bind"
+    "source=terminal-history-run,target=/commandhistory,type=volume",
+    "source=${env:HOME}${env:USERPROFILE}/projects,target=/Users/francoisseguin/projects,type=bind",
+    "source=${env:HOME}${env:USERPROFILE}/.cursor,target=/home/vscode/.cursor,type=bind"
   ],
   "runArgs": [
     "--cap-add=CAP_IPC_LOCK",
     "--cap-add=NET_ADMIN",
-    "--name=run-devcontainer",
-    "--network=host"
-  ],
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "ms-azuretools.vscode-docker",
-        "ms-kubernetes-tools.vscode-kubernetes-tools",
-        "esbenp.prettier-vscode",
-        "humao.rest-client",
-        "sdras.inbedby7pm",
-        "william-voyek.vscode-nginx",
-        "foxundermoon.shell-format",
-        "hashicorp.terraform",
-        "mikestead.dotenv",
-        "hashicorp.hcl",
-        "equinusocio.vsc-material-theme",
-        "wesbos.theme-cobalt2",
-        "sumneko.lua",
-        "ghostmind.hide-unhide",
-        "tinkertrain.theme-panda",
-        "golang.go",
-        "yinfei.luahelper",
-        "graphql.vscode-graphql",
-        "graphql.vscode-graphql-syntax",
-        "jdinhlife.gruvbox",
-        "styled-components.vscode-styled-components",
-        "be5invis.vscode-icontheme-nomo-dark",
-        "pkief.material-icon-theme",
-        "mtxr.sqltools",
-        "github.copilot-chat",
-        "github.copilot-nightly",
-        "ms-python.python",
-        "prisma.prisma",
-        "bradlc.vscode-tailwindcss",
-        "mariorodeghiero.vue-theme",
-        "denoland.vscode-deno",
-        "github.vscode-github-actions"
-      ]
-    }
-  }
+    "--network=host",
+    "--name=run"
+  ]
 }

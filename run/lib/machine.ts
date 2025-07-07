@@ -118,14 +118,7 @@ export async function machineInit() {
     devcontainer.name = projectName;
     devcontainer.remoteEnv.LOCALHOST_SRC =
       '${env:HOME}${env:USERPROFILE}/' + pathFromHome + '/' + projectName;
-    devcontainer.mounts[1] = `source=ghostmind-${projectName}-history,target=/commandhistory,type=volume`;
-    devcontainer.mounts[2] =
-      'source=${env:HOME}${env:USERPROFILE}/' +
-      pathFromHome +
-      '/' +
-      projectName +
-      ',' +
-      `target=${Deno.env.get('HOME')}/${pathFromHome}/${projectName},type=bind`;
+    devcontainer.mounts[0] = `source=terminal-history-${projectName},target=/commandhistory,type=volume`;
 
     devcontainer.runArgs[3] = `--name=${projectName}`;
 
