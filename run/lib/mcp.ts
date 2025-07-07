@@ -32,14 +32,21 @@ export default async function mcp(program: any) {
   setCommand
     .argument('[server-name]', 'Name of the MCP server to install')
     .option('--all', 'Process all MCP configurations found in the project')
+    .option(
+      '--reset',
+      'Reset/wipe existing MCP configurations before setting new ones'
+    )
     .action(
-      async (serverName: string | undefined, options: { all?: boolean }) => {
-        const { all } = options;
+      async (
+        serverName: string | undefined,
+        options: { all?: boolean; reset?: boolean }
+      ) => {
+        const { all, reset } = options;
 
         if (all) {
-          await discoverAndPrintMCPConfigurations();
+          await discoverAndPrintMCPConfigurations(reset);
         } else if (serverName) {
-          await setIndividualMCPConfiguration(serverName);
+          await setIndividualMCPConfiguration(serverName, reset);
         } else {
           console.error('❌ Server name is required when not using --all flag');
           console.log('Usage: run mcp set <server-name> OR run mcp set --all');
@@ -57,7 +64,8 @@ export default async function mcp(program: any) {
  * Find a specific MCP server configuration by name and update .cursor/mcp.json
  */
 async function setIndividualMCPConfiguration(
-  serverName: string
+  serverName: string,
+  reset: boolean
 ): Promise<void> {
   const SRC = Deno.env.get('SRC');
 
@@ -121,7 +129,7 @@ async function setIndividualMCPConfiguration(
     }
 
     // Now update the .cursor/mcp.json file
-    await updateCursorMcpJson(serverName, mcpServerConfig);
+    await updateCursorMcpJson(serverName, mcpServerConfig, reset);
   } catch (error) {
     console.error('❌ Error searching for MCP server:', error);
     Deno.exit(1);
@@ -133,7 +141,8 @@ async function setIndividualMCPConfiguration(
  */
 async function updateCursorMcpJson(
   serverName: string,
-  serverConfig: any
+  serverConfig: any,
+  reset: boolean
 ): Promise<void> {
   const SRC = Deno.env.get('SRC');
   const cursorDir = `${SRC}/.cursor`;
@@ -151,25 +160,37 @@ async function updateCursorMcpJson(
 
     let mcpJson: any = { mcpServers: {} };
 
-    // Try to read existing .cursor/mcp.json file
-    try {
-      const existingContent = await Deno.readTextFile(mcpJsonPath);
-      mcpJson = JSON.parse(existingContent);
-
-      // Ensure mcpServers property exists
-      if (!mcpJson.mcpServers) {
-        mcpJson.mcpServers = {};
-      }
-    } catch (error) {
-      // File doesn't exist or is invalid, use default structure
-      console.log(`📄 Creating new .cursor/mcp.json file`);
+    // If reset flag is true, start with a fresh configuration
+    if (reset) {
+      console.log(
+        `🔄 Resetting .cursor/mcp.json - wiping existing configurations`
+      );
       mcpJson = { mcpServers: {} };
+    } else {
+      // Try to read existing .cursor/mcp.json file
+      try {
+        const existingContent = await Deno.readTextFile(mcpJsonPath);
+        mcpJson = JSON.parse(existingContent);
+
+        // Ensure mcpServers property exists
+        if (!mcpJson.mcpServers) {
+          mcpJson.mcpServers = {};
+        }
+      } catch (error) {
+        // File doesn't exist or is invalid, use default structure
+        console.log(`📄 Creating new .cursor/mcp.json file`);
+        mcpJson = { mcpServers: {} };
+      }
     }
 
-    // Check if server already exists
-    const serverExists = mcpJson.mcpServers[serverName] !== undefined;
+    // Check if server already exists (only relevant when not resetting)
+    const serverExists = !reset && mcpJson.mcpServers[serverName] !== undefined;
 
-    if (serverExists) {
+    if (reset) {
+      console.log(
+        `➕ Adding MCP server '${serverName}' to fresh configuration`
+      );
+    } else if (serverExists) {
       console.log(`🔄 Replacing existing MCP server '${serverName}'`);
     } else {
       console.log(`➕ Adding new MCP server '${serverName}'`);
@@ -198,7 +219,9 @@ async function updateCursorMcpJson(
  * Discover all directories with meta.json files containing MCP configurations
  * and print directory paths with their MCP server names
  */
-async function discoverAndPrintMCPConfigurations(): Promise<void> {
+async function discoverAndPrintMCPConfigurations(
+  reset: boolean
+): Promise<void> {
   const SRC = Deno.env.get('SRC');
 
   if (!SRC) {
@@ -243,7 +266,9 @@ async function discoverAndPrintMCPConfigurations(): Promise<void> {
               '/bin/cmd.ts'
             );
 
-            await $`${binPath} mcp set ${serverName}`;
+            // Add --reset flag if specified
+            const resetFlag = reset ? '--reset' : '';
+            await $`${binPath} mcp set ${serverName} ${resetFlag}`;
           });
         }
       }
