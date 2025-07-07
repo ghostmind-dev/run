@@ -44,9 +44,9 @@ export default async function mcp(program: any) {
         const { all, reset } = options;
 
         if (all) {
-          await discoverAndPrintMCPConfigurations(reset);
+          await discoverAndPrintMCPConfigurations(reset ?? false);
         } else if (serverName) {
-          await setIndividualMCPConfiguration(serverName, reset);
+          await setIndividualMCPConfiguration(serverName, reset ?? false);
         } else {
           console.error('❌ Server name is required when not using --all flag');
           console.log('Usage: run mcp set <server-name> OR run mcp set --all');
