@@ -184,6 +184,101 @@ export async function machineInit() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// MOVE
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Move a project to a new location and update devcontainer configuration
+ *
+ * This function moves an existing project directory to a new location and
+ * updates the devcontainer configuration to reflect the new path, specifically
+ * the LOCALHOST_SRC environment variable.
+ *
+ * @param sourceProject - The name of the project folder to move
+ * @param destinationPath - The destination path where the project should be moved
+ *
+ * @example
+ * ```typescript
+ * // Move project "my-app" to "/Volumes/Projects/new-location"
+ * await machineMove("my-app", "/Volumes/Projects/new-location");
+ * ```
+ */
+export async function machineMove(
+  sourceProject: string,
+  destinationPath: string
+) {
+  const HOME = '/Volumes/Projects';
+
+  // Construct full paths
+  const sourcePath = `${currentPath}/${sourceProject}`;
+
+  // Resolve destination path to handle relative paths
+  let resolvedDestinationPath: string;
+  try {
+    resolvedDestinationPath = await fs.realpath(destinationPath);
+  } catch {
+    // If path doesn't exist, resolve parent and append the last part
+    const parentPath = destinationPath.split('/').slice(0, -1).join('/');
+    const lastPart = destinationPath.split('/').slice(-1)[0];
+    try {
+      const resolvedParent = await fs.realpath(parentPath);
+      resolvedDestinationPath = `${resolvedParent}/${lastPart}`;
+    } catch {
+      // Fallback to the original path if resolution fails
+      resolvedDestinationPath = destinationPath;
+    }
+  }
+
+  const fullDestinationPath = `${resolvedDestinationPath}/${sourceProject}`;
+
+  // Check if source project exists
+  if (!(await fs.pathExists(sourcePath))) {
+    console.error(`Source project "${sourcePath}" does not exist.`);
+    Deno.exit(1);
+  }
+
+  // Check if destination already exists
+  if (await fs.pathExists(fullDestinationPath)) {
+    console.error(`Destination "${fullDestinationPath}" already exists.`);
+    Deno.exit(1);
+  }
+
+  // Update devcontainer configuration if it exists BEFORE moving
+  const devcontainerPath = `${sourcePath}/.devcontainer/devcontainer.json`;
+
+  if (await fs.pathExists(devcontainerPath)) {
+    console.log('Updating devcontainer configuration...');
+
+    // Read existing devcontainer config
+    const devcontainer = await fs.readJson(devcontainerPath);
+
+    // Update LOCALHOST_SRC with the resolved destination path
+    if (devcontainer.remoteEnv && devcontainer.remoteEnv.LOCALHOST_SRC) {
+      devcontainer.remoteEnv.LOCALHOST_SRC = fullDestinationPath;
+
+      // Write updated configuration back
+      await fs.writeJson(devcontainerPath, devcontainer, { spaces: 2 });
+
+      console.log(
+        `Updated LOCALHOST_SRC to: ${devcontainer.remoteEnv.LOCALHOST_SRC}`
+      );
+    }
+  }
+
+  // Ensure destination directory exists
+  await fs.ensureDir(resolvedDestinationPath);
+
+  console.log(`Moving ${sourcePath} to ${fullDestinationPath}...`);
+
+  // Move the project folder
+  await fs.move(sourcePath, fullDestinationPath);
+
+  console.log(
+    `Successfully moved project "${sourceProject}" to "${fullDestinationPath}"`
+  );
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -194,4 +289,13 @@ export default async function machine(program: any) {
   const init = machine.command('init');
   init.description('create a devcontainer for the project');
   init.action(machineInit);
+
+  const move = machine.command('move');
+  move.description('move a project to a new location and update devcontainer');
+  move.argument('<sourceProject>', 'name of the project folder to move');
+  move.argument(
+    '<destinationPath>',
+    'destination path where the project should be moved'
+  );
+  move.action(machineMove);
 }
