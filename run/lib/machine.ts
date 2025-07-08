@@ -7,16 +7,10 @@
  * @module
  */
 
-import { $, cd, spinner, sleep, question } from 'npm:zx@8.1.0';
-import Table from 'npm:cli-table3@0.6.5';
-import {
-  createUUID,
-  verifyIfMetaJsonExists,
-  withMetaMatching,
-} from '../utils/divers.ts';
+import { $, cd } from 'npm:zx@8.1.0';
+import { createUUID } from '../utils/divers.ts';
 import inquirer from 'npm:inquirer@9.2.22';
 import fs from 'npm:fs-extra@11.2.0';
-import prettier from 'npm:prettier@3.3.2';
 import _ from 'npm:lodash@4.17.21';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -73,7 +67,9 @@ export async function machineInit() {
       },
     ]);
 
-  const pathFromHome = currentPath.replace(`${Deno.env.get('HOME')}/`, '');
+  const HOME = '/Volumes/Projects';
+
+  const pathFromHome = currentPath.replace(`${HOME}/`, '');
 
   /// diable cache for now
 
@@ -115,12 +111,27 @@ export async function machineInit() {
 
     // // Change the name of the container
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+
+    // SETTING THINGS UP
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+
     devcontainer.name = projectName;
     devcontainer.remoteEnv.LOCALHOST_SRC =
-      '${env:HOME}${env:USERPROFILE}/' + pathFromHome + '/' + projectName;
-    devcontainer.mounts[0] = `source=terminal-history-${projectName},target=/commandhistory,type=volume`;
+      `${HOME}/` + pathFromHome + '/' + projectName;
 
     devcontainer.runArgs[3] = `--name=${projectName}`;
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+
+    // SETTING THINGS UP
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////
 
     // // write the file back
 

@@ -8,6 +8,7 @@
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/ghostmind-dev/features/extensions:latest": {},
+    "ghcr.io/ghostmind-dev/features/mounts:latest": {},
     "ghcr.io/ghostmind-dev/features/themes:latest": {},
     "ghcr.io/ghostmind-dev/features/settings:latest": {},
     "ghcr.io/ghostmind-dev/features/init:latest": {
@@ -28,16 +29,12 @@
   "postAttachCommand": "deno run -A /usr/local/share/post-attach.ts",
   "remoteEnv": {
     "SRC": "${containerWorkspaceFolder}",
-    "LOCALHOST_SRC": "${env:HOME}${env:USERPROFILE}/projects/container/run",
+    "LOCALHOST_SRC": "/Volumes/Projects/container/run",
     "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
     "VAULT_ROOT_TOKEN": "${localEnv:VAULT_ROOT_TOKEN}",
     "VAULT_ADDR": "${localEnv:VAULT_ADDR}"
   },
-  "mounts": [
-    "source=terminal-history-run,target=/commandhistory,type=volume",
-    "source=${env:HOME}${env:USERPROFILE}/projects,target=/Users/francoisseguin/projects,type=bind",
-    "source=${env:HOME}${env:USERPROFILE}/.cursor,target=/home/vscode/.cursor,type=bind"
-  ],
+  "mounts": [],
   "runArgs": [
     "--cap-add=CAP_IPC_LOCK",
     "--cap-add=NET_ADMIN",
