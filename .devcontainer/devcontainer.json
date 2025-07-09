@@ -31,7 +31,7 @@
     "SRC": "${containerWorkspaceFolder}",
     "LOCALHOST_SRC": "/Volumes/Projects/container/run",
     "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
-    "VAULT_ROOT_TOKEN": "${localEnv:VAULT_ROOT_TOKEN}",
+    "VAULT_TOKEN": "${localEnv:VAULT_TOKEN}",
     "VAULT_ADDR": "${localEnv:VAULT_ADDR}"
   },
   "mounts": [],
