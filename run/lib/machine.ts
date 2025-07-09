@@ -188,52 +188,84 @@ export async function machineInit() {
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
+ * Resolve a path to absolute form, handling both relative and absolute paths
+ *
+ * @param inputPath - The path to resolve (can be relative or absolute)
+ * @param basePath - The base path to use for relative paths (defaults to current directory)
+ * @returns Promise resolving to the absolute path
+ */
+async function resolvePath(
+  inputPath: string,
+  basePath: string = currentPath
+): Promise<string> {
+  // If path is absolute, use it as-is
+  if (inputPath.startsWith('/')) {
+    return inputPath;
+  }
+
+  // If path is relative, resolve relative to basePath
+  const fullPath = `${basePath}/${inputPath}`;
+
+  try {
+    // Try to resolve the real path if it exists
+    return await fs.realpath(fullPath);
+  } catch {
+    // If path doesn't exist, manually resolve it
+    // This handles cases like ../folder or ./folder where the target doesn't exist yet
+    const parts = fullPath.split('/').filter((part) => part !== '');
+    const resolvedParts: string[] = [];
+
+    for (const part of parts) {
+      if (part === '.') {
+        // Current directory, skip
+        continue;
+      } else if (part === '..') {
+        // Parent directory, remove last part
+        resolvedParts.pop();
+      } else {
+        // Regular directory name
+        resolvedParts.push(part);
+      }
+    }
+
+    return '/' + resolvedParts.join('/');
+  }
+}
+
+/**
  * Move a project to a new location and update devcontainer configuration
  *
  * This function moves an existing project directory to a new location and
  * updates the devcontainer configuration to reflect the new path, specifically
  * the LOCALHOST_SRC environment variable.
  *
- * @param sourceProject - The name of the project folder to move
- * @param destinationPath - The destination path where the project should be moved
+ * @param sourcePath - The source path (can be relative or absolute)
+ * @param destinationPath - The destination path where the project should be moved (can be relative or absolute)
  *
  * @example
  * ```typescript
- * // Move project "my-app" to "/Volumes/Projects/new-location"
- * await machineMove("my-app", "/Volumes/Projects/new-location");
+ * // Move project using relative paths
+ * await machineMove("my-app", "../new-location");
+ *
+ * // Move project using absolute paths
+ * await machineMove("/current/path/my-app", "/Volumes/Projects/new-location");
+ *
+ * // Mix relative and absolute paths
+ * await machineMove("../my-app", "/Volumes/Projects/new-location");
  * ```
  */
-export async function machineMove(
-  sourceProject: string,
-  destinationPath: string
-) {
-  const HOME = '/Volumes/Projects';
+export async function machineMove(sourcePath: string, destinationPath: string) {
+  // Resolve both source and destination paths to handle relative/absolute paths
+  const resolvedSourcePath = await resolvePath(sourcePath);
+  const resolvedDestinationPath = await resolvePath(destinationPath);
 
-  // Construct full paths
-  const sourcePath = `${currentPath}/${sourceProject}`;
-
-  // Resolve destination path to handle relative paths
-  let resolvedDestinationPath: string;
-  try {
-    resolvedDestinationPath = await fs.realpath(destinationPath);
-  } catch {
-    // If path doesn't exist, resolve parent and append the last part
-    const parentPath = destinationPath.split('/').slice(0, -1).join('/');
-    const lastPart = destinationPath.split('/').slice(-1)[0];
-    try {
-      const resolvedParent = await fs.realpath(parentPath);
-      resolvedDestinationPath = `${resolvedParent}/${lastPart}`;
-    } catch {
-      // Fallback to the original path if resolution fails
-      resolvedDestinationPath = destinationPath;
-    }
-  }
-
-  const fullDestinationPath = `${resolvedDestinationPath}/${sourceProject}`;
+  // Extract the project name from the source path
+  const sourceProjectName = resolvedSourcePath.split('/').pop() || '';
+  const fullDestinationPath = `${resolvedDestinationPath}/${sourceProjectName}`;
 
   // Check if source project exists
-  if (!(await fs.pathExists(sourcePath))) {
-    console.error(`Source project "${sourcePath}" does not exist.`);
+  if (!(await fs.pathExists(resolvedSourcePath))) {
+    console.error(`Source project "${resolvedSourcePath}" does not exist.`);
     Deno.exit(1);
   }
 
@@ -244,7 +276,7 @@ export async function machineMove(
   }
 
   // Update devcontainer configuration if it exists BEFORE moving
-  const devcontainerPath = `${sourcePath}/.devcontainer/devcontainer.json`;
+  const devcontainerPath = `${resolvedSourcePath}/.devcontainer/devcontainer.json`;
 
   if (await fs.pathExists(devcontainerPath)) {
     console.log('Updating devcontainer configuration...');
@@ -268,13 +300,13 @@ export async function machineMove(
   // Ensure destination directory exists
   await fs.ensureDir(resolvedDestinationPath);
 
-  console.log(`Moving ${sourcePath} to ${fullDestinationPath}...`);
+  console.log(`Moving ${resolvedSourcePath} to ${fullDestinationPath}...`);
 
   // Move the project folder
-  await fs.move(sourcePath, fullDestinationPath);
+  await fs.move(resolvedSourcePath, fullDestinationPath);
 
   console.log(
-    `Successfully moved project "${sourceProject}" to "${fullDestinationPath}"`
+    `Successfully moved project "${sourceProjectName}" to "${fullDestinationPath}"`
   );
 }
 
@@ -292,10 +324,13 @@ export default async function machine(program: any) {
 
   const move = machine.command('move');
   move.description('move a project to a new location and update devcontainer');
-  move.argument('<sourceProject>', 'name of the project folder to move');
+  move.argument(
+    '<sourcePath>',
+    'source path of the project to move (relative or absolute)'
+  );
   move.argument(
     '<destinationPath>',
-    'destination path where the project should be moved'
+    'destination path where the project should be moved (relative or absolute)'
   );
   move.action(machineMove);
 }
