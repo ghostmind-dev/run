@@ -754,6 +754,306 @@ export default async function misc(program: any) {
         Deno.exit(1);
       }
     });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // ISOLATE CURRENT DIRECTORY
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('isolate')
+    .description(
+      'isolate current directory by hiding all other directories in IDE'
+    )
+    .option(
+      '--ignore-folders <folders>',
+      'comma-separated list of folders to never exclude',
+      ''
+    )
+    .option(
+      '--ignore-files <files>',
+      'comma-separated list of files to never exclude',
+      ''
+    )
+    .action(async (options: any) => {
+      try {
+        const homeDir = Deno.env.get('HOME') || '';
+        const currentPath = Deno.cwd();
+        const SRC = Deno.env.get('SRC') || '';
+
+        if (!SRC) {
+          console.log('SRC environment variable not set');
+          Deno.exit(1);
+        }
+
+        // Make sure currentPath is within SRC
+        if (!currentPath.startsWith(SRC)) {
+          console.log(`Current path ${currentPath} is not within SRC ${SRC}`);
+          Deno.exit(1);
+        }
+
+        // Determine IDE and settings path
+        let settingsPath = '';
+        let ideType = '';
+
+        try {
+          await Deno.stat(`${homeDir}/.cursor-server`);
+          settingsPath = `${homeDir}/.cursor-server/data/Machine/settings.json`;
+          ideType = 'Cursor';
+        } catch {
+          try {
+            await Deno.stat(`${homeDir}/.vscode-server`);
+            settingsPath = `${homeDir}/.vscode-server/data/Machine/settings.json`;
+            ideType = 'VS Code';
+          } catch {
+            console.log('Could not detect IDE (Cursor or VS Code)');
+            Deno.exit(1);
+          }
+        }
+
+        console.log(`Detected ${ideType} IDE`);
+        console.log(`Settings path: ${settingsPath}`);
+
+        // Read current settings
+        let settings: any = {};
+        try {
+          const settingsContent = Deno.readTextFileSync(settingsPath);
+          settings = JSON.parse(settingsContent);
+        } catch (error: any) {
+          console.log(`Creating new settings file...`);
+          settings = {};
+        }
+
+        // Initialize files.exclude if it doesn't exist (using standard property name)
+        if (!settings['files.exclude']) {
+          settings['files.exclude'] = {};
+        }
+
+        // Merge files.excluded into files.exclude if it exists (handle both property names)
+        if (settings['files.excluded']) {
+          settings['files.exclude'] = {
+            ...settings['files.exclude'],
+            ...settings['files.excluded'],
+          };
+          delete settings['files.excluded'];
+        }
+
+        // Parse ignore options
+        const ignoreFolders = options.ignoreFolders
+          ? options.ignoreFolders.split(',').map((f: string) => f.trim())
+          : [];
+        const ignoreFiles = options.ignoreFiles
+          ? options.ignoreFiles.split(',').map((f: string) => f.trim())
+          : [];
+
+        // Always ignore .vscode folder (but allow .github to be excluded)
+        const defaultIgnoreFolders = ['.vscode'];
+        const allIgnoreFolders = [...defaultIgnoreFolders, ...ignoreFolders];
+
+        if (allIgnoreFolders.length > 0) {
+          console.log(`Ignoring folders: ${allIgnoreFolders.join(', ')}`);
+        }
+        if (ignoreFiles.length > 0) {
+          console.log(`Ignoring files: ${ignoreFiles.join(', ')}`);
+        }
+
+        // Get relative path from SRC to current directory
+        const relativePath = currentPath.replace(SRC, '').replace(/^\//, '');
+        const pathParts = relativePath
+          .split('/')
+          .filter((part) => part.length > 0);
+
+        console.log(`Current path relative to SRC: ${relativePath}`);
+        console.log(`Isolating path: ${pathParts.join(' -> ')}`);
+
+        // Function to recursively exclude directories at each level
+        async function excludeAtLevel(
+          basePath: string,
+          currentParts: string[],
+          level: number = 0
+        ) {
+          try {
+            for await (const entry of Deno.readDir(basePath)) {
+              const entryPath = `${basePath}/${entry.name}`;
+              const relativePath = entryPath.replace(SRC + '/', '');
+
+              // First, check if this item should be ignored (protected)
+              let shouldIgnore = false;
+
+              // Check folder ignores
+              if (entry.isDirectory && allIgnoreFolders.includes(entry.name)) {
+                shouldIgnore = true;
+              }
+
+              // Check file ignores
+              if (entry.isFile && ignoreFiles.includes(entry.name)) {
+                shouldIgnore = true;
+              }
+
+              if (shouldIgnore) {
+                console.log(`Ignoring: ${relativePath}`);
+                continue;
+              }
+
+              // If this is part of our current path, recurse into it
+              if (
+                level < currentParts.length &&
+                entry.name === currentParts[level]
+              ) {
+                if (entry.isDirectory && level < currentParts.length - 1) {
+                  await excludeAtLevel(entryPath, currentParts, level + 1);
+                }
+              } else {
+                // This is not part of our current path, so exclude it
+
+                // Check for existing patterns that might conflict
+                let shouldExclude = true;
+                const existingKeys = Object.keys(settings['files.exclude']);
+
+                for (const existingKey of existingKeys) {
+                  // Check if the existing pattern would conflict with our new pattern (exact match)
+                  if (existingKey === relativePath) {
+                    shouldExclude = false;
+                    break;
+                  }
+                  // Check if this path is already covered by an existing glob pattern
+                  if (existingKey.includes('**/')) {
+                    const globPattern = existingKey.replace('**/', '');
+                    // Only match if the path ends with the glob pattern (more precise matching)
+                    if (
+                      relativePath === globPattern ||
+                      relativePath.endsWith('/' + globPattern)
+                    ) {
+                      shouldExclude = false;
+                      break;
+                    }
+                  }
+                }
+
+                if (shouldExclude) {
+                  settings['files.exclude'][relativePath] = true;
+                  console.log(`Excluding: ${relativePath}`);
+                }
+              }
+            }
+          } catch (error: any) {
+            console.log(
+              `Could not read directory ${basePath}: ${error.message}`
+            );
+          }
+        }
+
+        // Start exclusion process from SRC
+        await excludeAtLevel(SRC, pathParts);
+
+        // Write settings back
+        const settingsJson = JSON.stringify(settings, null, 2);
+        Deno.writeTextFileSync(settingsPath, settingsJson);
+
+        console.log(`Successfully isolated current directory: ${currentPath}`);
+        console.log(`Updated ${ideType} settings`);
+        console.log(`Restart your IDE to see the changes`);
+      } catch (error: any) {
+        console.log(`Error: ${error.message}`);
+        Deno.exit(1);
+      }
+    });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // RESTORE DEFAULT EXCLUSIONS
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('restore')
+    .description('restore default file exclusions from remote config')
+    .action(async () => {
+      try {
+        const homeDir = Deno.env.get('HOME') || '';
+
+        // Determine IDE and settings path
+        let settingsPath = '';
+        let ideType = '';
+
+        try {
+          await Deno.stat(`${homeDir}/.cursor-server`);
+          settingsPath = `${homeDir}/.cursor-server/data/Machine/settings.json`;
+          ideType = 'Cursor';
+        } catch {
+          try {
+            await Deno.stat(`${homeDir}/.vscode-server`);
+            settingsPath = `${homeDir}/.vscode-server/data/Machine/settings.json`;
+            ideType = 'VS Code';
+          } catch {
+            console.log('Could not detect IDE (Cursor or VS Code)');
+            Deno.exit(1);
+          }
+        }
+
+        console.log(`Detected ${ideType} IDE`);
+        console.log(`Settings path: ${settingsPath}`);
+
+        // Fetch remote settings
+        console.log('Fetching default exclusions from remote config...');
+        const remoteUrl =
+          'https://raw.githubusercontent.com/ghostmind-dev/config/main/config/vscode/settings.static.json';
+
+        const response = await fetch(remoteUrl);
+        if (!response.ok) {
+          console.log(
+            `Failed to fetch remote config: ${response.status} ${response.statusText}`
+          );
+          Deno.exit(1);
+        }
+
+        const remoteSettings = await response.json();
+
+        if (!remoteSettings['files.exclude']) {
+          console.log('No files.exclude property found in remote config');
+          Deno.exit(1);
+        }
+
+        console.log(
+          `Found ${
+            Object.keys(remoteSettings['files.exclude']).length
+          } default exclusions`
+        );
+
+        // Read current local settings
+        let localSettings: any = {};
+        try {
+          const settingsContent = Deno.readTextFileSync(settingsPath);
+          localSettings = JSON.parse(settingsContent);
+        } catch (error: any) {
+          console.log(`Creating new settings file...`);
+          localSettings = {};
+        }
+
+        // Override files.exclude with remote version
+        localSettings['files.exclude'] = remoteSettings['files.exclude'];
+
+        // Remove any files.excluded property if it exists
+        if (localSettings['files.excluded']) {
+          delete localSettings['files.excluded'];
+        }
+
+        // Write settings back
+        const settingsJson = JSON.stringify(localSettings, null, 2);
+        Deno.writeTextFileSync(settingsPath, settingsJson);
+
+        console.log(`Successfully restored default file exclusions`);
+        console.log(`Updated ${ideType} settings`);
+        console.log(`Restart your IDE to see the changes`);
+
+        // Show what was restored
+        const exclusions = Object.keys(remoteSettings['files.exclude']);
+        console.log(`\nRestored exclusions:`);
+        exclusions.forEach((exclusion) => {
+          console.log(`  - ${exclusion}`);
+        });
+      } catch (error: any) {
+        console.log(`Error: ${error.message}`);
+        Deno.exit(1);
+      }
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
