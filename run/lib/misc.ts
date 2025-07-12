@@ -682,6 +682,72 @@ export default async function misc(program: any) {
         Deno.exit(1);
       }
     });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // INSTALL VSCODE/CURSOR EXTENSIONS
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('extensions')
+    .description('install VSCode/Cursor extensions from ghostmind-dev/config repository')
+    .action(async () => {
+      $.verbose = true;
+      
+      try {
+        console.log('Fetching extensions list from ghostmind-dev/config repository...');
+        
+        // Fetch extensions list from GitHub
+        const response = await fetch('https://raw.githubusercontent.com/ghostmind-dev/config/main/config/vscode/extensions.json');
+        
+        if (!response.ok) {
+          console.log('Failed to fetch extensions list');
+          Deno.exit(1);
+        }
+        
+        const extensions = await response.json();
+        
+        if (!Array.isArray(extensions)) {
+          console.log('Invalid extensions format - expected JSON array');
+          Deno.exit(1);
+        }
+        
+        // Determine which IDE we're using
+        const homeDir = Deno.env.get('HOME') || '';
+        let ideCommand = '';
+        
+        try {
+          await Deno.stat(`${homeDir}/.cursor-server`);
+          ideCommand = 'cursor';
+          console.log('Detected Cursor IDE');
+        } catch {
+          try {
+            await Deno.stat(`${homeDir}/.vscode-server`);
+            ideCommand = 'code';
+            console.log('Detected VS Code IDE');
+          } catch {
+            console.log('Could not detect IDE, defaulting to code');
+            ideCommand = 'code';
+          }
+        }
+        
+        console.log(`Installing ${extensions.length} extensions...`);
+        
+        // Install each extension
+        for (const extension of extensions) {
+          console.log(`Installing extension: ${extension}`);
+          try {
+            await $`${ideCommand} --install-extension=${extension}`;
+          } catch (error) {
+            console.log(`Failed to install ${extension}: ${error.message}`);
+          }
+        }
+        
+        console.log('Extension installation complete!');
+      } catch (error) {
+        console.log(`Error: ${error.message}`);
+        Deno.exit(1);
+      }
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
