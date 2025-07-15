@@ -786,14 +786,16 @@ export async function dockerComposeUp(
   }
 
   let { compose } = metaConfig;
-
+  if (compose === undefined) {
+    return;
+  }
   if (compose === undefined) {
     return;
   }
   let filename = compose[component].filename || 'compose.yaml';
   let { root } = compose[component];
   filesToUp.push('-f');
-  filesToUp.push(`${root}/${filename}`);
+  filesToUp.push(`${currentPath}/${root}/${filename}`);
 
   if (filesToUp.length === 0) {
     return;
