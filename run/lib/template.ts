@@ -343,10 +343,22 @@ export async function downloadAndCopyTemplate(
 
       const fileData = await response.json();
       const fileResponse = await fetch(fileData.download_url);
-      const fileContent = await fileResponse.text();
-
       const filePath = `${fullTargetPath}/${templateName}`;
-      await Deno.writeTextFile(filePath, fileContent);
+
+      // Handle binary files (like images) differently from text files
+      if (
+        templateName.match(
+          /\.(jpg|jpeg|png|gif|svg|ico|webp|bmp|tiff|pdf|zip|tar|gz|exe|dll|so|bin|dat)$/i
+        )
+      ) {
+        // For binary files, use arrayBuffer and writeFile
+        const fileBuffer = await fileResponse.arrayBuffer();
+        await Deno.writeFile(filePath, new Uint8Array(fileBuffer));
+      } else {
+        // For text files, use text and writeTextFile
+        const fileContent = await fileResponse.text();
+        await Deno.writeTextFile(filePath, fileContent);
+      }
 
       console.log(`✅ File '${templateName}' copied to '${targetPath}/'`);
     } else {
@@ -404,10 +416,22 @@ async function downloadFolderContents(
       console.log(`Downloading: ${item.name}`);
 
       const fileResponse = await fetch(item.download_url);
-      const fileContent = await fileResponse.text();
 
+      // Handle binary files (like images) differently from text files
       const filePath = `${targetPath}/${item.name}`;
-      await Deno.writeTextFile(filePath, fileContent);
+      if (
+        item.name.match(
+          /\.(jpg|jpeg|png|gif|svg|ico|webp|bmp|tiff|pdf|zip|tar|gz|exe|dll|so|bin|dat)$/i
+        )
+      ) {
+        // For binary files, use arrayBuffer and writeFile
+        const fileBuffer = await fileResponse.arrayBuffer();
+        await Deno.writeFile(filePath, new Uint8Array(fileBuffer));
+      } else {
+        // For text files, use text and writeTextFile
+        const fileContent = await fileResponse.text();
+        await Deno.writeTextFile(filePath, fileContent);
+      }
     } else if (item.type === 'dir') {
       // Create subdirectory and recursively download its contents
       const subDirPath = `${targetPath}/${item.name}`;
