@@ -95,6 +95,7 @@ import commandMisc from '../lib/misc.ts';
 import commandRoutine from '../lib/routine.ts';
 import commandTemplate from '../lib/template.ts';
 import commandTerraform from '../lib/terraform.ts';
+import commandTmux from '../lib/tmux.ts';
 import commandTunnel from '../lib/tunnel.ts';
 import commmandVault from '../lib/vault.ts';
 
@@ -142,6 +143,7 @@ await commandMisc(program);
 await commandRoutine(program);
 await commandTemplate(program);
 await commandTerraform(program);
+await commandTmux(program);
 await commandTunnel(program);
 await commmandVault(program);
 

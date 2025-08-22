@@ -44,6 +44,7 @@ export * from './lib/meta.ts';
 export * from './lib/misc.ts';
 export * from './lib/routine.ts';
 export * from './lib/terraform.ts';
+export * from './lib/tmux.ts';
 export * from './lib/tunnel.ts';
 export * from './lib/vault.ts';
 
