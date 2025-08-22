@@ -1,0 +1,324 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Meta Configuration",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "The unique identifier for the configuration.",
+      "pattern": "^[a-fA-F0-9]{12}$"
+    },
+    "name": {
+      "type": "string",
+      "description": "The name of the configuration."
+    },
+    "version": {
+      "type": "string",
+      "description": "The version of the configuration."
+    },
+    "description": {
+      "type": "string",
+      "description": "A description of the configuration."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["app", "project", "template"],
+      "description": "The type of the configuration."
+    },
+    "global": {
+      "type": "boolean",
+      "description": "Flag to indicar if the configuration is global."
+    },
+    "compose": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "properties": {
+            "root": {
+              "type": "string",
+              "description": "Root directory for the container."
+            },
+            "filename": {
+              "type": "string",
+              "description": "Custom docker-compose filename."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "custom": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "path to the scripts folder"
+        }
+      },
+      "additionalProperties": false
+    },
+    "docker": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "properties": {
+            "root": {
+              "type": "string",
+              "description": "Root directory for the container."
+            },
+            "image": {
+              "type": "string",
+              "description": "Docker image url to be used. (example: docker.io/library/nginx:latest)"
+            },
+            "env_based": {
+              "type": "boolean",
+              "description": "Flag to indicate if context Dockerfile is used."
+            },
+            "context_dir": {
+              "type": "string",
+              "description": "Context where the app is located."
+            },
+            "tag_modifiers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of tag modifiers for the Docker image."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "port": {
+      "type": "number",
+      "description": "Port number for the application"
+    },
+    "routines": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": "string",
+          "description": "Command to be executed for the routine."
+        }
+      },
+      "additionalProperties": false
+    },
+    "secrets": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string",
+          "description": "Path to the base environment variables file"
+        }
+      },
+      "additionalProperties": false
+    },
+    "terraform": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Path for the terraform configuration."
+            },
+            "global": {
+              "type": "boolean",
+              "description": "Flag to indicate if the configuration is global."
+            },
+            "containers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of containers to be used."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "string",
+                  "description": "Command to execute for the MCP server."
+                },
+                "args": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Arguments for the MCP server command."
+                },
+                "env": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Environment variables for the MCP server."
+                }
+              },
+              "required": ["command"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "URL for the MCP server."
+                },
+                "headers": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Headers for the MCP server requests."
+                }
+              },
+              "required": ["url"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "template": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "properties": {
+            "ignoreFolders": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of folders to ignore in the template."
+            },
+            "ignoreFiles": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of files to ignore in the template."
+            },
+            "init": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of initialization commands to run for the template."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "tunnel": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "properties": {
+            "hostname": {
+              "type": "string",
+              "description": "hostname for the tunnel. (example: example.com)"
+            },
+            "service": {
+              "type": "string",
+              "description": "Local service to be tunneled. (example: localhost:8080)"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "tmux": {
+      "type": "object",
+      "description": "Tmux session configuration",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Session name"
+              },
+              "root": {
+                "type": "string",
+                "description": "Root directory for the session (relative to meta.json location)"
+              },
+              "windows": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Window name"
+                    },
+                    "panes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Pane identifier"
+                          },
+                          "path": {
+                            "type": "string",
+                            "description": "Starting directory relative to session root"
+                          },
+                          "split": {
+                            "type": "string",
+                            "enum": ["horizontal", "vertical"],
+                            "description": "How to split from previous pane"
+                          },
+                          "size": {
+                            "type": "string",
+                            "pattern": "^[0-9]+%?$",
+                            "description": "Size of split (e.g., '50%')"
+                          }
+                        },
+                        "required": ["name"]
+                      }
+                    }
+                  },
+                  "required": ["name", "panes"]
+                }
+              }
+            },
+            "required": ["name", "windows"]
+          }
+        }
+      }
+    }
+  },
+  "required": ["id", "name"]
+}

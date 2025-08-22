@@ -1,6 +1,6 @@
 {
   "name": "@ghostmind/run",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "license": "MIT",
   "description": "A comprehensive DevOps automation toolkit for managing Docker containers, GitHub Actions, Terraform infrastructure, HashiCorp Vault, and more",
   "exports": {
@@ -8,20 +8,11 @@
     "./cmd": "./run/bin/cmd.ts"
   },
   "lint": {
-    "include": [
-      "**/run/**",
-      "**/.devcontainer/**"
-    ],
-    "exclude": [
-      "**/run/test/**"
-    ],
+    "include": ["**/run/**", "**/.devcontainer/**"],
+    "exclude": ["**/run/test/**"],
     "rules": {
-      "tags": [
-        "recommended"
-      ],
-      "include": [
-        "ban-untagged-todo"
-      ],
+      "tags": ["recommended"],
+      "include": ["ban-untagged-todo"],
       "exclude": [
         "no-unused-vars",
         "no-explicit-any",
