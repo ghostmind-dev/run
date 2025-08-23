@@ -20,6 +20,7 @@ interface TmuxPane {
   path?: string;
   split?: 'horizontal' | 'vertical';
   size?: string;
+  command?: string;
 }
 
 interface TmuxWindow {
@@ -125,7 +126,8 @@ async function initTmuxSession(
   currentPath: string, 
   isAppendMode: boolean = false,
   useColors: boolean = false,
-  startWindowIndex: number = 0
+  startWindowIndex: number = 0,
+  runCommand: boolean = false
 ): Promise<number> {
   $.verbose = false;
   
@@ -164,9 +166,12 @@ async function initTmuxSession(
     sessionExists = false;
   }
   
-  // Process sessions from meta.json
+  // Process sessions from meta.json - filter to only the requested session
   let currentWindowIndex = startWindowIndex;
-  for (const sessionConfig of tmuxConfig.sessions) {
+  const filteredSessions = tmuxConfig.sessions.filter((session: any) => session.name === sessionName);
+  
+  
+  for (const sessionConfig of filteredSessions) {
     const sessionRoot = sessionConfig.root ? `${currentPath}/${sessionConfig.root}` : currentPath;
     
     // Process windows
@@ -205,6 +210,14 @@ async function initTmuxSession(
           await $`tmux split-window -t ${sessionName}:${windowName} ${splitFlag} ${sizeFlag} -c ${panePath}`;
           if (!isAppendMode) {
             console.log(chalk.gray(`    ➤ Created pane: ${pane.name} (${pane.split || 'vertical'} split)`));
+          }
+        }
+        
+        // Execute command if defined for this pane and runCommand flag is true
+        if (pane.command && runCommand) {
+          await $`tmux send-keys -t ${sessionName}:${windowName}.${paneIndex} ${pane.command} Enter`;
+          if (!isAppendMode) {
+            console.log(chalk.gray(`    🚀 Executed command: ${pane.command}`));
           }
         }
       }
@@ -253,14 +266,15 @@ export default async function tmux(program: any) {
     .option('--all', 'process all tmux configurations found in the project')
     .option('--reset', 'reset existing session if it exists')
     .option('--color', 'set random colors for each window when using --all')
-    .action(async (sessionName: string, options: { all?: boolean; reset?: boolean; color?: boolean }) => {
+    .option('--command', 'run default commands defined in meta.json panes')
+    .action(async (sessionName: string, options: { all?: boolean; reset?: boolean; color?: boolean; command?: boolean }) => {
       try {
-        const { all, reset, color } = options;
+        const { all, reset, color, command } = options;
 
         if (all) {
           await initAllTmuxSessions(sessionName, reset ?? false, color ?? false);
         } else {
-          await initTmuxSession(sessionName, reset ?? false, Deno.cwd(), false, color ?? false);
+          await initTmuxSession(sessionName, reset ?? false, Deno.cwd(), false, color ?? false, 0, command ?? false);
         }
       } catch (error) {
         console.error(chalk.red('❌ Error initializing tmux session:'), error);
