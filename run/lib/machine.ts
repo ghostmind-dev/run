@@ -7,11 +7,11 @@
  * @module
  */
 
-import { $, cd } from "npm:zx@8.1.0";
-import { createUUID } from "../utils/divers.ts";
-import inquirer from "npm:inquirer@9.2.22";
-import fs from "npm:fs-extra@11.2.0";
-import _ from "npm:lodash@4.17.21";
+import { $, cd } from 'npm:zx@8.1.0';
+import { createUUID } from '../utils/divers.ts';
+import inquirer from 'npm:inquirer@9.2.22';
+import fs from 'npm:fs-extra@11.2.0';
+import _ from 'npm:lodash@4.17.21';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -48,15 +48,15 @@ export async function machineInit() {
   // ask for the project name only
   const { projectName } = await inquirer.prompt([
     {
-      type: "input",
-      name: "projectName",
-      message: "What is the name of the project?",
+      type: 'input',
+      name: 'projectName',
+      message: 'What is the name of the project?',
     },
   ]);
 
-  const HOME = "/Volumes/Projects";
+  const HOME = '/Volumes/Projects';
 
-  const pathFromHome = currentPath.replace(`${HOME}/`, "");
+  const pathFromHome = currentPath.replace(`${HOME}/`, '');
 
   /// diable cache for now
 
@@ -66,29 +66,29 @@ export async function machineInit() {
 
   // Always create .env template from repository
   const envTemplateResponse = await fetch(
-    "https://raw.githubusercontent.com/ghostmind-dev/config/refs/heads/main/config/env/.env.template",
+    'https://raw.githubusercontent.com/ghostmind-dev/config/refs/heads/main/config/env/.env.template',
     {
       headers: {
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        Pragma: "no-cache",
-        Expires: "0",
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
       },
     }
   );
   const envTemplateContent = await envTemplateResponse.text();
 
-  await fs.writeFile(`.env.template`, envTemplateContent, "utf8");
+  await fs.writeFile(`.env.template`, envTemplateContent, 'utf8');
 
   // Always create devcontainer
   await $`mkdir -p ${currentPath}/${projectName}/.devcontainer`;
 
   const defaultDevcontainerJsonRaw = await fetch(
-    "https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/devcontainer.json",
+    'https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/devcontainer.json',
     {
       headers: {
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        Pragma: "no-cache",
-        Expires: "0",
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
       },
     }
   );
@@ -107,7 +107,7 @@ export async function machineInit() {
 
   devcontainer.name = projectName;
   devcontainer.remoteEnv.LOCALHOST_SRC =
-    `${HOME}/` + pathFromHome + "/" + projectName;
+    `${HOME}/` + pathFromHome + '/' + projectName;
 
   devcontainer.runArgs[3] = `--name=${projectName}`;
 
@@ -124,7 +124,7 @@ export async function machineInit() {
   await fs.writeFile(
     `${currentPath}/${projectName}/.devcontainer/devcontainer.json`,
     JSON.stringify(devcontainer, null, 2),
-    "utf8"
+    'utf8'
   );
 
   await $`curl -o ${currentPath}/${projectName}/.devcontainer/Dockerfile https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/Dockerfile`;
@@ -142,7 +142,7 @@ export async function machineInit() {
   await fs.writeJson(`${currentPath}/${projectName}/meta.json`, {
     id: await createUUID(),
     name: projectName,
-    type: "app",
+    type: 'app',
   });
 
   // // now we need replace the content of Readme.md and only write a ssingle line header
@@ -150,7 +150,7 @@ export async function machineInit() {
   await fs.writeFile(
     `${currentPath}/${projectName}/Readme.md`,
     `# ${projectName}`,
-    "utf8"
+    'utf8'
   );
 
   await $`mkdir -p ${currentPath}/${projectName}/.vscode`;
@@ -182,7 +182,7 @@ async function resolvePath(
   basePath: string = currentPath
 ): Promise<string> {
   // If path is absolute, use it as-is
-  if (inputPath.startsWith("/")) {
+  if (inputPath.startsWith('/')) {
     return inputPath;
   }
 
@@ -195,14 +195,14 @@ async function resolvePath(
   } catch {
     // If path doesn't exist, manually resolve it
     // This handles cases like ../folder or ./folder where the target doesn't exist yet
-    const parts = fullPath.split("/").filter((part) => part !== "");
+    const parts = fullPath.split('/').filter((part) => part !== '');
     const resolvedParts: string[] = [];
 
     for (const part of parts) {
-      if (part === ".") {
+      if (part === '.') {
         // Current directory, skip
         continue;
-      } else if (part === "..") {
+      } else if (part === '..') {
         // Parent directory, remove last part
         resolvedParts.pop();
       } else {
@@ -211,7 +211,7 @@ async function resolvePath(
       }
     }
 
-    return "/" + resolvedParts.join("/");
+    return '/' + resolvedParts.join('/');
   }
 }
 
@@ -243,7 +243,7 @@ export async function machineMove(sourcePath: string, destinationPath: string) {
   const resolvedDestinationPath = await resolvePath(destinationPath);
 
   // Extract the project name from the source path
-  const sourceProjectName = resolvedSourcePath.split("/").pop() || "";
+  const sourceProjectName = resolvedSourcePath.split('/').pop() || '';
   const fullDestinationPath = `${resolvedDestinationPath}/${sourceProjectName}`;
 
   // Check if source project exists
@@ -262,7 +262,7 @@ export async function machineMove(sourcePath: string, destinationPath: string) {
   const devcontainerPath = `${resolvedSourcePath}/.devcontainer/devcontainer.json`;
 
   if (await fs.pathExists(devcontainerPath)) {
-    console.log("Updating devcontainer configuration...");
+    console.log('Updating devcontainer configuration...');
 
     // Read existing devcontainer config
     const devcontainer = await fs.readJson(devcontainerPath);
@@ -316,28 +316,28 @@ export async function machineUpdateExtensions() {
   // Check if .devcontainer folder exists
   if (!(await fs.pathExists(devcontainerPath))) {
     console.error(
-      "Error: .devcontainer/devcontainer.json not found in current directory."
+      'Error: .devcontainer/devcontainer.json not found in current directory.'
     );
-    console.error("Please run this command from the root of your project.");
+    console.error('Please run this command from the root of your project.');
     Deno.exit(1);
   }
 
-  console.log("Fetching remote extensions list...");
+  console.log('Fetching remote extensions list...');
 
   // Fetch remote extensions list
   const remoteExtensionsResponse = await fetch(
-    "https://raw.githubusercontent.com/ghostmind-dev/config/main/config/vscode/extensions.json",
+    'https://raw.githubusercontent.com/ghostmind-dev/config/main/config/vscode/extensions.json',
     {
       headers: {
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        Pragma: "no-cache",
-        Expires: "0",
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
       },
     }
   );
 
   if (!remoteExtensionsResponse.ok) {
-    console.error("Error: Failed to fetch remote extensions list.");
+    console.error('Error: Failed to fetch remote extensions list.');
     Deno.exit(1);
   }
 
@@ -345,7 +345,7 @@ export async function machineUpdateExtensions() {
   console.log(`Found ${remoteExtensions.length} extensions in remote config.`);
 
   // Read local devcontainer.json
-  console.log("Reading local devcontainer configuration...");
+  console.log('Reading local devcontainer configuration...');
   const devcontainer = await fs.readJson(devcontainerPath);
 
   // Get current extensions list
@@ -360,7 +360,7 @@ export async function machineUpdateExtensions() {
 
   if (newExtensions.length === 0) {
     console.log(
-      "✅ All remote extensions are already present in local config."
+      '✅ All remote extensions are already present in local config.'
     );
     return;
   }
@@ -384,7 +384,7 @@ export async function machineUpdateExtensions() {
   // Write updated configuration back
   await fs.writeJson(devcontainerPath, devcontainer, { spaces: 2 });
 
-  console.log("✅ Successfully updated devcontainer extensions configuration.");
+  console.log('✅ Successfully updated devcontainer extensions configuration.');
   console.log(`Total extensions: ${updatedExtensions.length}`);
 }
 
@@ -393,31 +393,31 @@ export async function machineUpdateExtensions() {
 ////////////////////////////////////////////////////////////////////////////////
 
 export default async function machine(program: any) {
-  const machine = program.command("machine");
-  machine.description("create a devcontainer for the project");
+  const machine = program.command('machine');
+  machine.description('create a devcontainer for the project');
 
-  const init = machine.command("init");
-  init.description("create a devcontainer for the project");
+  const init = machine.command('init');
+  init.description('create a devcontainer for the project');
   init.action(machineInit);
 
-  const move = machine.command("move");
-  move.description("move a project to a new location and update devcontainer");
+  const move = machine.command('move');
+  move.description('move a project to a new location and update devcontainer');
   move.argument(
-    "<sourcePath>",
-    "source path of the project to move (relative or absolute)"
+    '<sourcePath>',
+    'source path of the project to move (relative or absolute)'
   );
   move.argument(
-    "<destinationPath>",
-    "destination path where the project should be moved (relative or absolute)"
+    '<destinationPath>',
+    'destination path where the project should be moved (relative or absolute)'
   );
   move.action(machineMove);
 
-  const update = machine.command("update");
-  update.description("update project configuration");
+  const update = machine.command('update');
+  update.description('update project configuration');
 
-  const updateExtensions = update.command("extensions");
+  const updateExtensions = update.command('extensions');
   updateExtensions.description(
-    "update devcontainer extensions from remote config"
+    'update devcontainer extensions from remote config'
   );
   updateExtensions.action(machineUpdateExtensions);
 }
