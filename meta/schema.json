@@ -5,8 +5,7 @@
   "properties": {
     "id": {
       "type": "string",
-      "description": "The unique identifier for the configuration.",
-      "pattern": "^[a-fA-F0-9]{12}$"
+      "description": "The unique identifier for the configuration."
     },
     "name": {
       "type": "string",
