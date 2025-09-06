@@ -112,7 +112,7 @@ export async function machineInit() {
   ///////////////////////////////////////////////////////////////////////////////////////////////
 
   devcontainer.name = projectName;
-  devcontainer.remoteEnv.LOCALHOST_SRC =
+  devcontainer.containerEnv.LOCALHOST_SRC =
     `${HOME}/` + pathFromHome + '/' + projectName;
 
   devcontainer.runArgs[1] = `--name=${projectName}`;
