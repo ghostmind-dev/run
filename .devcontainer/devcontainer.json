@@ -1,43 +1,32 @@
 {
   "name": "run",
   "build": {
-    "dockerfile": "Dockerfile",
+    "dockerfile": "Dockerfile"
   },
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {},
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/ghostmind-dev/features/extensions:latest": {},
-    "ghcr.io/ghostmind-dev/features/mounts:latest": {},
-    "ghcr.io/ghostmind-dev/features/themes:latest": {},
-    "ghcr.io/ghostmind-dev/features/settings:latest": {},
-    "ghcr.io/ghostmind-dev/features/init:latest": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/ghostmind-dev/config/extensions:latest": {},
+    "ghcr.io/ghostmind-dev/config/settings:latest": {},
+    "ghcr.io/ghostmind-dev/misc/mounts:latest": {},
+    "ghcr.io/ghostmind-dev/init/init:latest": {
       "resetLive": true
-    },
-    "ghcr.io/ghostmind-dev/features/zsh:latest": {
-      "theme": "codespaces"
     }
   },
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "ghostmind.hide-unhide"
-      ]
-    }
-  },
-  "postStartCommand": "deno run -A -r jsr:@ghostmind/init",
-  "postAttachCommand": "deno run -A /usr/local/share/post-attach.ts",
-  "remoteEnv": {
+  "postStartCommand": "deno run -A /usr/local/share/post-start.ts",
+  "containerEnv": {
     "SRC": "${containerWorkspaceFolder}",
-    "LOCALHOST_SRC": "/Volumes/Projects/container/run",
+    "LOCALHOST_SRC": "/Volumes/Projects/container/run"
+  },
+  "remoteEnv": {
     "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
     "VAULT_TOKEN": "${localEnv:VAULT_TOKEN}",
     "VAULT_ADDR": "${localEnv:VAULT_ADDR}"
   },
-  "mounts": [],
+  "mounts": [
+    "source=terminal-history-run,target=/commandhistory,type=volume"
+  ],
   "runArgs": [
-    "--cap-add=CAP_IPC_LOCK",
-    "--cap-add=NET_ADMIN",
     "--network=host",
     "--name=run"
   ]

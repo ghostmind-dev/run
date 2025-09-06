@@ -40,21 +40,27 @@ cd(currentPath);
  *
  * @example
  * ```typescript
- * // Initialize a new project (only prompts for project name)
+ * // Initialize a new project (prompts for project name and home directory)
  * await machineInit();
  * ```
  */
 export async function machineInit() {
-  // ask for the project name only
-  const { projectName } = await inquirer.prompt([
+  // ask for the project name and home directory
+  const { projectName, homeDirectory } = await inquirer.prompt([
     {
       type: 'input',
       name: 'projectName',
       message: 'What is the name of the project?',
     },
+    {
+      type: 'input',
+      name: 'homeDirectory',
+      message: 'What is the home directory for projects?',
+      default: '/Volumes/Projects',
+    },
   ]);
 
-  const HOME = '/Volumes/Projects';
+  const HOME = homeDirectory;
 
   const pathFromHome = currentPath.replace(`${HOME}/`, '');
 
@@ -109,7 +115,7 @@ export async function machineInit() {
   devcontainer.remoteEnv.LOCALHOST_SRC =
     `${HOME}/` + pathFromHome + '/' + projectName;
 
-  devcontainer.runArgs[3] = `--name=${projectName}`;
+  devcontainer.runArgs[1] = `--name=${projectName}`;
 
   ///////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -131,7 +137,7 @@ export async function machineInit() {
 
   await $`mkdir -p ${currentPath}/${projectName}/.devcontainer/library-scripts`;
 
-  await $`curl -o ${currentPath}/${projectName}/.devcontainer/library-scripts/post-create.ts https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/library-scripts/post-create.ts`;
+  await $`curl -o ${currentPath}/${projectName}/.devcontainer/library-scripts/post-start.ts https://raw.githubusercontent.com/ghostmind-dev/config/main/config/devcontainer/library-scripts/post-start.ts`;
 
   // // now , we need to modify ./meta.json
 
