@@ -1054,6 +1054,146 @@ export default async function misc(program: any) {
         Deno.exit(1);
       }
     });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // INVERT FILE EXCLUSIONS BASED ON MAJORITY
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('invert')
+    .description('invert all file.exclude values based on majority rule')
+    .option(
+      '--workspace',
+      'target workspace .vscode/settings.json instead of global IDE settings'
+    )
+    .action(async (options: any) => {
+      try {
+        let settingsPath = '';
+        let settingsType = '';
+
+        if (options.workspace) {
+          // Target workspace settings
+          const currentPath = Deno.cwd();
+          settingsPath = `${currentPath}/.vscode/settings.json`;
+          settingsType = 'workspace';
+          console.log(`Targeting workspace settings`);
+        } else {
+          // Target global IDE settings (original behavior)
+          const homeDir = Deno.env.get('HOME') || '';
+
+          try {
+            await Deno.stat(`${homeDir}/.cursor-server`);
+            settingsPath = `${homeDir}/.cursor-server/data/Machine/settings.json`;
+            settingsType = 'Cursor global';
+          } catch {
+            try {
+              await Deno.stat(`${homeDir}/.vscode-server`);
+              settingsPath = `${homeDir}/.vscode-server/data/Machine/settings.json`;
+              settingsType = 'VS Code global';
+            } catch {
+              console.log('Could not detect IDE (Cursor or VS Code)');
+              Deno.exit(1);
+            }
+          }
+          console.log(`Targeting ${settingsType} settings`);
+        }
+
+        console.log(`Settings path: ${settingsPath}`);
+
+        // Read current settings
+        let settings: any = {};
+        try {
+          const settingsContent = Deno.readTextFileSync(settingsPath);
+          settings = JSON.parse(settingsContent);
+        } catch (error: any) {
+          console.log('No settings file found - nothing to invert');
+          Deno.exit(0);
+        }
+
+        // Check if files.exclude exists
+        if (
+          !settings['files.exclude'] ||
+          Object.keys(settings['files.exclude']).length === 0
+        ) {
+          console.log(
+            'No files.exclude property found or it is empty - nothing to invert'
+          );
+          Deno.exit(0);
+        }
+
+        const excludeEntries = settings['files.exclude'];
+        const totalEntries = Object.keys(excludeEntries).length;
+
+        console.log(`Found ${totalEntries} file exclusion entries`);
+
+        // Count true and false values
+        let trueCount = 0;
+        let falseCount = 0;
+
+        for (const [key, value] of Object.entries(excludeEntries)) {
+          if (value === true) {
+            trueCount++;
+          } else if (value === false) {
+            falseCount++;
+          }
+        }
+
+        console.log(`True values: ${trueCount}, False values: ${falseCount}`);
+
+        if (trueCount === 0 && falseCount === 0) {
+          console.log(
+            'No boolean values found in files.exclude - nothing to invert'
+          );
+          Deno.exit(0);
+        }
+
+        // Determine majority and what to flip to
+        const majorityIsTrue = trueCount > falseCount;
+        const majorityIsFalse = falseCount > trueCount;
+
+        // If majority is false, flip all to true. If majority is true, flip all to false.
+        // If tied, default to flipping all to true
+        let flipToValue: boolean;
+        if (majorityIsFalse) {
+          flipToValue = true;
+        } else if (majorityIsTrue) {
+          flipToValue = false;
+        } else {
+          // Tie case - default to true
+          flipToValue = true;
+        }
+
+        console.log(`True: ${trueCount}, False: ${falseCount}`);
+        console.log(
+          `Majority is ${
+            majorityIsTrue ? 'true' : majorityIsFalse ? 'false' : 'tied'
+          }, flipping all values to ${flipToValue}`
+        );
+
+        // Flip all values
+        let changedCount = 0;
+        for (const key of Object.keys(excludeEntries)) {
+          const oldValue = excludeEntries[key];
+          if (typeof oldValue === 'boolean') {
+            excludeEntries[key] = flipToValue;
+            changedCount++;
+          }
+        }
+
+        // Write settings back
+        const settingsJson = JSON.stringify(settings, null, 2);
+        Deno.writeTextFileSync(settingsPath, settingsJson);
+
+        console.log(
+          `Successfully inverted ${changedCount} file exclusion entries`
+        );
+        console.log(`Updated ${settingsType} settings`);
+        console.log(`Restart your IDE to see the changes`);
+      } catch (error: any) {
+        console.log(`Error: ${error.message}`);
+        Deno.exit(1);
+      }
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
