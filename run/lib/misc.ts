@@ -1194,6 +1194,159 @@ export default async function misc(program: any) {
         Deno.exit(1);
       }
     });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // ALIGN ALL FILE EXCLUSIONS TO OVERALL MAJORITY
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('align')
+    .description('align both global and workspace file.exclude values to overall majority')
+    .action(async () => {
+      try {
+        const homeDir = Deno.env.get('HOME') || '';
+        const currentPath = Deno.cwd();
+        
+        // Define settings paths
+        let globalSettingsPath = '';
+        let globalSettingsType = '';
+        
+        // Determine global IDE settings path
+        try {
+          await Deno.stat(`${homeDir}/.cursor-server`);
+          globalSettingsPath = `${homeDir}/.cursor-server/data/Machine/settings.json`;
+          globalSettingsType = 'Cursor global';
+        } catch {
+          try {
+            await Deno.stat(`${homeDir}/.vscode-server`);
+            globalSettingsPath = `${homeDir}/.vscode-server/data/Machine/settings.json`;
+            globalSettingsType = 'VS Code global';
+          } catch {
+            console.log('Could not detect IDE (Cursor or VS Code)');
+            Deno.exit(1);
+          }
+        }
+
+        const workspaceSettingsPath = `${currentPath}/.vscode/settings.json`;
+        
+        console.log(`Global settings: ${globalSettingsPath}`);
+        console.log(`Workspace settings: ${workspaceSettingsPath}`);
+
+        // Read both settings files
+        let globalSettings: any = {};
+        let workspaceSettings: any = {};
+        
+        // Read global settings
+        try {
+          const globalContent = Deno.readTextFileSync(globalSettingsPath);
+          globalSettings = JSON.parse(globalContent);
+        } catch (error: any) {
+          console.log('No global settings file found');
+        }
+
+        // Read workspace settings  
+        try {
+          const workspaceContent = Deno.readTextFileSync(workspaceSettingsPath);
+          workspaceSettings = JSON.parse(workspaceContent);
+        } catch (error: any) {
+          console.log('No workspace settings file found');
+        }
+
+        // Collect all file exclusion entries from both files
+        const globalExclusions = globalSettings['files.exclude'] || {};
+        const workspaceExclusions = workspaceSettings['files.exclude'] || {};
+
+        const globalEntries = Object.keys(globalExclusions).length;
+        const workspaceEntries = Object.keys(workspaceExclusions).length;
+        const totalEntries = globalEntries + workspaceEntries;
+
+        if (totalEntries === 0) {
+          console.log('No files.exclude entries found in either settings file');
+          Deno.exit(0);
+        }
+
+        console.log(`Found ${globalEntries} global exclusions, ${workspaceEntries} workspace exclusions`);
+        console.log(`Total entries: ${totalEntries}`);
+
+        // Count true and false values across both files
+        let totalTrueCount = 0;
+        let totalFalseCount = 0;
+
+        // Count global exclusions
+        for (const [key, value] of Object.entries(globalExclusions)) {
+          if (value === true) {
+            totalTrueCount++;
+          } else if (value === false) {
+            totalFalseCount++;
+          }
+        }
+
+        // Count workspace exclusions
+        for (const [key, value] of Object.entries(workspaceExclusions)) {
+          if (value === true) {
+            totalTrueCount++;
+          } else if (value === false) {
+            totalFalseCount++;
+          }
+        }
+
+        console.log(`Combined totals - True: ${totalTrueCount}, False: ${totalFalseCount}`);
+
+        if (totalTrueCount === 0 && totalFalseCount === 0) {
+          console.log('No boolean values found in either settings file');
+          Deno.exit(0);
+        }
+
+        // Determine overall majority
+        const overallMajorityIsTrue = totalTrueCount > totalFalseCount;
+        const alignToValue = overallMajorityIsTrue;
+
+        console.log(`Overall majority is ${overallMajorityIsTrue ? 'true' : 'false'}, aligning all values to ${alignToValue}`);
+
+        let globalChangedCount = 0;
+        let workspaceChangedCount = 0;
+
+        // Update global settings
+        if (Object.keys(globalExclusions).length > 0) {
+          for (const key of Object.keys(globalExclusions)) {
+            const oldValue = globalExclusions[key];
+            if (typeof oldValue === 'boolean') {
+              globalExclusions[key] = alignToValue;
+              globalChangedCount++;
+            }
+          }
+
+          // Write global settings back
+          const globalSettingsJson = JSON.stringify(globalSettings, null, 2);
+          Deno.writeTextFileSync(globalSettingsPath, globalSettingsJson);
+          console.log(`Updated ${globalChangedCount} global exclusions`);
+        }
+
+        // Update workspace settings
+        if (Object.keys(workspaceExclusions).length > 0) {
+          for (const key of Object.keys(workspaceExclusions)) {
+            const oldValue = workspaceExclusions[key];
+            if (typeof oldValue === 'boolean') {
+              workspaceExclusions[key] = alignToValue;
+              workspaceChangedCount++;
+            }
+          }
+
+          // Write workspace settings back
+          const workspaceSettingsJson = JSON.stringify(workspaceSettings, null, 2);
+          Deno.writeTextFileSync(workspaceSettingsPath, workspaceSettingsJson);
+          console.log(`Updated ${workspaceChangedCount} workspace exclusions`);
+        }
+
+        console.log(`Successfully aligned ${globalChangedCount + workspaceChangedCount} total file exclusion entries`);
+        console.log(`Updated both ${globalSettingsType} and workspace settings`);
+        console.log(`Restart your IDE to see the changes`);
+
+      } catch (error: any) {
+        console.log(`Error: ${error.message}`);
+        Deno.exit(1);
+      }
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
