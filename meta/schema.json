@@ -307,6 +307,10 @@
                             "type": "string",
                             "pattern": "^[0-9]+%?$",
                             "description": "Size of split (e.g., '50%')"
+                          },
+                          "command": {
+                            "type": "string",
+                            "description": "Default command to execute in this pane"
                           }
                         },
                         "required": ["name"]

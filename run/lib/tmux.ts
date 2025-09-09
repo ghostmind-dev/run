@@ -247,6 +247,116 @@ async function initTmuxSession(
   return currentWindowIndex;
 }
 
+async function executeSessionCommands(sessionName: string, runAll: boolean = false, targets?: string[]): Promise<void> {
+  $.verbose = false;
+
+  // Check if session exists
+  try {
+    await $`tmux has-session -t ${sessionName} 2>/dev/null`;
+  } catch {
+    console.error(chalk.red(`❌ Session '${sessionName}' does not exist`));
+    return;
+  }
+
+  console.log(chalk.green(`🚀 Executing commands in session '${sessionName}'...`));
+
+  // Find project root and discover configurations
+  const SRC = Deno.env.get('SRC') || Deno.cwd();
+  const directories = await recursiveDirectoriesDiscovery(SRC);
+  directories.unshift(SRC);
+
+  const tmuxConfigs: { path: string; meta: any }[] = [];
+
+  // Find all meta.json files with tmux config
+  for (const directory of directories) {
+    const metaConfig = await verifyIfMetaJsonExists(directory);
+    if (metaConfig?.tmux?.sessions) {
+      const matchingSessions = metaConfig.tmux.sessions.filter((session: any) => session.name === sessionName);
+      if (matchingSessions.length > 0) {
+        tmuxConfigs.push({ path: directory, meta: metaConfig });
+      }
+    }
+  }
+
+  if (tmuxConfigs.length === 0) {
+    console.log(chalk.yellow(`⚠️  No tmux configurations found for session '${sessionName}'`));
+    return;
+  }
+
+  // Process each configuration
+  for (const config of tmuxConfigs) {
+    const tmuxConfig: TmuxConfig = config.meta.tmux;
+    const filteredSessions = tmuxConfig.sessions.filter((session: any) => session.name === sessionName);
+
+    for (const sessionConfig of filteredSessions) {
+      for (const window of sessionConfig.windows) {
+        const windowName = `${config.meta.name}-${window.name}`;
+
+        for (let paneIndex = 0; paneIndex < window.panes.length; paneIndex++) {
+          const pane = window.panes[paneIndex];
+
+          // Check if we should process this specific pane
+          let shouldProcessPane = runAll;
+          
+          if (targets && targets.length > 0 && !runAll) {
+            shouldProcessPane = false;
+            
+            // Check each target to see if this pane matches
+            for (const target of targets) {
+              const targetParts = target.split('.');
+              const targetWindow = targetParts[0];
+              
+              if (targetWindow === windowName) {
+                if (targetParts.length === 1) {
+                  // Target is just the window, run all panes in this window
+                  shouldProcessPane = true;
+                  break;
+                } else if (targetParts.length === 2) {
+                  // Target is window.pane
+                  const targetPane = targetParts[1];
+                  
+                  // Check if it's an index format like pane[0]
+                  const indexMatch = targetPane.match(/pane\[(\d+)\]/);
+                  if (indexMatch) {
+                    const targetIndex = parseInt(indexMatch[1]);
+                    if (targetIndex === paneIndex) {
+                      shouldProcessPane = true;
+                      break;
+                    }
+                  } else {
+                    // Direct pane name match
+                    if (targetPane === pane.name) {
+                      shouldProcessPane = true;
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          if (shouldProcessPane && pane.command) {
+            console.log(chalk.blue(`  🔧 Executing in ${windowName}.${pane.name}: ${pane.command}`));
+            try {
+              await $`tmux send-keys -t ${sessionName}:${windowName}.${paneIndex} ${pane.command} Enter`;
+              console.log(chalk.gray(`    ✅ Command sent successfully`));
+              
+              // Add a small pause between command executions
+              await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (error) {
+              console.log(chalk.red(`    ❌ Failed to execute command: ${error}`));
+            }
+          } else if (shouldProcessPane && !pane.command) {
+            console.log(chalk.gray(`  ⏭️  No command defined for ${windowName}.${pane.name}`));
+          }
+        }
+      }
+    }
+  }
+
+  console.log(chalk.green(`✅ Command execution completed for session '${sessionName}'`));
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
 ////////////////////////////////////////////////////////////////////////////////
@@ -290,9 +400,19 @@ export default async function tmux(program: any) {
     .command('attach')
     .description('attach to a tmux session')
     .argument('<session>', 'session name to attach to')
-    .action(async (sessionName: string) => {
+    .option('--run-all', 'execute all default commands defined in panes')
+    .option('--run <target...>', 'execute commands for specific targets (format: app-window or app-window.pane[index]). Can be used multiple times.')
+    .action(async (sessionName: string, options: { runAll?: boolean; run?: string[] }) => {
       try {
         $.verbose = false;
+        
+        const { runAll, run } = options;
+        
+        // Execute commands if requested
+        if (runAll || (run && run.length > 0)) {
+          await executeSessionCommands(sessionName, runAll, run);
+        }
+        
         await $`tmux attach-session -t ${sessionName}`;
       } catch (error) {
         console.error(chalk.red(`❌ Error attaching to tmux session '${sessionName}':`, error));
