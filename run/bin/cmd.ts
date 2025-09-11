@@ -140,7 +140,6 @@ await commandMcp(program);
 await commandMeta(program);
 await commandMisc(program);
 await commandRoutine(program);
-await commandTemplate(program);
 await commandTerraform(program);
 await commandTmux(program);
 await commandTunnel(program);
