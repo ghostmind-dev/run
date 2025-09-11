@@ -93,7 +93,6 @@ import commandMcp from '../lib/mcp.ts';
 import commandMeta from '../lib/meta.ts';
 import commandMisc from '../lib/misc.ts';
 import commandRoutine from '../lib/routine.ts';
-import commandTemplate from '../lib/template.ts';
 import commandTerraform from '../lib/terraform.ts';
 import commandTmux from '../lib/tmux.ts';
 import commandTunnel from '../lib/tunnel.ts';
