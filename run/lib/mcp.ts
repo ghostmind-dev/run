@@ -14,8 +14,7 @@ import {
   setSecretsOnLocal,
 } from '../utils/divers.ts';
 
-import { $, within, cd } from 'npm:zx@8.1.0';
-import * as toml from 'https://deno.land/std@0.208.0/toml/mod.ts';
+import { cd } from 'npm:zx@8.1.0';
 
 /**
  * Escape a string for TOML format
@@ -23,8 +22,8 @@ import * as toml from 'https://deno.land/std@0.208.0/toml/mod.ts';
  */
 function escapeTomlString(str: string): string {
   return str
-    .replace(/\\/g, '\\\\')  // Escape backslashes
-    .replace(/"/g, '\\"');    // Escape double quotes
+    .replace(/\\/g, '\\\\') // Escape backslashes
+    .replace(/"/g, '\\"'); // Escape double quotes
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -44,12 +43,12 @@ export default async function mcp(program: any) {
 
   setCommand
     .argument('[server-name]', 'Name of the MCP server to install')
-    .option('--all', 'Sync all MCP configurations from meta.json files (cleanup mode)')
+    .option(
+      '--all',
+      'Sync all MCP configurations from meta.json files (cleanup mode)'
+    )
     .action(
-      async (
-        serverName: string | undefined,
-        options: { all?: boolean }
-      ) => {
+      async (serverName: string | undefined, options: { all?: boolean }) => {
         const { all } = options;
 
         if (all) {
@@ -63,7 +62,6 @@ export default async function mcp(program: any) {
         }
       }
     );
-
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -147,8 +145,6 @@ async function setIndividualMCPConfiguration(
   }
 }
 
-
-
 /**
  * Update the .cursor/mcp.json file with the MCP server configuration (Cursor format - same as Claude)
  */
@@ -197,11 +193,17 @@ async function updateCursorMcpJson(
     const serverExists = !reset && mcpJson.mcpServers[serverName] !== undefined;
 
     if (reset) {
-      console.log(`➕ Adding MCP server '${serverName}' to fresh Cursor configuration`);
+      console.log(
+        `➕ Adding MCP server '${serverName}' to fresh Cursor configuration`
+      );
     } else if (serverExists) {
-      console.log(`🔄 Updating existing MCP server '${serverName}' in Cursor configuration`);
+      console.log(
+        `🔄 Updating existing MCP server '${serverName}' in Cursor configuration`
+      );
     } else {
-      console.log(`➕ Adding new MCP server '${serverName}' to Cursor configuration`);
+      console.log(
+        `➕ Adding new MCP server '${serverName}' to Cursor configuration`
+      );
     }
 
     // Add or replace the server configuration
@@ -231,7 +233,9 @@ async function updateClaudeMcpJson(
   try {
     await Deno.stat(mcpJsonPath);
   } catch (error) {
-    console.log(`⚠️  Claude MCP file not found at ${mcpJsonPath}, skipping Claude configuration`);
+    console.log(
+      `⚠️  Claude MCP file not found at ${mcpJsonPath}, skipping Claude configuration`
+    );
     return;
   }
 
@@ -264,11 +268,17 @@ async function updateClaudeMcpJson(
     const serverExists = !reset && mcpJson.mcpServers[serverName] !== undefined;
 
     if (reset) {
-      console.log(`➕ Adding MCP server '${serverName}' to fresh Claude configuration`);
+      console.log(
+        `➕ Adding MCP server '${serverName}' to fresh Claude configuration`
+      );
     } else if (serverExists) {
-      console.log(`🔄 Updating existing MCP server '${serverName}' in Claude configuration`);
+      console.log(
+        `🔄 Updating existing MCP server '${serverName}' in Claude configuration`
+      );
     } else {
-      console.log(`➕ Adding new MCP server '${serverName}' to Claude configuration`);
+      console.log(
+        `➕ Adding new MCP server '${serverName}' to Claude configuration`
+      );
     }
 
     // Add or replace the server configuration
@@ -291,7 +301,7 @@ async function updateClaudeMcpJson(
  * Sync all MCP configurations from meta.json files across the project
  * This function performs a complete cleanup: only MCP servers defined in meta.json files
  * will be kept in the VS Code and Claude MCP configurations
- * 
+ *
  * Uses the tunnel.ts pattern: CD into each directory and setSecretsOnLocal for proper env var substitution
  */
 async function syncAllMCPConfigurationsFromMetaJson(): Promise<void> {
@@ -303,7 +313,9 @@ async function syncAllMCPConfigurationsFromMetaJson(): Promise<void> {
   }
 
   const currentPath = Deno.cwd();
-  console.log('🔄 Syncing all MCP configurations from meta.json files (cleanup mode)...\n');
+  console.log(
+    '🔄 Syncing all MCP configurations from meta.json files (cleanup mode)...\n'
+  );
 
   try {
     // Use withMetaMatching to find all directories that have MCP property (like tunnel.ts does)
@@ -322,16 +334,16 @@ async function syncAllMCPConfigurationsFromMetaJson(): Promise<void> {
     for (const directory of directories) {
       // CD into the directory (like tunnel.ts line 127)
       cd(directory);
-      
+
       // Load environment variables for this specific directory (like tunnel.ts line 128)
       await setSecretsOnLocal('local');
-      
+
       // Read meta.json with proper environment context (like tunnel.ts line 129)
       const metaConfig = await verifyIfMetaJsonExists(directory);
 
       if (metaConfig && metaConfig.mcp) {
         mcpConfigurationsFound++;
-        
+
         // Loop through all MCP servers in this directory
         const mcpServerNames = Object.keys(metaConfig.mcp);
 
@@ -350,7 +362,9 @@ async function syncAllMCPConfigurationsFromMetaJson(): Promise<void> {
       return;
     }
 
-    console.log(`\n📊 Total MCP servers found: ${Object.keys(allMcpServers).length}`);
+    console.log(
+      `\n📊 Total MCP servers found: ${Object.keys(allMcpServers).length}`
+    );
     console.log(`📂 Directories with MCP configs: ${mcpConfigurationsFound}\n`);
 
     // Now sync Claude, Cursor, and Codex MCP configurations with cleanup
@@ -364,8 +378,6 @@ async function syncAllMCPConfigurationsFromMetaJson(): Promise<void> {
     Deno.exit(1);
   }
 }
-
-
 
 /**
  * Sync Cursor MCP configuration with cleanup
@@ -388,7 +400,7 @@ async function syncCursorMcpJsonWithCleanup(
 
   try {
     let existingServers: string[] = [];
-    
+
     // Read existing Cursor .cursor/mcp.json file to see what servers are currently there
     try {
       const existingContent = await Deno.readTextFile(mcpJsonPath);
@@ -403,28 +415,42 @@ async function syncCursorMcpJsonWithCleanup(
 
     // Create fresh configuration with only meta.json servers
     const newMcpJson = {
-      mcpServers: { ...allMcpServers }
+      mcpServers: { ...allMcpServers },
     };
 
     // Report what's being removed and added
-    const serversToRemove = existingServers.filter(server => !allMcpServers[server]);
-    const serversToAdd = Object.keys(allMcpServers).filter(server => !existingServers.includes(server));
-    const serversToUpdate = Object.keys(allMcpServers).filter(server => existingServers.includes(server));
+    const serversToRemove = existingServers.filter(
+      (server) => !allMcpServers[server]
+    );
+    const serversToAdd = Object.keys(allMcpServers).filter(
+      (server) => !existingServers.includes(server)
+    );
+    const serversToUpdate = Object.keys(allMcpServers).filter((server) =>
+      existingServers.includes(server)
+    );
 
     if (serversToRemove.length > 0) {
-      console.log(`  🗑️  Removing servers not in meta.json: ${serversToRemove.join(', ')}`);
+      console.log(
+        `  🗑️  Removing servers not in meta.json: ${serversToRemove.join(', ')}`
+      );
     }
     if (serversToAdd.length > 0) {
       console.log(`  ➕ Adding new servers: ${serversToAdd.join(', ')}`);
     }
     if (serversToUpdate.length > 0) {
-      console.log(`  🔄 Updating existing servers: ${serversToUpdate.join(', ')}`);
+      console.log(
+        `  🔄 Updating existing servers: ${serversToUpdate.join(', ')}`
+      );
     }
 
     // Write the updated configuration back to the file
     await Deno.writeTextFile(mcpJsonPath, JSON.stringify(newMcpJson, null, 2));
 
-    console.log(`✅ Cursor MCP configuration synced (${Object.keys(allMcpServers).length} servers)`);
+    console.log(
+      `✅ Cursor MCP configuration synced (${
+        Object.keys(allMcpServers).length
+      } servers)`
+    );
   } catch (error) {
     console.error('❌ Error syncing Cursor MCP configuration:', error);
   }
@@ -436,14 +462,18 @@ async function syncCursorMcpJsonWithCleanup(
  */
 function convertToCodexFormat(serverName: string, serverConfig: any): any {
   const codexConfig: any = {};
-  
+
   // Check if this is an HTTP or SSE server (check for type or transport field)
-  if (serverConfig.type === 'http' || serverConfig.transport === 'http' || 
-      serverConfig.type === 'sse' || serverConfig.transport === 'sse') {
+  if (
+    serverConfig.type === 'http' ||
+    serverConfig.transport === 'http' ||
+    serverConfig.type === 'sse' ||
+    serverConfig.transport === 'sse'
+  ) {
     // Use mcp-proxy to convert HTTP/SSE to stdio
     codexConfig.command = 'mcp-proxy';
     codexConfig.args = [serverConfig.url];
-    
+
     // Add transport flag
     const transportType = serverConfig.type || serverConfig.transport;
     if (transportType === 'http') {
@@ -451,14 +481,14 @@ function convertToCodexFormat(serverName: string, serverConfig: any): any {
     } else if (transportType === 'sse') {
       codexConfig.args.push('--transport', 'sse');
     }
-    
+
     // Add headers if present
     if (serverConfig.headers) {
       for (const [key, value] of Object.entries(serverConfig.headers)) {
         codexConfig.args.push('--headers', key, value as string);
       }
     }
-    
+
     // Environment variables from original config
     if (serverConfig.env) {
       codexConfig.env = serverConfig.env;
@@ -468,21 +498,21 @@ function convertToCodexFormat(serverName: string, serverConfig: any): any {
     if (serverConfig.command) {
       codexConfig.command = serverConfig.command;
     }
-    
+
     if (serverConfig.args) {
       codexConfig.args = serverConfig.args;
     }
-    
+
     if (serverConfig.env) {
       codexConfig.env = serverConfig.env;
     }
   }
-  
+
   // Add startup timeout if specified
   if (serverConfig.startup_timeout_ms) {
     codexConfig.startup_timeout_ms = serverConfig.startup_timeout_ms;
   }
-  
+
   return codexConfig;
 }
 
@@ -505,40 +535,42 @@ async function updateCodexMcpToml(
     // Directory might already exist, that's fine
   }
 
-  console.log(`📝 Updating MCP configuration for Codex (.codex/config.toml)...`);
+  console.log(
+    `📝 Updating MCP configuration for Codex (.codex/config.toml)...`
+  );
 
   try {
     let configContent = '';
     let nonMcpContent = '';
-    
+
     // Try to read existing config.toml file
     try {
       configContent = await Deno.readTextFile(configPath);
-      
+
       // Remove all existing MCP server configurations
       // Split content into lines and filter out MCP server sections
       const lines = configContent.split('\n');
       let inMcpSection = false;
       const filteredLines: string[] = [];
-      
+
       for (const line of lines) {
         // Check if we're entering an MCP server section
         if (line.startsWith('[mcp_servers.')) {
           inMcpSection = true;
           continue;
         }
-        
+
         // Check if we're entering a new non-MCP section
         if (line.startsWith('[') && !line.startsWith('[mcp_servers.')) {
           inMcpSection = false;
         }
-        
+
         // Only keep non-MCP content
         if (!inMcpSection) {
           filteredLines.push(line);
         }
       }
-      
+
       nonMcpContent = filteredLines.join('\n').trimEnd();
     } catch (error) {
       console.log(`📄 Creating new Codex configuration`);
@@ -547,26 +579,33 @@ async function updateCodexMcpToml(
 
     // Convert server config to Codex format
     const codexServerConfig = convertToCodexFormat(serverName, serverConfig);
-    
+
     // Build TOML section manually to ensure proper formatting
     let mcpSection = `[mcp_servers.${serverName}]\n`;
     mcpSection += `command = "${codexServerConfig.command}"\n`;
-    
+
     if (codexServerConfig.args && codexServerConfig.args.length > 0) {
-      mcpSection += `args = [${codexServerConfig.args.map((arg: string) => `"${escapeTomlString(arg)}"`).join(', ')}]\n`;
+      mcpSection += `args = [${codexServerConfig.args
+        .map((arg: string) => `"${escapeTomlString(arg)}"`)
+        .join(', ')}]\n`;
     }
-    
-    if (codexServerConfig.env && Object.keys(codexServerConfig.env).length > 0) {
+
+    if (
+      codexServerConfig.env &&
+      Object.keys(codexServerConfig.env).length > 0
+    ) {
       const envPairs = Object.entries(codexServerConfig.env)
-        .map(([key, value]) => `"${key}" = "${escapeTomlString(String(value))}"`)
+        .map(
+          ([key, value]) => `"${key}" = "${escapeTomlString(String(value))}"`
+        )
         .join(', ');
       mcpSection += `env = { ${envPairs} }\n`;
     }
-    
+
     if (codexServerConfig.startup_timeout_ms) {
       mcpSection += `startup_timeout_ms = ${codexServerConfig.startup_timeout_ms}\n`;
     }
-    
+
     // Combine non-MCP content with new MCP server configuration
     let finalContent = nonMcpContent;
     if (finalContent && !finalContent.endsWith('\n')) {
@@ -608,17 +647,17 @@ async function syncCodexMcpTomlWithCleanup(
   try {
     let nonMcpContent = '';
     let existingServers: string[] = [];
-    
+
     // Try to read existing config.toml file
     try {
       const configContent = await Deno.readTextFile(configPath);
-      
+
       // Parse existing MCP servers and remove them from content
       const lines = configContent.split('\n');
       let inMcpSection = false;
       let currentServerName = '';
       const filteredLines: string[] = [];
-      
+
       for (const line of lines) {
         // Check if we're entering an MCP server section
         const mcpMatch = line.match(/^\[mcp_servers\.(.+)\]/);
@@ -628,18 +667,18 @@ async function syncCodexMcpTomlWithCleanup(
           existingServers.push(currentServerName);
           continue;
         }
-        
+
         // Check if we're entering a new non-MCP section
         if (line.startsWith('[') && !line.startsWith('[mcp_servers.')) {
           inMcpSection = false;
         }
-        
+
         // Only keep non-MCP content
         if (!inMcpSection) {
           filteredLines.push(line);
         }
       }
-      
+
       nonMcpContent = filteredLines.join('\n').trimEnd();
     } catch (error) {
       // File doesn't exist or is invalid, start fresh
@@ -651,45 +690,59 @@ async function syncCodexMcpTomlWithCleanup(
     let mcpSection = '';
     for (const [name, config] of Object.entries(allMcpServers)) {
       const codexConfig = convertToCodexFormat(name, config);
-      
+
       if (mcpSection) {
         mcpSection += '\n'; // Add blank line between servers
       }
-      
+
       mcpSection += `[mcp_servers.${name}]\n`;
       mcpSection += `command = "${escapeTomlString(codexConfig.command)}"\n`;
-      
+
       if (codexConfig.args && codexConfig.args.length > 0) {
-        mcpSection += `args = [${codexConfig.args.map((arg: string) => `"${escapeTomlString(arg)}"`).join(', ')}]\n`;
+        mcpSection += `args = [${codexConfig.args
+          .map((arg: string) => `"${escapeTomlString(arg)}"`)
+          .join(', ')}]\n`;
       }
-      
+
       if (codexConfig.env && Object.keys(codexConfig.env).length > 0) {
         const envPairs = Object.entries(codexConfig.env)
-          .map(([key, value]) => `"${key}" = "${escapeTomlString(String(value))}"`)
+          .map(
+            ([key, value]) => `"${key}" = "${escapeTomlString(String(value))}"`
+          )
           .join(', ');
         mcpSection += `env = { ${envPairs} }\n`;
       }
-      
+
       if (codexConfig.startup_timeout_ms) {
         mcpSection += `startup_timeout_ms = ${codexConfig.startup_timeout_ms}\n`;
       }
     }
-    
+
     // Report what's being removed and added
-    const serversToRemove = existingServers.filter(server => !allMcpServers[server]);
-    const serversToAdd = Object.keys(allMcpServers).filter(server => !existingServers.includes(server));
-    const serversToUpdate = Object.keys(allMcpServers).filter(server => existingServers.includes(server));
+    const serversToRemove = existingServers.filter(
+      (server) => !allMcpServers[server]
+    );
+    const serversToAdd = Object.keys(allMcpServers).filter(
+      (server) => !existingServers.includes(server)
+    );
+    const serversToUpdate = Object.keys(allMcpServers).filter((server) =>
+      existingServers.includes(server)
+    );
 
     if (serversToRemove.length > 0) {
-      console.log(`  🗑️  Removing servers not in meta.json: ${serversToRemove.join(', ')}`);
+      console.log(
+        `  🗑️  Removing servers not in meta.json: ${serversToRemove.join(', ')}`
+      );
     }
     if (serversToAdd.length > 0) {
       console.log(`  ➕ Adding new servers: ${serversToAdd.join(', ')}`);
     }
     if (serversToUpdate.length > 0) {
-      console.log(`  🔄 Updating existing servers: ${serversToUpdate.join(', ')}`);
+      console.log(
+        `  🔄 Updating existing servers: ${serversToUpdate.join(', ')}`
+      );
     }
-    
+
     // Combine non-MCP content with new MCP servers configuration
     let finalContent = nonMcpContent;
     if (finalContent && !finalContent.endsWith('\n')) {
@@ -703,7 +756,11 @@ async function syncCodexMcpTomlWithCleanup(
     // Write the updated configuration back to the file
     await Deno.writeTextFile(configPath, finalContent);
 
-    console.log(`✅ Codex MCP configuration synced (${Object.keys(allMcpServers).length} servers)`);
+    console.log(
+      `✅ Codex MCP configuration synced (${
+        Object.keys(allMcpServers).length
+      } servers)`
+    );
   } catch (error) {
     console.error('❌ Error syncing Codex MCP configuration:', error);
   }
@@ -722,7 +779,9 @@ async function syncClaudeMcpJsonWithCleanup(
   try {
     await Deno.stat(mcpJsonPath);
   } catch (error) {
-    console.log(`⚠️  Claude MCP file not found at ${mcpJsonPath}, skipping Claude configuration`);
+    console.log(
+      `⚠️  Claude MCP file not found at ${mcpJsonPath}, skipping Claude configuration`
+    );
     return;
   }
 
@@ -730,7 +789,7 @@ async function syncClaudeMcpJsonWithCleanup(
 
   try {
     let existingServers: string[] = [];
-    
+
     // Read existing Claude .mcp.json file to see what servers are currently there
     try {
       const existingContent = await Deno.readTextFile(mcpJsonPath);
@@ -745,28 +804,42 @@ async function syncClaudeMcpJsonWithCleanup(
 
     // Create fresh configuration with only meta.json servers
     const newMcpJson = {
-      mcpServers: { ...allMcpServers }
+      mcpServers: { ...allMcpServers },
     };
 
     // Report what's being removed and added
-    const serversToRemove = existingServers.filter(server => !allMcpServers[server]);
-    const serversToAdd = Object.keys(allMcpServers).filter(server => !existingServers.includes(server));
-    const serversToUpdate = Object.keys(allMcpServers).filter(server => existingServers.includes(server));
+    const serversToRemove = existingServers.filter(
+      (server) => !allMcpServers[server]
+    );
+    const serversToAdd = Object.keys(allMcpServers).filter(
+      (server) => !existingServers.includes(server)
+    );
+    const serversToUpdate = Object.keys(allMcpServers).filter((server) =>
+      existingServers.includes(server)
+    );
 
     if (serversToRemove.length > 0) {
-      console.log(`  🗑️  Removing servers not in meta.json: ${serversToRemove.join(', ')}`);
+      console.log(
+        `  🗑️  Removing servers not in meta.json: ${serversToRemove.join(', ')}`
+      );
     }
     if (serversToAdd.length > 0) {
       console.log(`  ➕ Adding new servers: ${serversToAdd.join(', ')}`);
     }
     if (serversToUpdate.length > 0) {
-      console.log(`  🔄 Updating existing servers: ${serversToUpdate.join(', ')}`);
+      console.log(
+        `  🔄 Updating existing servers: ${serversToUpdate.join(', ')}`
+      );
     }
 
     // Write the updated configuration back to the file
     await Deno.writeTextFile(mcpJsonPath, JSON.stringify(newMcpJson, null, 2));
 
-    console.log(`✅ Claude MCP configuration synced (${Object.keys(allMcpServers).length} servers)`);
+    console.log(
+      `✅ Claude MCP configuration synced (${
+        Object.keys(allMcpServers).length
+      } servers)`
+    );
   } catch (error) {
     console.error('❌ Error syncing Claude MCP configuration:', error);
   }

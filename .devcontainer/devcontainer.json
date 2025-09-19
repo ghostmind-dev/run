@@ -8,24 +8,21 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/ghostmind-dev/config/extensions:latest": {},
     "ghcr.io/ghostmind-dev/config/settings:latest": {},
-    "ghcr.io/ghostmind-dev/misc/mounts:latest": {},
+    "ghcr.io/ghostmind-dev/config/ai:latest": {},
     "ghcr.io/ghostmind-dev/init/init:latest": {
       "resetLive": true
     }
   },
   "postStartCommand": "deno run -A /usr/local/share/post-start.ts",
   "containerEnv": {
-    "SRC": "${containerWorkspaceFolder}",
-    "LOCALHOST_SRC": "/Volumes/Projects/container/run"
+    "LOCALHOST_SRC": "${localWorkspaceFolder}",
+    "SRC": "${containerWorkspaceFolder}"
   },
   "remoteEnv": {
     "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
     "VAULT_TOKEN": "${localEnv:VAULT_TOKEN}",
     "VAULT_ADDR": "${localEnv:VAULT_ADDR}"
   },
-  "mounts": [
-    "source=terminal-history-run,target=/commandhistory,type=volume"
-  ],
   "runArgs": [
     "--network=host",
     "--name=run"
