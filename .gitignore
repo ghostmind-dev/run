@@ -112,3 +112,8 @@ __pycache__
 **/dist
 
 **/.data
+
+
+.claude
+
+.history
