@@ -112,9 +112,6 @@ export async function machineInit() {
   ///////////////////////////////////////////////////////////////////////////////////////////////
 
   devcontainer.name = projectName;
-  devcontainer.containerEnv.LOCALHOST_SRC =
-    `${HOME}/` + pathFromHome + '/' + projectName;
-
   devcontainer.runArgs[1] = `--name=${projectName}`;
 
   ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -162,6 +159,8 @@ export async function machineInit() {
   await $`mkdir -p ${currentPath}/${projectName}/.vscode`;
 
   await $`curl -o ${currentPath}/${projectName}/.vscode/settings.json https://raw.githubusercontent.com/ghostmind-dev/config/main/config/vscode/settings.json`;
+
+  await $`mkdir -p ${currentPath}/${projectName}/.history`;
 
   $.verbose = true;
 
