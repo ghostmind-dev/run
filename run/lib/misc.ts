@@ -866,11 +866,11 @@ export default async function misc(program: any) {
         console.log(`Isolating path: ${pathParts.join(' -> ')}`);
 
         // Function to recursively exclude directories at each level
-        async function excludeAtLevel(
+        const excludeAtLevel = async (
           basePath: string,
           currentParts: string[],
           level: number = 0
-        ) {
+        ) => {
           try {
             for await (const entry of Deno.readDir(basePath)) {
               const entryPath = `${basePath}/${entry.name}`;
@@ -940,7 +940,7 @@ export default async function misc(program: any) {
               `Could not read directory ${basePath}: ${error.message}`
             );
           }
-        }
+        };
 
         // Start exclusion process from SRC
         await excludeAtLevel(SRC, pathParts);
@@ -1201,16 +1201,18 @@ export default async function misc(program: any) {
 
   misc
     .command('align')
-    .description('align both global and workspace file.exclude values to overall majority')
+    .description(
+      'align both global and workspace file.exclude values to overall majority'
+    )
     .action(async () => {
       try {
         const homeDir = Deno.env.get('HOME') || '';
         const currentPath = Deno.cwd();
-        
+
         // Define settings paths
         let globalSettingsPath = '';
         let globalSettingsType = '';
-        
+
         // Determine global IDE settings path
         try {
           await Deno.stat(`${homeDir}/.cursor-server`);
@@ -1228,14 +1230,14 @@ export default async function misc(program: any) {
         }
 
         const workspaceSettingsPath = `${currentPath}/.vscode/settings.json`;
-        
+
         console.log(`Global settings: ${globalSettingsPath}`);
         console.log(`Workspace settings: ${workspaceSettingsPath}`);
 
         // Read both settings files
         let globalSettings: any = {};
         let workspaceSettings: any = {};
-        
+
         // Read global settings
         try {
           const globalContent = Deno.readTextFileSync(globalSettingsPath);
@@ -1244,7 +1246,7 @@ export default async function misc(program: any) {
           console.log('No global settings file found');
         }
 
-        // Read workspace settings  
+        // Read workspace settings
         try {
           const workspaceContent = Deno.readTextFileSync(workspaceSettingsPath);
           workspaceSettings = JSON.parse(workspaceContent);
@@ -1265,7 +1267,9 @@ export default async function misc(program: any) {
           Deno.exit(0);
         }
 
-        console.log(`Found ${globalEntries} global exclusions, ${workspaceEntries} workspace exclusions`);
+        console.log(
+          `Found ${globalEntries} global exclusions, ${workspaceEntries} workspace exclusions`
+        );
         console.log(`Total entries: ${totalEntries}`);
 
         // Count true and false values across both files
@@ -1290,7 +1294,9 @@ export default async function misc(program: any) {
           }
         }
 
-        console.log(`Combined totals - True: ${totalTrueCount}, False: ${totalFalseCount}`);
+        console.log(
+          `Combined totals - True: ${totalTrueCount}, False: ${totalFalseCount}`
+        );
 
         if (totalTrueCount === 0 && totalFalseCount === 0) {
           console.log('No boolean values found in either settings file');
@@ -1301,7 +1307,11 @@ export default async function misc(program: any) {
         const overallMajorityIsTrue = totalTrueCount > totalFalseCount;
         const alignToValue = overallMajorityIsTrue;
 
-        console.log(`Overall majority is ${overallMajorityIsTrue ? 'true' : 'false'}, aligning all values to ${alignToValue}`);
+        console.log(
+          `Overall majority is ${
+            overallMajorityIsTrue ? 'true' : 'false'
+          }, aligning all values to ${alignToValue}`
+        );
 
         let globalChangedCount = 0;
         let workspaceChangedCount = 0;
@@ -1333,19 +1343,60 @@ export default async function misc(program: any) {
           }
 
           // Write workspace settings back
-          const workspaceSettingsJson = JSON.stringify(workspaceSettings, null, 2);
+          const workspaceSettingsJson = JSON.stringify(
+            workspaceSettings,
+            null,
+            2
+          );
           Deno.writeTextFileSync(workspaceSettingsPath, workspaceSettingsJson);
           console.log(`Updated ${workspaceChangedCount} workspace exclusions`);
         }
 
-        console.log(`Successfully aligned ${globalChangedCount + workspaceChangedCount} total file exclusion entries`);
-        console.log(`Updated both ${globalSettingsType} and workspace settings`);
+        console.log(
+          `Successfully aligned ${
+            globalChangedCount + workspaceChangedCount
+          } total file exclusion entries`
+        );
+        console.log(
+          `Updated both ${globalSettingsType} and workspace settings`
+        );
         console.log(`Restart your IDE to see the changes`);
-
       } catch (error: any) {
         console.log(`Error: ${error.message}`);
         Deno.exit(1);
       }
+    });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // SSH
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('ssh')
+    .description('remote ssh helper')
+    .argument('<config>', 'SSH config name')
+    .argument('<command>', 'Command to run')
+    .action(async (config: string, command: string) => {
+      // to simplyfy the command, we will use the following format:
+      // "ssh m3 -t 'cd ${LOCALHOST_SRC}/city;run routine host_playwright; exec $SHELL -l'"
+
+      $.verbose = true;
+
+      const currentPath = Deno.cwd();
+
+      // we need to run the command relative to $LOCALHOST_SRC
+
+      // currentPath is based on $SRC
+
+      const SRC = Deno.env.get('SRC') || '';
+      const LOCALHOST_SRC = Deno.env.get('LOCALHOST_SRC') || '';
+
+      const relativePath = currentPath.replace(SRC, '').replace(/^\//, '');
+      const targetPath = `${LOCALHOST_SRC}/${relativePath}`;
+
+      const sshCommand = `cd ${targetPath}; ${command}; exec $SHELL -l`;
+
+      await $`ssh ${config} -t ${sshCommand}`;
     });
 }
 
