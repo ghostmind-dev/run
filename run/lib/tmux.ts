@@ -4,6 +4,25 @@
  * This module provides commands for managing TMUX sessions and windows
  * for development workflows.
  *
+ * SSH Support:
+ * Panes can now include an "sshTarget" property to execute commands remotely.
+ * Example meta.json configuration:
+ * {
+ *   "tmux": {
+ *     "sessions": [{
+ *       "name": "dev",
+ *       "windows": [{
+ *         "name": "backend",
+ *         "panes": [{
+ *           "name": "server",
+ *           "command": "npm start",
+ *           "sshTarget": "prod-server"
+ *         }]
+ *       }]
+ *     }]
+ *   }
+ * }
+ *
  * @module
  */
 
@@ -24,6 +43,7 @@ interface TmuxPane {
   split?: 'horizontal' | 'vertical';
   size?: string;
   command?: string;
+  sshTarget?: string;
 }
 
 interface TmuxWindow {
@@ -63,6 +83,27 @@ const TMUX_COLORS = [
 
 function getRandomColor(): string {
   return TMUX_COLORS[Math.floor(Math.random() * TMUX_COLORS.length)];
+}
+
+/**
+ * Build SSH command using the same logic as 'run misc ssh'
+ * @param sshTarget SSH config name
+ * @param command Command to run
+ * @param currentPath Current working directory path
+ * @returns SSH command string
+ */
+function buildSSHCommand(
+  sshTarget: string,
+  command: string,
+  currentPath: string
+): string {
+  const SRC = Deno.env.get('SRC') || '';
+  const LOCALHOST_SRC = Deno.env.get('LOCALHOST_SRC') || '';
+
+  const relativePath = currentPath.replace(SRC, '').replace(/^\//, '');
+  const targetPath = `${LOCALHOST_SRC}/${relativePath}`;
+
+  return `ssh ${sshTarget} -t "cd ${targetPath}; ${command}; exec \\$SHELL -l"`;
 }
 
 async function initAllTmuxSessions(
@@ -270,9 +311,25 @@ async function initTmuxSession(
 
         // Execute command if defined for this pane and runCommand flag is true
         if (pane.command && runCommand) {
-          await $`tmux send-keys -t ${sessionName}:${windowName}.${paneIndex} ${pane.command} Enter`;
+          let commandToExecute = pane.command;
+
+          // If sshTarget is specified, wrap the command in SSH
+          if (pane.sshTarget) {
+            commandToExecute = buildSSHCommand(
+              pane.sshTarget,
+              pane.command,
+              panePath
+            );
+            if (!isAppendMode) {
+              console.log(chalk.gray(`    🔗 SSH target: ${pane.sshTarget}`));
+            }
+          }
+
+          await $`tmux send-keys -t ${sessionName}:${windowName}.${paneIndex} ${commandToExecute} Enter`;
           if (!isAppendMode) {
-            console.log(chalk.gray(`    🚀 Executed command: ${pane.command}`));
+            console.log(
+              chalk.gray(`    🚀 Executed command: ${commandToExecute}`)
+            );
           }
         }
       }
@@ -409,13 +466,34 @@ async function executeSessionCommands(
           }
 
           if (shouldProcessPane && pane.command) {
+            let commandToExecute = pane.command;
+            let displayCommand = pane.command;
+
+            // If sshTarget is specified, wrap the command in SSH
+            if (pane.sshTarget) {
+              // For executeSessionCommands, we need to get the pane path
+              const sessionRoot = sessionConfig.root
+                ? `${config.path}/${sessionConfig.root}`
+                : config.path;
+              const panePath = pane.path
+                ? `${sessionRoot}/${pane.path}`
+                : sessionRoot;
+
+              commandToExecute = buildSSHCommand(
+                pane.sshTarget,
+                pane.command,
+                panePath
+              );
+              displayCommand = `${pane.command} (via SSH: ${pane.sshTarget})`;
+            }
+
             console.log(
               chalk.blue(
-                `  🔧 Executing in ${windowName}.${pane.name}: ${pane.command}`
+                `  🔧 Executing in ${windowName}.${pane.name}: ${displayCommand}`
               )
             );
             try {
-              await $`tmux send-keys -t ${sessionName}:${windowName}.${paneIndex} ${pane.command} Enter`;
+              await $`tmux send-keys -t ${sessionName}:${windowName}.${paneIndex} ${commandToExecute} Enter`;
               console.log(chalk.gray(`    ✅ Command sent successfully`));
 
               // Add a small pause between command executions
