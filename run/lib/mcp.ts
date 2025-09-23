@@ -135,7 +135,7 @@ async function setIndividualMCPConfiguration(
       return;
     }
 
-    // Now update Claude, Cursor, and Codex MCP configuration files
+    // Now update Claude, Cursor, and Codex MCP configuration files (only if they exist)
     await updateClaudeMcpJson(SRC, serverName, mcpServerConfig, false);
     await updateCursorMcpJson(SRC, serverName, mcpServerConfig, false);
     await updateCodexMcpToml(SRC, serverName, mcpServerConfig, false);
@@ -157,11 +157,14 @@ async function updateCursorMcpJson(
   const cursorDir = `${srcPath}/.cursor`;
   const mcpJsonPath = `${cursorDir}/mcp.json`;
 
-  // Ensure .cursor directory exists
+  // Check if .cursor directory exists - if not, skip Cursor configuration
   try {
-    await Deno.mkdir(cursorDir, { recursive: true });
+    await Deno.stat(cursorDir);
   } catch (error) {
-    // Directory might already exist, that's fine
+    console.log(
+      `⚠️  Cursor directory not found at ${cursorDir}, skipping Cursor configuration`
+    );
+    return;
   }
 
   console.log(`📝 Updating MCP configuration for Cursor (.cursor/mcp.json)...`);
@@ -367,7 +370,7 @@ async function syncAllMCPConfigurationsFromMetaJson(): Promise<void> {
     );
     console.log(`📂 Directories with MCP configs: ${mcpConfigurationsFound}\n`);
 
-    // Now sync Claude, Cursor, and Codex MCP configurations with cleanup
+    // Now sync Claude, Cursor, and Codex MCP configurations with cleanup (only if they exist)
     await syncClaudeMcpJsonWithCleanup(SRC, allMcpServers);
     await syncCursorMcpJsonWithCleanup(SRC, allMcpServers);
     await syncCodexMcpTomlWithCleanup(SRC, allMcpServers);
@@ -389,11 +392,14 @@ async function syncCursorMcpJsonWithCleanup(
   const cursorDir = `${srcPath}/.cursor`;
   const mcpJsonPath = `${cursorDir}/mcp.json`;
 
-  // Ensure .cursor directory exists
+  // Check if .cursor directory exists - if not, skip Cursor configuration
   try {
-    await Deno.mkdir(cursorDir, { recursive: true });
+    await Deno.stat(cursorDir);
   } catch (error) {
-    // Directory might already exist, that's fine
+    console.log(
+      `⚠️  Cursor directory not found at ${cursorDir}, skipping Cursor configuration`
+    );
+    return;
   }
 
   console.log(`📝 Syncing MCP configuration for Cursor (.cursor/mcp.json)...`);
@@ -528,11 +534,14 @@ async function updateCodexMcpToml(
   const codexDir = `${srcPath}/.codex`;
   const configPath = `${codexDir}/config.toml`;
 
-  // Ensure .codex directory exists
+  // Check if .codex directory exists - if not, skip Codex configuration
   try {
-    await Deno.mkdir(codexDir, { recursive: true });
+    await Deno.stat(codexDir);
   } catch (error) {
-    // Directory might already exist, that's fine
+    console.log(
+      `⚠️  Codex directory not found at ${codexDir}, skipping Codex configuration`
+    );
+    return;
   }
 
   console.log(
@@ -635,11 +644,14 @@ async function syncCodexMcpTomlWithCleanup(
   const codexDir = `${srcPath}/.codex`;
   const configPath = `${codexDir}/config.toml`;
 
-  // Ensure .codex directory exists
+  // Check if .codex directory exists - if not, skip Codex configuration
   try {
-    await Deno.mkdir(codexDir, { recursive: true });
+    await Deno.stat(codexDir);
   } catch (error) {
-    // Directory might already exist, that's fine
+    console.log(
+      `⚠️  Codex directory not found at ${codexDir}, skipping Codex configuration`
+    );
+    return;
   }
 
   console.log(`📝 Syncing MCP configuration for Codex (.codex/config.toml)...`);
