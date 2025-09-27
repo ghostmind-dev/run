@@ -117,3 +117,24 @@ __pycache__
 .claude
 
 .history
+
+**/dist
+
+
+**/global-*.mdc
+!.claude/settings.local.json
+
+.claude/**
+
+
+.history
+
+.history/**
+
+
+.mcp.json
+
+mcp.json
+
+
+config.toml

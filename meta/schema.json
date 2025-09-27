@@ -21,7 +21,11 @@
     },
     "type": {
       "type": "string",
-      "enum": ["app", "project", "template"],
+      "enum": [
+        "app",
+        "project",
+        "template"
+      ],
       "description": "The type of the configuration."
     },
     "global": {
@@ -176,7 +180,9 @@
                   "description": "Environment variables for the MCP server."
                 }
               },
-              "required": ["command"],
+              "required": [
+                "command"
+              ],
               "additionalProperties": false
             },
             {
@@ -198,7 +204,9 @@
                   "description": "Headers for the MCP server requests."
                 }
               },
-              "required": ["url"],
+              "required": [
+                "url"
+              ],
               "additionalProperties": false
             }
           ]
@@ -285,8 +293,85 @@
                       "type": "string",
                       "description": "Window name"
                     },
+                    "layout": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "grid",
+                            "manual",
+                            "steps",
+                            "sections"
+                          ],
+                          "description": "Layout mode: 'grid' for automatic 2x2 grid, 'manual' for custom splits, 'steps' for step-by-step creation, 'sections' for hierarchical sections"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "rows",
+                                "columns"
+                              ],
+                              "description": "Split orientation: rows = horizontal split, columns = vertical split"
+                            },
+                            "splits": {
+                              "type": "array",
+                              "description": "Array of splits, each can be a pane name or another layout object",
+                              "items": {
+                                "oneOf": [
+                                  {
+                                    "type": "string",
+                                    "description": "Pane name reference"
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "rows",
+                                          "columns"
+                                        ]
+                                      },
+                                      "splits": {
+                                        "type": "array"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "splits"
+                          ]
+                        }
+                      ]
+                    },
+                    "section": {
+                      "$ref": "#/$defs/tmuxSection"
+                    },
                     "panes": {
                       "type": "array",
+                      "allOf": [
+                        {
+                          "if": {
+                            "properties": {
+                              "layout": {
+                                "const": "grid"
+                              }
+                            }
+                          },
+                          "then": {
+                            "minItems": 4,
+                            "maxItems": 4,
+                            "description": "Grid layout requires exactly 4 panes in order: top-left, top-right, bottom-left, bottom-right"
+                          }
+                        }
+                      ],
                       "items": {
                         "type": "object",
                         "properties": {
@@ -300,32 +385,120 @@
                           },
                           "split": {
                             "type": "string",
-                            "enum": ["horizontal", "vertical"],
-                            "description": "How to split from previous pane"
+                            "enum": [
+                              "horizontal",
+                              "vertical"
+                            ],
+                            "description": "How to split from previous pane (ignored in grid layout)"
+                          },
+                          "target": {
+                            "type": "number",
+                            "description": "Pane index to split from (0-based). If not specified, splits the last created pane"
                           },
                           "size": {
                             "type": "string",
                             "pattern": "^[0-9]+%?$",
-                            "description": "Size of split (e.g., '50%')"
+                            "description": "Size of split (e.g., '50%') (ignored in grid layout)"
                           },
                           "command": {
                             "type": "string",
                             "description": "Default command to execute in this pane"
+                          },
+                          "sshTarget": {
+                            "type": "string",
+                            "description": "SSH target for remote command execution"
                           }
                         },
-                        "required": ["name"]
+                        "required": [
+                          "name"
+                        ]
                       }
                     }
                   },
-                  "required": ["name", "panes"]
+                  "required": [
+                    "name",
+                    "panes"
+                  ]
                 }
               }
             },
-            "required": ["name", "windows"]
+            "required": [
+              "name",
+              "windows"
+            ]
           }
         }
       }
     }
   },
-  "required": ["id", "name"]
+  "required": [
+    "id",
+    "name"
+  ],
+  "$defs": {
+    "tmuxSection": {
+      "type": "object",
+      "description": "A section defines how to split space - either containing panes or other sections",
+      "properties": {
+        "split": {
+          "type": "string",
+          "enum": ["horizontal", "vertical"],
+          "description": "Split direction: horizontal = split top/bottom, vertical = split left/right"
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^[0-9]+%?$",
+          "description": "Size of this section (e.g., '50%', '30'). Only applies when this section is an item in another section."
+        },
+        "items": {
+          "type": "array",
+          "description": "Items within this section - can be panes or other sections",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/tmuxSection",
+                "description": "Nested section"
+              },
+              {
+                "$ref": "#/$defs/tmuxPane",
+                "description": "Terminal pane"
+              }
+            ]
+          }
+        }
+      },
+      "required": ["split", "items"],
+      "additionalProperties": false
+    },
+    "tmuxPane": {
+      "type": "object",
+      "description": "A terminal pane with optional commands and configuration",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Unique identifier for this pane"
+        },
+        "path": {
+          "type": "string",
+          "description": "Starting directory relative to session root"
+        },
+        "command": {
+          "type": "string",
+          "description": "Default command to execute in this pane"
+        },
+        "sshTarget": {
+          "type": "string",
+          "description": "SSH target for remote command execution (e.g., 'user@host')"
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^[0-9]+%?$",
+          "description": "Size of this pane (e.g., '50%', '30'). Only applies when this pane is an item in a section."
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    }
+  }
 }
