@@ -7,5 +7,61 @@
     "test": "deno test  --allow-all run/test/units.ts",
     "init": "run tmux init dev",
     "terminate": "run tmux terminate dev"
+  },
+  "tmux": {
+    "sessions": [
+      {
+        "name": "dev",
+        "root": ".",
+        "windows": [
+          {
+            "name": "five-pane",
+            "layout": "sections",
+            "section": {
+              "split": "horizontal",
+              "items": [
+                {
+                  "split": "vertical",
+                  "size": "60%",
+                  "items": [
+                    {
+                      "name": "top-left",
+                      "command": "echo 'Top Left Pane'",
+                      "size": "50%"
+                    },
+                    {
+                      "name": "top-right",
+                      "command": "echo 'Top Right Pane'",
+                      "size": "50%"
+                    }
+                  ]
+                },
+                {
+                  "split": "vertical",
+                  "size": "40%",
+                  "items": [
+                    {
+                      "name": "bottom-left",
+                      "command": "echo 'Bottom Left Pane'",
+                      "size": "33%"
+                    },
+                    {
+                      "name": "bottom-center",
+                      "command": "echo 'Bottom Center Pane'",
+                      "size": "33%"
+                    },
+                    {
+                      "name": "bottom-right",
+                      "command": "echo 'Bottom Right Pane'",
+                      "size": "34%"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
   }
 }
