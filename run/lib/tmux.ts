@@ -49,10 +49,10 @@ interface TmuxPane {
 
 interface TmuxStep {
   action: 'split';
-  target: string;  // pane name to target
+  target: string; // pane name to target
   direction: 'horizontal' | 'vertical';
   size?: string;
-  newPane: string;  // name of the new pane created
+  newPane: string; // name of the new pane created
 }
 
 interface TmuxGridCell {
@@ -95,12 +95,15 @@ interface TmuxWindow {
   grid?: TmuxGrid;
   panes?: TmuxPane[];
   steps?: TmuxStep[];
-  section?: TmuxSection;  // For section-based layout
-  paneDefinitions?: Record<string, {
-    path?: string;
-    command?: string;
-    sshTarget?: string;
-  }>;
+  section?: TmuxSection; // For section-based layout
+  paneDefinitions?: Record<
+    string,
+    {
+      path?: string;
+      command?: string;
+      sshTarget?: string;
+    }
+  >;
 }
 
 interface TmuxSession {
@@ -148,7 +151,11 @@ async function processSectionHierarchy(
     // First item is a pane
     paneMap.set(firstItem.name, currentPaneIndex);
     if (!isAppendMode) {
-      console.log(chalk.gray(`    ➤ Created pane: ${firstItem.name} (index ${currentPaneIndex})`));
+      console.log(
+        chalk.gray(
+          `    ➤ Created pane: ${firstItem.name} (index ${currentPaneIndex})`
+        )
+      );
     }
     nextPaneIndex = Math.max(nextPaneIndex, currentPaneIndex + 1);
   } else if (isSection(firstItem)) {
@@ -172,7 +179,8 @@ async function processSectionHierarchy(
     const sizeFlag = item.size ? `-p ${item.size.replace('%', '')}` : '';
 
     // Create the new pane by splitting from the target
-    const itemPath = isPane(item) && item.path ? `${sessionRoot}/${item.path}` : sessionRoot;
+    const itemPath =
+      isPane(item) && item.path ? `${sessionRoot}/${item.path}` : sessionRoot;
     await $`tmux split-window -t ${sessionName}:${windowName}.${currentPaneIndex} ${splitFlag} ${sizeFlag} -c ${itemPath}`;
 
     const newPaneIndex = nextPaneIndex++;
@@ -181,12 +189,20 @@ async function processSectionHierarchy(
       // Item is a pane
       paneMap.set(item.name, newPaneIndex);
       if (!isAppendMode) {
-        console.log(chalk.gray(`    ➤ Split ${section.split}ly → created pane: ${item.name} (index ${newPaneIndex})`));
+        console.log(
+          chalk.gray(
+            `    ➤ Split ${section.split}ly → created pane: ${item.name} (index ${newPaneIndex})`
+          )
+        );
       }
     } else if (isSection(item)) {
       // Item is a section - process recursively
       if (!isAppendMode) {
-        console.log(chalk.gray(`    ➤ Split ${section.split}ly → created section (${item.split})`));
+        console.log(
+          chalk.gray(
+            `    ➤ Split ${section.split}ly → created section (${item.split})`
+          )
+        );
       }
       nextPaneIndex = await processSectionHierarchy(
         item,
@@ -204,7 +220,10 @@ async function processSectionHierarchy(
   return nextPaneIndex;
 }
 
-function findPaneInSection(section: TmuxSection, paneName: string): TmuxPane | null {
+function findPaneInSection(
+  section: TmuxSection,
+  paneName: string
+): TmuxPane | null {
   for (const item of section.items) {
     if (isPane(item) && item.name === paneName) {
       return item;
@@ -433,14 +452,23 @@ async function initTmuxSession(
       if (window.grid) {
         // 🔥 REVOLUTIONARY GRID MODE - explicit positioning 🔥
         if (!isAppendMode) {
-          console.log(chalk.red(`    🔥 Creating ${window.grid.rows}x${window.grid.columns} REVOLUTIONARY GRID 🔥`));
+          console.log(
+            chalk.red(
+              `    🔥 Creating ${window.grid.rows}x${window.grid.columns} REVOLUTIONARY GRID 🔥`
+            )
+          );
         }
 
         // Start with the first cell
-        const firstCell = window.grid.cells.find(c => c.row === 0 && c.col === 0);
-        if (!firstCell) throw new Error('Grid must have a cell at position 0,0');
+        const firstCell = window.grid.cells.find(
+          (c) => c.row === 0 && c.col === 0
+        );
+        if (!firstCell)
+          throw new Error('Grid must have a cell at position 0,0');
 
-        const firstPath = firstCell.path ? `${sessionRoot}/${firstCell.path}` : sessionRoot;
+        const firstPath = firstCell.path
+          ? `${sessionRoot}/${firstCell.path}`
+          : sessionRoot;
 
         if (!sessionExists && windowIndex === 0) {
           await $`tmux new-session -d -s ${sessionName} -n ${windowName} -c ${firstPath}`;
@@ -451,32 +479,62 @@ async function initTmuxSession(
 
         // For a 2x2 grid, build it with PRECISE control
         if (window.grid.rows === 2 && window.grid.columns === 2) {
-          const topLeft = window.grid.cells.find(c => c.row === 0 && c.col === 0);
-          const topRight = window.grid.cells.find(c => c.row === 0 && c.col === 1);
-          const bottomLeft = window.grid.cells.find(c => c.row === 1 && c.col === 0);
-          const bottomRight = window.grid.cells.find(c => c.row === 1 && c.col === 1);
+          const topLeft = window.grid.cells.find(
+            (c) => c.row === 0 && c.col === 0
+          );
+          const topRight = window.grid.cells.find(
+            (c) => c.row === 0 && c.col === 1
+          );
+          const bottomLeft = window.grid.cells.find(
+            (c) => c.row === 1 && c.col === 0
+          );
+          const bottomRight = window.grid.cells.find(
+            (c) => c.row === 1 && c.col === 1
+          );
 
           if (!topLeft || !topRight || !bottomLeft || !bottomRight) {
-            throw new Error('2x2 grid requires cells at positions (0,0), (0,1), (1,0), (1,1)');
+            throw new Error(
+              '2x2 grid requires cells at positions (0,0), (0,1), (1,0), (1,1)'
+            );
           }
 
-          console.log(chalk.yellow(`    📍 Building: ${topLeft.name} | ${topRight.name}`));
-          console.log(chalk.yellow(`    📍           ${bottomLeft.name} | ${bottomRight.name}`));
+          console.log(
+            chalk.yellow(`    📍 Building: ${topLeft.name} | ${topRight.name}`)
+          );
+          console.log(
+            chalk.yellow(
+              `    📍           ${bottomLeft.name} | ${bottomRight.name}`
+            )
+          );
 
           // Step 1: Split horizontally first to create TOP and BOTTOM rows
-          const bottomLeftPath = bottomLeft.path ? `${sessionRoot}/${bottomLeft.path}` : sessionRoot;
+          const bottomLeftPath = bottomLeft.path
+            ? `${sessionRoot}/${bottomLeft.path}`
+            : sessionRoot;
           await $`tmux split-window -t ${sessionName}:${windowName}.0 -v -p 50 -c ${bottomLeftPath}`;
           console.log(chalk.green(`    ✅ Created TOP and BOTTOM rows`));
 
           // Step 2: Split the TOP row vertically to create TOP-LEFT and TOP-RIGHT
-          const topRightPath = topRight.path ? `${sessionRoot}/${topRight.path}` : sessionRoot;
+          const topRightPath = topRight.path
+            ? `${sessionRoot}/${topRight.path}`
+            : sessionRoot;
           await $`tmux split-window -t ${sessionName}:${windowName}.0 -h -p 50 -c ${topRightPath}`;
-          console.log(chalk.green(`    ✅ Split TOP row: ${topLeft.name} | ${topRight.name}`));
+          console.log(
+            chalk.green(
+              `    ✅ Split TOP row: ${topLeft.name} | ${topRight.name}`
+            )
+          );
 
           // Step 3: Split the BOTTOM row vertically to create BOTTOM-LEFT and BOTTOM-RIGHT
-          const bottomRightPath = bottomRight.path ? `${sessionRoot}/${bottomRight.path}` : sessionRoot;
+          const bottomRightPath = bottomRight.path
+            ? `${sessionRoot}/${bottomRight.path}`
+            : sessionRoot;
           await $`tmux split-window -t ${sessionName}:${windowName}.2 -h -p 50 -c ${bottomRightPath}`;
-          console.log(chalk.green(`    ✅ Split BOTTOM row: ${bottomLeft.name} | ${bottomRight.name}`));
+          console.log(
+            chalk.green(
+              `    ✅ Split BOTTOM row: ${bottomLeft.name} | ${bottomRight.name}`
+            )
+          );
 
           // Execute commands in the CORRECT positions
           if (runCommand) {
@@ -485,25 +543,41 @@ async function initTmuxSession(
               { cell: topLeft, pane: 0 },
               { cell: topRight, pane: 1 },
               { cell: bottomLeft, pane: 2 },
-              { cell: bottomRight, pane: 3 }
+              { cell: bottomRight, pane: 3 },
             ];
 
             for (const { cell, pane } of cellMapping) {
               if (cell.command) {
                 let commandToExecute = cell.command;
                 if (cell.sshTarget) {
-                  const cellPath = cell.path ? `${sessionRoot}/${cell.path}` : sessionRoot;
-                  commandToExecute = buildSSHCommand(cell.sshTarget, cell.command, cellPath);
+                  const cellPath = cell.path
+                    ? `${sessionRoot}/${cell.path}`
+                    : sessionRoot;
+                  commandToExecute = buildSSHCommand(
+                    cell.sshTarget,
+                    cell.command,
+                    cellPath
+                  );
                 }
                 await $`tmux send-keys -t ${sessionName}:${windowName}.${pane} ${commandToExecute} Enter`;
-                console.log(chalk.cyan(`    🎯 ${cell.name} (${cell.row},${cell.col}) -> pane ${pane}: ${commandToExecute}`));
+                console.log(
+                  chalk.cyan(
+                    `    🎯 ${cell.name} (${cell.row},${cell.col}) -> pane ${pane}: ${commandToExecute}`
+                  )
+                );
               }
             }
           }
         }
 
-        console.log(chalk.green(`    🎉 REVOLUTIONARY GRID CREATED SUCCESSFULLY! 🎉`));
-      } else if (typeof window.layout === 'object' && window.layout.type && window.panes) {
+        console.log(
+          chalk.green(`    🎉 REVOLUTIONARY GRID CREATED SUCCESSFULLY! 🎉`)
+        );
+      } else if (
+        typeof window.layout === 'object' &&
+        window.layout.type &&
+        window.panes
+      ) {
         // Hierarchical layout mode
         if (!isAppendMode) {
           console.log(chalk.gray(`    📐 Creating hierarchical layout`));
@@ -529,8 +603,8 @@ async function initTmuxSession(
         ) => {
           if (typeof layout === 'string') {
             // It's a pane name, find and create it
-            const pane = window.panes.find((p) => p.name === layout);
-            if (pane && window.panes.indexOf(pane) > 0) {
+            const pane = window.panes?.find((p) => p.name === layout);
+            if (pane && window.panes && window.panes.indexOf(pane) > 0) {
               const panePath = pane.path
                 ? `${sessionRoot}/${pane.path}`
                 : sessionRoot;
@@ -548,7 +622,7 @@ async function initTmuxSession(
               } else {
                 // Create horizontal split
                 if (typeof layout.splits[i] === 'string') {
-                  const pane = window.panes.find(
+                  const pane = window.panes?.find(
                     (p) => p.name === layout.splits[i]
                   );
                   if (pane) {
@@ -579,7 +653,7 @@ async function initTmuxSession(
               } else {
                 // Create vertical split
                 if (typeof layout.splits[i] === 'string') {
-                  const pane = window.panes.find(
+                  const pane = window.panes?.find(
                     (p) => p.name === layout.splits[i]
                   );
                   if (pane) {
@@ -604,8 +678,11 @@ async function initTmuxSession(
 
         // Create the layout structure
         await createLayout(window.layout as TmuxLayout);
-
-      } else if (window.layout === 'steps' && window.steps && window.paneDefinitions) {
+      } else if (
+        window.layout === 'steps' &&
+        window.steps &&
+        window.paneDefinitions
+      ) {
         // Step-by-step layout mode - human-like approach
         if (!isAppendMode) {
           console.log(chalk.gray(`    🎯 Creating step-by-step layout`));
@@ -631,7 +708,9 @@ async function initTmuxSession(
         let nextPaneIndex = 1;
 
         if (!isAppendMode) {
-          console.log(chalk.gray(`    ➤ Created initial pane: ${firstPaneName}`));
+          console.log(
+            chalk.gray(`    ➤ Created initial pane: ${firstPaneName}`)
+          );
         }
 
         // Execute each step
@@ -639,7 +718,13 @@ async function initTmuxSession(
           if (step.action === 'split') {
             const targetPaneIndex = paneMap.get(step.target);
             if (targetPaneIndex === undefined) {
-              throw new Error(`Target pane '${step.target}' not found. Available panes: ${Array.from(paneMap.keys()).join(', ')}`);
+              throw new Error(
+                `Target pane '${
+                  step.target
+                }' not found. Available panes: ${Array.from(
+                  paneMap.keys()
+                ).join(', ')}`
+              );
             }
 
             const newPaneConfig = window.paneDefinitions[step.newPane];
@@ -648,7 +733,9 @@ async function initTmuxSession(
               : sessionRoot;
 
             const splitFlag = step.direction === 'horizontal' ? '-v' : '-h';
-            const sizeFlag = step.size ? `-p ${step.size.replace('%', '')}` : '';
+            const sizeFlag = step.size
+              ? `-p ${step.size.replace('%', '')}`
+              : '';
 
             await $`tmux split-window -t ${sessionName}:${windowName}.${targetPaneIndex} ${splitFlag} ${sizeFlag} -c ${newPanePath}`;
 
@@ -657,7 +744,13 @@ async function initTmuxSession(
             nextPaneIndex++;
 
             if (!isAppendMode) {
-              console.log(chalk.gray(`    ➤ Split ${step.target} ${step.direction}ly → created ${step.newPane} (pane ${nextPaneIndex - 1})`));
+              console.log(
+                chalk.gray(
+                  `    ➤ Split ${step.target} ${step.direction}ly → created ${
+                    step.newPane
+                  } (pane ${nextPaneIndex - 1})`
+                )
+              );
             }
           }
         }
@@ -680,7 +773,11 @@ async function initTmuxSession(
               }
               await $`tmux send-keys -t ${sessionName}:${windowName}.${paneIndex} ${commandToExecute} Enter`;
               if (!isAppendMode) {
-                console.log(chalk.cyan(`    🚀 Executed in ${paneName} (${paneIndex}): ${commandToExecute}`));
+                console.log(
+                  chalk.cyan(
+                    `    🚀 Executed in ${paneName} (${paneIndex}): ${commandToExecute}`
+                  )
+                );
               }
             }
           }
@@ -720,7 +817,9 @@ async function initTmuxSession(
       } else if (window.layout === 'sections' && window.section) {
         // Hierarchical section-based layout mode
         if (!isAppendMode) {
-          console.log(chalk.gray(`    🏗️  Creating hierarchical section layout`));
+          console.log(
+            chalk.gray(`    🏗️  Creating hierarchical section layout`)
+          );
         }
 
         // Create initial session/window
@@ -735,7 +834,15 @@ async function initTmuxSession(
         const paneMap = new Map<string, number>();
         let nextPaneIndex = 0;
 
-        await processSectionHierarchy(window.section, sessionName, windowName, sessionRoot, paneMap, nextPaneIndex, isAppendMode);
+        await processSectionHierarchy(
+          window.section,
+          sessionName,
+          windowName,
+          sessionRoot,
+          paneMap,
+          nextPaneIndex,
+          isAppendMode
+        );
 
         // Execute commands if needed
         if (runCommand) {
@@ -885,9 +992,8 @@ async function initTmuxSession(
               : '';
 
             // Determine target pane - use specified target or default to last created
-            const targetPane = pane.target !== undefined
-              ? `.${pane.target}`
-              : '';
+            const targetPane =
+              pane.target !== undefined ? `.${pane.target}` : '';
 
             // Special handling for five-pane layouts - optimize bottom row splits
             let finalSizeFlag = sizeFlag;
@@ -909,7 +1015,9 @@ async function initTmuxSession(
                 chalk.gray(
                   `    ➤ Created pane: ${pane.name} (${
                     pane.split || 'vertical'
-                  } split${pane.target !== undefined ? ` from pane ${pane.target}` : ''})`
+                  } split${
+                    pane.target !== undefined ? ` from pane ${pane.target}` : ''
+                  })`
                 )
               );
             }
@@ -1029,8 +1137,12 @@ async function executeSessionCommands(
       for (const window of sessionConfig.windows) {
         const windowName = `${config.meta.name}-${window.name}`;
 
-        for (let paneIndex = 0; paneIndex < window.panes.length; paneIndex++) {
-          const pane = window.panes[paneIndex];
+        for (
+          let paneIndex = 0;
+          paneIndex < (window.panes?.length ?? 0);
+          paneIndex++
+        ) {
+          const pane = window.panes![paneIndex];
 
           // Check if we should process this specific pane
           let shouldProcessPane = runAll;
