@@ -303,7 +303,7 @@
                             "steps",
                             "sections"
                           ],
-                          "description": "Layout mode: 'grid' for automatic 2x2 grid, 'manual' for custom splits, 'steps' for step-by-step creation, 'sections' for hierarchical sections"
+                          "description": "Layout mode: 'grid' for automatic 2x2 grid, 'manual' for custom splits, 'steps' for step-by-step creation, 'sections' for hierarchical sections with nested items"
                         },
                         {
                           "type": "object",
@@ -353,6 +353,46 @@
                     },
                     "section": {
                       "$ref": "#/$defs/tmuxSection"
+                    },
+                    "paneDefinitions": {
+                      "type": "object",
+                      "description": "Pane definitions for steps layout mode",
+                      "additionalProperties": {
+                        "$ref": "#/$defs/tmuxPane"
+                      }
+                    },
+                    "steps": {
+                      "type": "array",
+                      "description": "Step-by-step instructions for creating the layout",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "action": {
+                            "type": "string",
+                            "enum": ["split"],
+                            "description": "Action to perform"
+                          },
+                          "target": {
+                            "type": "string",
+                            "description": "Name of the pane to split from"
+                          },
+                          "direction": {
+                            "type": "string",
+                            "enum": ["horizontal", "vertical"],
+                            "description": "Direction to split"
+                          },
+                          "size": {
+                            "type": "string",
+                            "pattern": "^[0-9]+%?$",
+                            "description": "Size of the new pane"
+                          },
+                          "newPane": {
+                            "type": "string",
+                            "description": "Name of the new pane to create"
+                          }
+                        },
+                        "required": ["action", "target", "direction", "newPane"]
+                      }
                     },
                     "panes": {
                       "type": "array",
@@ -416,8 +456,85 @@
                     }
                   },
                   "required": [
-                    "name",
-                    "panes"
+                    "name"
+                  ],
+                  "allOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "required": ["panes"]
+                        },
+                        {
+                          "required": ["section"]
+                        },
+                        {
+                          "allOf": [
+                            {
+                              "required": ["paneDefinitions"]
+                            },
+                            {
+                              "required": ["steps"]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "if": {
+                        "properties": {
+                          "layout": {
+                            "const": "sections"
+                          }
+                        }
+                      },
+                      "then": {
+                        "required": ["section"],
+                        "not": {
+                          "anyOf": [
+                            {"required": ["panes"]},
+                            {"required": ["paneDefinitions"]},
+                            {"required": ["steps"]}
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "if": {
+                        "properties": {
+                          "layout": {
+                            "const": "steps"
+                          }
+                        }
+                      },
+                      "then": {
+                        "required": ["paneDefinitions", "steps"],
+                        "not": {
+                          "anyOf": [
+                            {"required": ["panes"]},
+                            {"required": ["section"]}
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "if": {
+                        "properties": {
+                          "layout": {
+                            "enum": ["grid", "manual"]
+                          }
+                        }
+                      },
+                      "then": {
+                        "required": ["panes"],
+                        "not": {
+                          "anyOf": [
+                            {"required": ["section"]},
+                            {"required": ["paneDefinitions"]},
+                            {"required": ["steps"]}
+                          ]
+                        }
+                      }
+                    }
                   ]
                 }
               }
