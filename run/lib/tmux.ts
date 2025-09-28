@@ -96,6 +96,74 @@ function extractPanesFromSection(section: TmuxSection): TmuxPane[] {
   return panes;
 }
 
+// Build a plan of split operations needed for the entire layout
+function buildSplitPlan(section: TmuxSection, targetPane: number = 0): Array<{
+  type: 'split';
+  fromPane: number;
+  direction: string;
+  size?: string;
+  resultPane: number;
+} | {
+  type: 'assign';
+  paneName: string;
+  paneIndex: number;
+}> {
+  const plan: Array<any> = [];
+  let nextPaneId = 1;
+
+  function processSection(sec: TmuxSection, currentPane: number): number[] {
+    const sectionPanes: number[] = [];
+
+    if (sec.items.length === 0) {
+      return sectionPanes;
+    }
+
+    // For sections, we first create all the splits for the section
+    // then process each item's content in its allocated pane
+    const itemPanes: number[] = [];
+
+    // First item uses the current pane
+    itemPanes.push(currentPane);
+
+    // Create splits for remaining items
+    for (let i = 1; i < sec.items.length; i++) {
+      const item = sec.items[i];
+      const splitFlag = sec.split === 'horizontal' ? '-v' : '-h';
+      const sizeFlag = item.size ? `-p ${item.size.replace('%', '')}` : '';
+      const newPane = nextPaneId++;
+
+      plan.push({
+        type: 'split',
+        fromPane: currentPane, // Always split from the original pane
+        direction: splitFlag,
+        size: sizeFlag,
+        resultPane: newPane
+      });
+
+      itemPanes.push(newPane);
+    }
+
+    // Now process each item's content in its allocated pane
+    for (let i = 0; i < sec.items.length; i++) {
+      const item = sec.items[i];
+      const itemPane = itemPanes[i];
+
+      if (isPane(item)) {
+        plan.push({ type: 'assign', paneName: item.name, paneIndex: itemPane });
+        sectionPanes.push(itemPane);
+      } else if (isSection(item)) {
+        const nestedPanes = processSection(item, itemPane);
+        sectionPanes.push(...nestedPanes);
+      }
+    }
+
+    return sectionPanes;
+  }
+
+  processSection(section, targetPane);
+  return plan;
+}
+
 async function processSectionHierarchy(
   section: TmuxSection,
   sessionName: string,
@@ -110,81 +178,105 @@ async function processSectionHierarchy(
     return nextPaneIndex;
   }
 
-  // Process first item (no split needed for the first item)
-  const firstItem = section.items[0];
-  let currentPaneIndex = targetPaneIndex ?? 0;
+  // Build the complete plan first
+  const plan = buildSplitPlan(section, targetPaneIndex ?? 0);
 
-  if (isPane(firstItem)) {
-    // First item is a pane
-    paneMap.set(firstItem.name, currentPaneIndex);
-    if (!isAppendMode) {
-      console.log(
-        chalk.gray(
-          `    ➤ Created pane: ${firstItem.name} (index ${currentPaneIndex})`
-        )
-      );
-    }
-    nextPaneIndex = Math.max(nextPaneIndex, currentPaneIndex + 1);
-  } else if (isSection(firstItem)) {
-    // First item is a section
-    nextPaneIndex = await processSectionHierarchy(
-      firstItem,
-      sessionName,
-      windowName,
-      sessionRoot,
-      paneMap,
-      nextPaneIndex,
-      isAppendMode,
-      currentPaneIndex
-    );
+  if (!isAppendMode) {
+    console.log(chalk.gray(`    📋 Execution plan:`));
+    plan.forEach((op, i) => {
+      if (op.type === 'split') {
+        console.log(chalk.gray(`      ${i + 1}. Split pane ${op.fromPane} ${op.direction} → pane ${op.resultPane}`));
+      } else {
+        console.log(chalk.gray(`      ${i + 1}. Assign '${op.paneName}' → pane ${op.paneIndex}`));
+      }
+    });
   }
 
-  // Process remaining items with splits
-  for (let i = 1; i < section.items.length; i++) {
-    const item = section.items[i];
-    const splitFlag = section.split === 'horizontal' ? '-v' : '-h';
-    const sizeFlag = item.size ? `-p ${item.size.replace('%', '')}` : '';
+  // Map from planned pane IDs to actual tmux pane indices
+  const paneMapping = new Map<number, number>();
+  paneMapping.set(0, targetPaneIndex ?? 0); // Initial pane mapping
 
-    // Create the new pane by splitting from the target
-    const itemPath =
-      isPane(item) && item.path ? `${sessionRoot}/${item.path}` : sessionRoot;
-    await $`tmux split-window -t ${sessionName}:${windowName}.${currentPaneIndex} ${splitFlag} ${sizeFlag} -c ${itemPath}`;
+  // Execute the plan with position-based tracking
+  for (const op of plan) {
+    if (op.type === 'split') {
+      const actualFromPane = paneMapping.get(op.fromPane) ?? 0;
+      const itemPath = sessionRoot; // Default path for splits
 
-    const newPaneIndex = nextPaneIndex++;
-
-    if (isPane(item)) {
-      // Item is a pane
-      paneMap.set(item.name, newPaneIndex);
       if (!isAppendMode) {
         console.log(
-          chalk.gray(
-            `    ➤ Split ${section.split}ly → created pane: ${item.name} (index ${newPaneIndex})`
-          )
+          chalk.gray(`    ➤ Splitting actual pane ${actualFromPane} ${op.direction} (planned: ${op.fromPane} → ${op.resultPane})`)
         );
       }
-    } else if (isSection(item)) {
-      // Item is a section - process recursively
+
+      // Get pane positions before split to understand the layout
+      const beforeSplitResult = await $`tmux list-panes -t ${sessionName}:${windowName} -F "#{pane_index}:#{pane_left},#{pane_top},#{pane_width},#{pane_height}"`;
+      const beforePanes = beforeSplitResult.stdout.trim().split('\n').map(line => {
+        const [index, pos] = line.split(':');
+        const [left, top, width, height] = pos.split(',').map(Number);
+        return { index: parseInt(index), left, top, width, height };
+      });
+
+      // Perform the split
+      await $`tmux split-window -t ${sessionName}:${windowName}.${actualFromPane} ${op.direction} ${op.size} -c ${itemPath}`;
+
+      // Get pane positions after split to understand the new layout
+      const afterSplitResult = await $`tmux list-panes -t ${sessionName}:${windowName} -F "#{pane_index}:#{pane_left},#{pane_top},#{pane_width},#{pane_height}"`;
+      const afterPanes = afterSplitResult.stdout.trim().split('\n').map(line => {
+        const [index, pos] = line.split(':');
+        const [left, top, width, height] = pos.split(',').map(Number);
+        return { index: parseInt(index), left, top, width, height };
+      });
+
+      // Find the newly created pane (highest index)
+      const newActualPane = Math.max(...afterPanes.map(p => p.index));
+
+      // Map the planned pane ID to the actual pane index
+      paneMapping.set(op.resultPane, newActualPane);
+
       if (!isAppendMode) {
-        console.log(
-          chalk.gray(
-            `    ➤ Split ${section.split}ly → created section (${item.split})`
-          )
-        );
+        console.log(chalk.gray(`      → Created actual pane ${newActualPane}`));
+        console.log(chalk.gray(`      → Layout after split:`));
+        afterPanes.forEach(p => {
+          console.log(chalk.gray(`          Pane ${p.index}: ${p.width}x${p.height} at (${p.left},${p.top})`));
+        });
       }
-      nextPaneIndex = await processSectionHierarchy(
-        item,
-        sessionName,
-        windowName,
-        sessionRoot,
-        paneMap,
-        nextPaneIndex,
-        isAppendMode,
-        newPaneIndex
-      );
+
+      // CRITICAL: Update existing pane mappings that may have been affected by renumbering
+      // We need to track which planned panes correspond to which actual positions
+      for (const [plannedId, oldActualIndex] of paneMapping.entries()) {
+        if (plannedId === op.resultPane) continue; // Skip the newly created pane
+
+        // Find the old pane's position
+        const oldPane = beforePanes.find(p => p.index === oldActualIndex);
+        if (!oldPane) continue;
+
+        // Find the current pane at that position
+        const currentPane = afterPanes.find(p =>
+          p.left === oldPane.left && p.top === oldPane.top &&
+          p.width === oldPane.width && p.height === oldPane.height
+        );
+
+        if (currentPane && currentPane.index !== oldActualIndex) {
+          // The pane was renumbered
+          paneMapping.set(plannedId, currentPane.index);
+          if (!isAppendMode) {
+            console.log(chalk.gray(`      → Remapped planned pane ${plannedId}: ${oldActualIndex} → ${currentPane.index}`));
+          }
+        }
+      }
+    } else if (op.type === 'assign') {
+      const actualPane = paneMapping.get(op.paneIndex) ?? op.paneIndex;
+      paneMap.set(op.paneName, actualPane);
+
+      if (!isAppendMode) {
+        console.log(chalk.gray(`    ➤ Assigned '${op.paneName}' to actual pane ${actualPane}`));
+      }
     }
   }
 
-  return nextPaneIndex;
+  // Return the next available pane index
+  const allActualPanes = Array.from(paneMapping.values());
+  return Math.max(...allActualPanes, nextPaneIndex) + 1;
 }
 
 function findPaneInSection(
@@ -436,6 +528,7 @@ async function initTmuxSession(
         const paneMap = new Map<string, number>();
         let nextPaneIndex = 0;
 
+        // Use the recursive algorithm for all patterns
         await processSectionHierarchy(
           window.section,
           sessionName,
