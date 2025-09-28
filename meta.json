@@ -5,55 +5,57 @@
   "routines": {
     "check": "deno check run/bin/cmd.ts",
     "test": "deno test  --allow-all run/test/units.ts",
-    "init": "run tmux init dev",
-    "terminate": "run tmux terminate dev"
+    "init": "run tmux init run",
+    "attach": "run tmux attach run",
+    "terminate": "run tmux terminate run",
+    "mcp": "run mcp set --all"
+  },
+  "mcp": {
+    "docs": {
+      "type": "http",
+      "url": "https://docs.ghostmind.dev/mcp"
+    }
   },
   "tmux": {
     "sessions": [
       {
-        "name": "dev",
-        "root": ".",
+        "name": "run",
         "windows": [
           {
-            "name": "five-pane",
+            "name": "simple-test",
             "layout": "sections",
             "section": {
-              "split": "horizontal",
+              "split": "vertical",
               "items": [
                 {
-                  "split": "vertical",
-                  "size": "60%",
+                  "split": "horizontal",
+                  "size": "50%",
                   "items": [
                     {
                       "name": "top-left",
-                      "command": "echo 'Top Left Pane'",
+                      "command": "echo 'TOP LEFT'",
                       "size": "50%"
                     },
                     {
-                      "name": "top-right",
-                      "command": "echo 'Top Right Pane'",
+                      "name": "bottom-left",
+                      "command": "echo 'BOTTOM LEFT'",
                       "size": "50%"
                     }
                   ]
                 },
                 {
-                  "split": "vertical",
-                  "size": "40%",
+                  "split": "horizontal",
+                  "size": "50%",
                   "items": [
                     {
-                      "name": "bottom-left",
-                      "command": "echo 'Bottom Left Pane'",
-                      "size": "33%"
-                    },
-                    {
-                      "name": "bottom-center",
-                      "command": "echo 'Bottom Center Pane'",
-                      "size": "33%"
+                      "name": "top-right",
+                      "command": "echo 'TOP RIGHT'",
+                      "size": "50%"
                     },
                     {
                       "name": "bottom-right",
-                      "command": "echo 'Bottom Right Pane'",
-                      "size": "34%"
+                      "command": "echo 'BOTTOM RIGHT'",
+                      "size": "50%"
                     }
                   ]
                 }
