@@ -91,11 +91,16 @@ async function setIndividualMCPConfiguration(
     // but there's always a meta.json file in the SRC folder
     directories.unshift(SRC);
 
+    // Filter out the dev folder at the root of SRC (special folder present in any project)
+    const filteredDirectories = directories.filter(
+      (dir) => dir !== `${SRC}/dev`
+    );
+
     let serverFound = false;
     let mcpServerConfig: any = null;
 
     // Check each directory for meta.json with the specific mcp server
-    for (const directory of directories) {
+    for (const directory of filteredDirectories) {
       const metaConfig = await verifyIfMetaJsonExists(directory);
 
       if (metaConfig && metaConfig.mcp && metaConfig.mcp[serverName]) {
@@ -118,7 +123,7 @@ async function setIndividualMCPConfiguration(
 
       // Show available MCP servers
       let availableServers: string[] = [];
-      for (const directory of directories) {
+      for (const directory of filteredDirectories) {
         const metaConfig = await verifyIfMetaJsonExists(directory);
         if (metaConfig && metaConfig.mcp) {
           const servers = Object.keys(metaConfig.mcp);
@@ -327,6 +332,11 @@ async function syncAllMCPConfigurationsFromMetaJson(): Promise<void> {
       path: SRC,
     });
 
+    // Filter out the dev folder at the root of SRC (special folder present in any project)
+    const filteredDirectories = directories.filter(
+      (dir: string) => dir !== `${SRC}/dev`
+    );
+
     // Collect all MCP servers from all meta.json files
     const allMcpServers: Record<string, any> = {};
     let mcpConfigurationsFound = 0;
@@ -334,7 +344,7 @@ async function syncAllMCPConfigurationsFromMetaJson(): Promise<void> {
     console.log('🔍 Collecting MCP servers from meta.json files...');
 
     // Process each directory with MCP configurations (following tunnel.ts pattern)
-    for (const directory of directories) {
+    for (const directory of filteredDirectories) {
       // CD into the directory (like tunnel.ts line 127)
       cd(directory);
 
