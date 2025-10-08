@@ -45,7 +45,6 @@ interface TmuxPane {
   size?: string;
 }
 
-
 interface TmuxSection {
   split: 'horizontal' | 'vertical';
   size?: string;
@@ -84,9 +83,9 @@ interface TmuxConfig {
 
 // Define expected pane counts for each grid type
 const GRID_PANE_COUNTS: Record<TmuxGrid['type'], number> = {
-  'single': 1,
-  'vertical': 2,
-  'horizontal': 2,
+  single: 1,
+  vertical: 2,
+  horizontal: 2,
   'two-by-two': 4,
   'main-side': 3,
 };
@@ -108,7 +107,11 @@ function autoFillGridPanes(grid: TmuxGrid): TmuxPane[] {
   if (currentCount < expectedCount) {
     console.log(
       chalk.yellow(
-        `⚠️  Grid '${grid.type}' expects ${expectedCount} panes, found ${currentCount}. Auto-filling ${expectedCount - currentCount} panes.`
+        `⚠️  Grid '${
+          grid.type
+        }' expects ${expectedCount} panes, found ${currentCount}. Auto-filling ${
+          expectedCount - currentCount
+        } panes.`
       )
     );
 
@@ -130,7 +133,7 @@ function gridToSection(grid: TmuxGrid): TmuxSection {
     case 'single':
       return {
         split: 'horizontal',
-        items: [panes[0]]
+        items: [panes[0]],
       };
 
     case 'vertical':
@@ -138,8 +141,8 @@ function gridToSection(grid: TmuxGrid): TmuxSection {
         split: 'vertical',
         items: [
           { ...panes[0], size: '50%' },
-          { ...panes[1], size: '50%' }
-        ]
+          { ...panes[1], size: '50%' },
+        ],
       };
 
     case 'horizontal':
@@ -147,8 +150,8 @@ function gridToSection(grid: TmuxGrid): TmuxSection {
         split: 'horizontal',
         items: [
           { ...panes[0], size: '50%' },
-          { ...panes[1], size: '50%' }
-        ]
+          { ...panes[1], size: '50%' },
+        ],
       };
 
     case 'two-by-two':
@@ -160,18 +163,18 @@ function gridToSection(grid: TmuxGrid): TmuxSection {
             size: '50%',
             items: [
               { ...panes[0], size: '50%' },
-              { ...panes[1], size: '50%' }
-            ]
+              { ...panes[1], size: '50%' },
+            ],
           },
           {
             split: 'horizontal',
             size: '50%',
             items: [
               { ...panes[2], size: '50%' },
-              { ...panes[3], size: '50%' }
-            ]
-          }
-        ]
+              { ...panes[3], size: '50%' },
+            ],
+          },
+        ],
       };
 
     case 'main-side':
@@ -184,10 +187,10 @@ function gridToSection(grid: TmuxGrid): TmuxSection {
             size: '34%',
             items: [
               { ...panes[1], size: '50%' },
-              { ...panes[2], size: '50%' }
-            ]
-          }
-        ]
+              { ...panes[2], size: '50%' },
+            ],
+          },
+        ],
       };
 
     default:
@@ -224,17 +227,23 @@ function extractPanesFromSection(section: TmuxSection): TmuxPane[] {
 }
 
 // Build a plan of split operations needed for the entire layout
-function buildSplitPlan(section: TmuxSection, targetPane: number = 0): Array<{
-  type: 'split';
-  fromPane: number;
-  direction: string;
-  size?: string;
-  resultPane: number;
-} | {
-  type: 'assign';
-  paneName: string;
-  paneIndex: number;
-}> {
+function buildSplitPlan(
+  section: TmuxSection,
+  targetPane: number = 0
+): Array<
+  | {
+      type: 'split';
+      fromPane: number;
+      direction: string;
+      size?: string;
+      resultPane: number;
+    }
+  | {
+      type: 'assign';
+      paneName: string;
+      paneIndex: number;
+    }
+> {
   const plan: Array<any> = [];
   let nextPaneId = 1;
 
@@ -264,7 +273,7 @@ function buildSplitPlan(section: TmuxSection, targetPane: number = 0): Array<{
         fromPane: currentPane, // Always split from the original pane
         direction: splitFlag,
         size: sizeFlag,
-        resultPane: newPane
+        resultPane: newPane,
       });
 
       itemPanes.push(newPane);
@@ -312,9 +321,19 @@ async function processSectionHierarchy(
     console.log(chalk.gray(`    📋 Execution plan:`));
     plan.forEach((op, i) => {
       if (op.type === 'split') {
-        console.log(chalk.gray(`      ${i + 1}. Split pane ${op.fromPane} ${op.direction} → pane ${op.resultPane}`));
+        console.log(
+          chalk.gray(
+            `      ${i + 1}. Split pane ${op.fromPane} ${op.direction} → pane ${
+              op.resultPane
+            }`
+          )
+        );
       } else {
-        console.log(chalk.gray(`      ${i + 1}. Assign '${op.paneName}' → pane ${op.paneIndex}`));
+        console.log(
+          chalk.gray(
+            `      ${i + 1}. Assign '${op.paneName}' → pane ${op.paneIndex}`
+          )
+        );
       }
     });
   }
@@ -331,31 +350,97 @@ async function processSectionHierarchy(
 
       if (!isAppendMode) {
         console.log(
-          chalk.gray(`    ➤ Splitting actual pane ${actualFromPane} ${op.direction} (planned: ${op.fromPane} → ${op.resultPane})`)
+          chalk.gray(
+            `    ➤ Splitting actual pane ${actualFromPane} ${op.direction} (planned: ${op.fromPane} → ${op.resultPane})`
+          )
         );
       }
 
-      // Get pane positions before split to understand the layout
-      const beforeSplitResult = await $`tmux list-panes -t ${sessionName}:${windowName} -F "#{pane_index}:#{pane_left},#{pane_top},#{pane_width},#{pane_height}"`;
-      const beforePanes = beforeSplitResult.stdout.trim().split('\n').map(line => {
-        const [index, pos] = line.split(':');
-        const [left, top, width, height] = pos.split(',').map(Number);
-        return { index: parseInt(index), left, top, width, height };
-      });
+      // Add small delay to ensure window is fully created
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // Perform the split
-      await $`tmux split-window -t ${sessionName}:${windowName}.${actualFromPane} ${op.direction} ${op.size} -c ${itemPath}`;
+      // Get pane positions before split to understand the layout with retry logic
+      let beforePanes: any[] = [];
+      let retryCount = 0;
+      const maxRetries = 3;
 
-      // Get pane positions after split to understand the new layout
-      const afterSplitResult = await $`tmux list-panes -t ${sessionName}:${windowName} -F "#{pane_index}:#{pane_left},#{pane_top},#{pane_width},#{pane_height}"`;
-      const afterPanes = afterSplitResult.stdout.trim().split('\n').map(line => {
-        const [index, pos] = line.split(':');
-        const [left, top, width, height] = pos.split(',').map(Number);
-        return { index: parseInt(index), left, top, width, height };
-      });
+      while (retryCount < maxRetries) {
+        try {
+          const beforeSplitResult =
+            await $`tmux list-panes -t ${sessionName}:${windowName} -F "#{pane_index}:#{pane_left},#{pane_top},#{pane_width},#{pane_height}"`;
+          beforePanes = beforeSplitResult.stdout
+            .trim()
+            .split('\n')
+            .map((line) => {
+              const [index, pos] = line.split(':');
+              const [left, top, width, height] = pos.split(',').map(Number);
+              return { index: parseInt(index), left, top, width, height };
+            });
+          break;
+        } catch (error) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw new Error(
+              `Failed to get pane positions for window ${windowName} after ${maxRetries} attempts: ${error}`
+            );
+          }
+          // Wait a bit longer before retrying
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+      }
+
+      // Perform the split with retry logic
+      retryCount = 0;
+      while (retryCount < maxRetries) {
+        try {
+          await $`tmux split-window -t ${sessionName}:${windowName}.${actualFromPane} ${op.direction} ${op.size} -c ${itemPath}`;
+          break;
+        } catch (error) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw new Error(
+              `Failed to split window ${windowName} after ${maxRetries} attempts: ${error}`
+            );
+          }
+          // Wait a bit before retrying
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+      }
+
+      // Add delay after split to ensure it's complete
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Get pane positions after split to understand the new layout with retry logic
+      let afterPanes: any[] = [];
+      retryCount = 0;
+
+      while (retryCount < maxRetries) {
+        try {
+          const afterSplitResult =
+            await $`tmux list-panes -t ${sessionName}:${windowName} -F "#{pane_index}:#{pane_left},#{pane_top},#{pane_width},#{pane_height}"`;
+          afterPanes = afterSplitResult.stdout
+            .trim()
+            .split('\n')
+            .map((line) => {
+              const [index, pos] = line.split(':');
+              const [left, top, width, height] = pos.split(',').map(Number);
+              return { index: parseInt(index), left, top, width, height };
+            });
+          break;
+        } catch (error) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw new Error(
+              `Failed to get pane positions after split for window ${windowName} after ${maxRetries} attempts: ${error}`
+            );
+          }
+          // Wait a bit longer before retrying
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+      }
 
       // Find the newly created pane (highest index)
-      const newActualPane = Math.max(...afterPanes.map(p => p.index));
+      const newActualPane = Math.max(...afterPanes.map((p) => p.index));
 
       // Map the planned pane ID to the actual pane index
       paneMapping.set(op.resultPane, newActualPane);
@@ -363,8 +448,12 @@ async function processSectionHierarchy(
       if (!isAppendMode) {
         console.log(chalk.gray(`      → Created actual pane ${newActualPane}`));
         console.log(chalk.gray(`      → Layout after split:`));
-        afterPanes.forEach(p => {
-          console.log(chalk.gray(`          Pane ${p.index}: ${p.width}x${p.height} at (${p.left},${p.top})`));
+        afterPanes.forEach((p) => {
+          console.log(
+            chalk.gray(
+              `          Pane ${p.index}: ${p.width}x${p.height} at (${p.left},${p.top})`
+            )
+          );
         });
       }
 
@@ -374,20 +463,27 @@ async function processSectionHierarchy(
         if (plannedId === op.resultPane) continue; // Skip the newly created pane
 
         // Find the old pane's position
-        const oldPane = beforePanes.find(p => p.index === oldActualIndex);
+        const oldPane = beforePanes.find((p) => p.index === oldActualIndex);
         if (!oldPane) continue;
 
         // Find the current pane at that position
-        const currentPane = afterPanes.find(p =>
-          p.left === oldPane.left && p.top === oldPane.top &&
-          p.width === oldPane.width && p.height === oldPane.height
+        const currentPane = afterPanes.find(
+          (p) =>
+            p.left === oldPane.left &&
+            p.top === oldPane.top &&
+            p.width === oldPane.width &&
+            p.height === oldPane.height
         );
 
         if (currentPane && currentPane.index !== oldActualIndex) {
           // The pane was renumbered
           paneMapping.set(plannedId, currentPane.index);
           if (!isAppendMode) {
-            console.log(chalk.gray(`      → Remapped planned pane ${plannedId}: ${oldActualIndex} → ${currentPane.index}`));
+            console.log(
+              chalk.gray(
+                `      → Remapped planned pane ${plannedId}: ${oldActualIndex} → ${currentPane.index}`
+              )
+            );
           }
         }
       }
@@ -396,7 +492,11 @@ async function processSectionHierarchy(
       paneMap.set(op.paneName, actualPane);
 
       if (!isAppendMode) {
-        console.log(chalk.gray(`    ➤ Assigned '${op.paneName}' to actual pane ${actualPane}`));
+        console.log(
+          chalk.gray(
+            `    ➤ Assigned '${op.paneName}' to actual pane ${actualPane}`
+          )
+        );
       }
     }
   }
@@ -664,6 +764,9 @@ async function initTmuxSession(
         } else {
           await $`tmux new-window -t ${sessionName}: -n ${windowName} -c ${sessionRoot}`;
         }
+
+        // Add delay to ensure window is fully created before processing
+        await new Promise((resolve) => setTimeout(resolve, 150));
 
         // Process the section hierarchy
         const paneMap = new Map<string, number>();
