@@ -22,42 +22,49 @@
         "name": "run",
         "windows": [
           {
-            "name": "simple-test",
-            "layout": "sections",
-            "section": {
-              "split": "vertical",
-              "items": [
+            "name": "single",
+            "layout": "grid",
+            "grid": {
+              "type": "single",
+              "panes": [
                 {
-                  "split": "horizontal",
-                  "size": "50%",
-                  "items": [
-                    {
-                      "name": "top-left",
-                      "command": "echo 'TOP LEFT'",
-                      "size": "50%"
-                    },
-                    {
-                      "name": "bottom-left",
-                      "command": "echo 'BOTTOM LEFT'",
-                      "size": "50%"
-                    }
-                  ]
+                  "name": "main"
+                }
+              ]
+            }
+          },
+          {
+            "name": "four-pane",
+            "layout": "grid",
+            "grid": {
+              "type": "two-by-two",
+              "panes": [
+                {
+                  "name": "top-left"
                 },
                 {
-                  "split": "horizontal",
-                  "size": "50%",
-                  "items": [
-                    {
-                      "name": "top-right",
-                      "command": "echo 'TOP RIGHT'",
-                      "size": "50%"
-                    },
-                    {
-                      "name": "bottom-right",
-                      "command": "echo 'BOTTOM RIGHT'",
-                      "size": "50%"
-                    }
-                  ]
+                  "name": "top-right"
+                },
+                {
+                  "name": "bottom-left"
+                },
+                {
+                  "name": "bottom-right"
+                }
+              ]
+            }
+          },
+          {
+            "name": "vertical-split",
+            "layout": "grid",
+            "grid": {
+              "type": "vertical",
+              "panes": [
+                {
+                  "name": "left"
+                },
+                {
+                  "name": "right"
                 }
               ]
             }

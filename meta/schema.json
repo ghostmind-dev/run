@@ -295,16 +295,18 @@
                     },
                     "layout": {
                       "type": "string",
-                      "const": "sections",
-                      "description": "Layout mode: only 'sections' is supported for hierarchical layouts"
+                      "enum": ["sections", "grid"],
+                      "description": "Layout mode: 'sections' for hierarchical layouts, 'grid' for predefined arrangements"
                     },
                     "section": {
                       "$ref": "#/$defs/tmuxSection"
+                    },
+                    "grid": {
+                      "$ref": "#/$defs/tmuxGrid"
                     }
                   },
                   "required": [
-                    "name",
-                    "section"
+                    "name"
                   ]
                 }
               }
@@ -385,6 +387,27 @@
         }
       },
       "required": ["name"],
+      "additionalProperties": false
+    },
+    "tmuxGrid": {
+      "type": "object",
+      "description": "Predefined grid layout with auto-fill support for missing panes",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["single", "vertical", "horizontal", "two-by-two", "main-side"],
+          "description": "Grid type: single (1 pane), vertical (2 panes left/right), horizontal (2 panes top/bottom), two-by-two (4 panes in 2x2 grid), main-side (1 large left + 2 stacked right)"
+        },
+        "panes": {
+          "type": "array",
+          "description": "Pane definitions. Missing panes will be auto-generated with default names.",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/tmuxPane"
+          }
+        }
+      },
+      "required": ["type", "panes"],
       "additionalProperties": false
     }
   }

@@ -52,10 +52,16 @@ interface TmuxSection {
   items: (TmuxSection | TmuxPane)[];
 }
 
+interface TmuxGrid {
+  type: 'single' | 'vertical' | 'horizontal' | 'two-by-two' | 'main-side';
+  panes: TmuxPane[];
+}
+
 interface TmuxWindow {
   name: string;
-  layout: 'sections';
-  section: TmuxSection;
+  layout: 'sections' | 'grid';
+  section?: TmuxSection;
+  grid?: TmuxGrid;
 }
 
 interface TmuxSession {
@@ -70,6 +76,127 @@ interface TmuxConfig {
 
 ////////////////////////////////////////////////////////////////////////////////
 // HELPER FUNCTIONS
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// GRID LAYOUT HELPER FUNCTIONS
+////////////////////////////////////////////////////////////////////////////////
+
+// Define expected pane counts for each grid type
+const GRID_PANE_COUNTS: Record<TmuxGrid['type'], number> = {
+  'single': 1,
+  'vertical': 2,
+  'horizontal': 2,
+  'two-by-two': 4,
+  'main-side': 3,
+};
+
+// Auto-fill missing panes for a grid configuration
+function autoFillGridPanes(grid: TmuxGrid): TmuxPane[] {
+  const expectedCount = GRID_PANE_COUNTS[grid.type];
+  const currentCount = grid.panes.length;
+
+  if (currentCount > expectedCount) {
+    console.log(
+      chalk.yellow(
+        `⚠️  Grid '${grid.type}' expects ${expectedCount} panes, but ${currentCount} were defined. Using first ${expectedCount} panes.`
+      )
+    );
+    return grid.panes.slice(0, expectedCount);
+  }
+
+  if (currentCount < expectedCount) {
+    console.log(
+      chalk.yellow(
+        `⚠️  Grid '${grid.type}' expects ${expectedCount} panes, found ${currentCount}. Auto-filling ${expectedCount - currentCount} panes.`
+      )
+    );
+
+    const filledPanes = [...grid.panes];
+    for (let i = currentCount; i < expectedCount; i++) {
+      filledPanes.push({ name: `pane-${i}` });
+    }
+    return filledPanes;
+  }
+
+  return grid.panes;
+}
+
+// Convert grid configuration to section hierarchy for processing
+function gridToSection(grid: TmuxGrid): TmuxSection {
+  const panes = autoFillGridPanes(grid);
+
+  switch (grid.type) {
+    case 'single':
+      return {
+        split: 'horizontal',
+        items: [panes[0]]
+      };
+
+    case 'vertical':
+      return {
+        split: 'vertical',
+        items: [
+          { ...panes[0], size: '50%' },
+          { ...panes[1], size: '50%' }
+        ]
+      };
+
+    case 'horizontal':
+      return {
+        split: 'horizontal',
+        items: [
+          { ...panes[0], size: '50%' },
+          { ...panes[1], size: '50%' }
+        ]
+      };
+
+    case 'two-by-two':
+      return {
+        split: 'vertical',
+        items: [
+          {
+            split: 'horizontal',
+            size: '50%',
+            items: [
+              { ...panes[0], size: '50%' },
+              { ...panes[1], size: '50%' }
+            ]
+          },
+          {
+            split: 'horizontal',
+            size: '50%',
+            items: [
+              { ...panes[2], size: '50%' },
+              { ...panes[3], size: '50%' }
+            ]
+          }
+        ]
+      };
+
+    case 'main-side':
+      return {
+        split: 'vertical',
+        items: [
+          { ...panes[0], size: '66%' },
+          {
+            split: 'horizontal',
+            size: '34%',
+            items: [
+              { ...panes[1], size: '50%' },
+              { ...panes[2], size: '50%' }
+            ]
+          }
+        ]
+      };
+
+    default:
+      throw new Error(`Unknown grid type: ${grid.type}`);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SECTION LAYOUT HELPER FUNCTIONS
 ////////////////////////////////////////////////////////////////////////////////
 
 // Section-based layout helper functions
@@ -507,15 +634,29 @@ async function initTmuxSession(
         console.log(chalk.gray(`  📁 Creating window: ${windowName}`));
       }
 
-      // Process window using section-based layout
-      if (window.layout === 'sections' && window.section) {
+      // Determine the section to process based on layout type
+      let sectionToProcess: TmuxSection | null = null;
+
+      if (window.layout === 'grid' && window.grid) {
+        // Grid layout mode - convert to section
+        if (!isAppendMode) {
+          console.log(
+            chalk.gray(`    📐 Creating grid layout: ${window.grid.type}`)
+          );
+        }
+        sectionToProcess = gridToSection(window.grid);
+      } else if (window.layout === 'sections' && window.section) {
         // Hierarchical section-based layout mode
         if (!isAppendMode) {
           console.log(
             chalk.gray(`    🏗️  Creating hierarchical section layout`)
           );
         }
+        sectionToProcess = window.section;
+      }
 
+      // Process window layout if we have a section
+      if (sectionToProcess) {
         // Create initial session/window
         if (!sessionExists && windowIndex === 0) {
           await $`tmux new-session -d -s ${sessionName} -n ${windowName} -c ${sessionRoot}`;
@@ -530,7 +671,7 @@ async function initTmuxSession(
 
         // Use the recursive algorithm for all patterns
         await processSectionHierarchy(
-          window.section,
+          sectionToProcess,
           sessionName,
           windowName,
           sessionRoot,
@@ -543,7 +684,7 @@ async function initTmuxSession(
         if (runCommand) {
           for (const [paneName, paneIndex] of paneMap.entries()) {
             // Find the pane config by traversing the section tree
-            const paneConfig = findPaneInSection(window.section, paneName);
+            const paneConfig = findPaneInSection(sectionToProcess, paneName);
             if (paneConfig?.command) {
               let commandToExecute = paneConfig.command;
               if (paneConfig.sshTarget) {
@@ -657,8 +798,13 @@ async function executeSessionCommands(
       for (const window of sessionConfig.windows) {
         const windowName = `${config.meta.name}-${window.name}`;
 
-        // Extract panes from section hierarchy
-        const panes = window.section ? extractPanesFromSection(window.section) : [];
+        // Extract panes based on layout type
+        let panes: TmuxPane[] = [];
+        if (window.layout === 'grid' && window.grid) {
+          panes = autoFillGridPanes(window.grid);
+        } else if (window.section) {
+          panes = extractPanesFromSection(window.section);
+        }
 
         for (let paneIndex = 0; paneIndex < panes.length; paneIndex++) {
           const pane = panes[paneIndex];
