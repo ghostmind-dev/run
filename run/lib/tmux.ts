@@ -783,6 +783,24 @@ async function initTmuxSession(
           isAppendMode
         );
 
+        // Set pane titles based on pane names from configuration
+        for (const [paneName, paneIndex] of paneMap.entries()) {
+          try {
+            await $`tmux select-pane -t ${sessionName}:${windowName}.${paneIndex} -T ${paneName}`;
+            if (!isAppendMode) {
+              console.log(
+                chalk.gray(`    🏷️  Set pane title '${paneName}' for pane ${paneIndex}`)
+              );
+            }
+          } catch (error) {
+            if (!isAppendMode) {
+              console.log(
+                chalk.yellow(`    ⚠️  Failed to set title for pane ${paneIndex}: ${error}`)
+              );
+            }
+          }
+        }
+
         // Execute commands if needed
         if (runCommand) {
           for (const [paneName, paneIndex] of paneMap.entries()) {
