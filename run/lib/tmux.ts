@@ -56,11 +56,17 @@ interface TmuxGrid {
   panes: TmuxPane[];
 }
 
+interface TmuxCompact {
+  type: 'single' | 'vertical' | 'horizontal' | 'two-by-two' | 'main-side';
+  panes: Record<string, string>;
+}
+
 interface TmuxWindow {
   name: string;
-  layout: 'sections' | 'grid';
+  layout: 'sections' | 'grid' | 'compact';
   section?: TmuxSection;
   grid?: TmuxGrid;
+  compact?: TmuxCompact;
 }
 
 interface TmuxSession {
@@ -196,6 +202,54 @@ function gridToSection(grid: TmuxGrid): TmuxSection {
     default:
       throw new Error(`Unknown grid type: ${grid.type}`);
   }
+}
+
+// Convert compact configuration to section hierarchy for processing
+function compactToSection(compact: TmuxCompact): TmuxSection {
+  // Convert object panes to array format, preserving order (top-left to bottom-right)
+  const paneEntries = Object.entries(compact.panes);
+  const expectedCount = GRID_PANE_COUNTS[compact.type];
+
+  if (paneEntries.length > expectedCount) {
+    console.log(
+      chalk.yellow(
+        `⚠️  Compact '${compact.type}' expects ${expectedCount} panes, but ${paneEntries.length} were defined. Using first ${expectedCount} panes.`
+      )
+    );
+  }
+
+  // Create TmuxPane array from object entries, taking only what's needed
+  const panes: TmuxPane[] = paneEntries
+    .slice(0, expectedCount)
+    .map(([name, command]) => ({
+      name,
+      command,
+    }));
+
+  // Auto-fill missing panes if needed
+  if (panes.length < expectedCount) {
+    console.log(
+      chalk.yellow(
+        `⚠️  Compact '${
+          compact.type
+        }' expects ${expectedCount} panes, found ${panes.length}. Auto-filling ${
+          expectedCount - panes.length
+        } panes.`
+      )
+    );
+
+    for (let i = panes.length; i < expectedCount; i++) {
+      panes.push({ name: `pane-${i}` });
+    }
+  }
+
+  // Convert to the appropriate grid structure and then to section
+  const grid: TmuxGrid = {
+    type: compact.type,
+    panes: panes,
+  };
+
+  return gridToSection(grid);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -745,6 +799,14 @@ async function initTmuxSession(
           );
         }
         sectionToProcess = gridToSection(window.grid);
+      } else if (window.layout === 'compact' && window.compact) {
+        // Compact layout mode - convert to section
+        if (!isAppendMode) {
+          console.log(
+            chalk.gray(`    📦 Creating compact layout: ${window.compact.type}`)
+          );
+        }
+        sectionToProcess = compactToSection(window.compact);
       } else if (window.layout === 'sections' && window.section) {
         // Hierarchical section-based layout mode
         if (!isAppendMode) {
@@ -923,6 +985,20 @@ async function executeSessionCommands(
         let panes: TmuxPane[] = [];
         if (window.layout === 'grid' && window.grid) {
           panes = autoFillGridPanes(window.grid);
+        } else if (window.layout === 'compact' && window.compact) {
+          // Convert compact panes object to array
+          const paneEntries = Object.entries(window.compact.panes);
+          const expectedCount = GRID_PANE_COUNTS[window.compact.type];
+          panes = paneEntries
+            .slice(0, expectedCount)
+            .map(([name, command]) => ({
+              name,
+              command,
+            }));
+          // Auto-fill if needed
+          for (let i = panes.length; i < expectedCount; i++) {
+            panes.push({ name: `pane-${i}` });
+          }
         } else if (window.section) {
           panes = extractPanesFromSection(window.section);
         }

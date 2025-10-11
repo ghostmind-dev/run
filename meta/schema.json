@@ -295,14 +295,17 @@
                     },
                     "layout": {
                       "type": "string",
-                      "enum": ["sections", "grid"],
-                      "description": "Layout mode: 'sections' for hierarchical layouts, 'grid' for predefined arrangements"
+                      "enum": ["sections", "grid", "compact"],
+                      "description": "Layout mode: 'sections' for hierarchical layouts, 'grid' for predefined arrangements, 'compact' for minimal object-based configuration"
                     },
                     "section": {
                       "$ref": "#/$defs/tmuxSection"
                     },
                     "grid": {
                       "$ref": "#/$defs/tmuxGrid"
+                    },
+                    "compact": {
+                      "$ref": "#/$defs/tmuxCompact"
                     }
                   },
                   "required": [
@@ -405,6 +408,27 @@
           "items": {
             "$ref": "#/$defs/tmuxPane"
           }
+        }
+      },
+      "required": ["type", "panes"],
+      "additionalProperties": false
+    },
+    "tmuxCompact": {
+      "type": "object",
+      "description": "Compact grid layout with minimal object-based configuration. Panes are defined as key-value pairs where the key is the pane name and the value is the command.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["single", "vertical", "horizontal", "two-by-two", "main-side"],
+          "description": "Grid type: single (1 pane), vertical (2 panes left/right), horizontal (2 panes top/bottom), two-by-two (4 panes in 2x2 grid), main-side (1 large left + 2 stacked right)"
+        },
+        "panes": {
+          "type": "object",
+          "description": "Pane definitions as key-value pairs. Key is the pane name (also used as title), value is the command to execute. Panes are ordered top-left to bottom-right.",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "minProperties": 1
         }
       },
       "required": ["type", "panes"],
