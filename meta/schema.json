@@ -293,6 +293,10 @@
                       "type": "string",
                       "description": "Window name"
                     },
+                    "path": {
+                      "type": "string",
+                      "description": "Starting directory for all panes in this window. If starts with '/', treated as absolute path. Otherwise, relative to session root. Pane-level paths override this."
+                    },
                     "layout": {
                       "type": "string",
                       "enum": ["sections", "grid", "compact"],
@@ -373,7 +377,7 @@
         },
         "path": {
           "type": "string",
-          "description": "Starting directory relative to session root"
+          "description": "Starting directory for this pane. If starts with '/', treated as absolute path. Otherwise, relative to window path (or session root if window has no path). Overrides window-level path."
         },
         "command": {
           "type": "string",
