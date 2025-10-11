@@ -64,6 +64,7 @@ interface TmuxCompact {
 interface TmuxWindow {
   name: string;
   layout: 'sections' | 'grid' | 'compact';
+  path?: string;
   section?: TmuxSection;
   grid?: TmuxGrid;
   compact?: TmuxCompact;
@@ -82,6 +83,26 @@ interface TmuxConfig {
 ////////////////////////////////////////////////////////////////////////////////
 // HELPER FUNCTIONS
 ////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Resolve a path relative to a base directory
+ * @param path Path to resolve (absolute if starts with /, relative otherwise)
+ * @param basePath Base directory for relative paths
+ * @returns Resolved absolute path
+ */
+function resolvePath(path: string | undefined, basePath: string): string {
+  if (!path) {
+    return basePath;
+  }
+
+  // If path starts with /, it's absolute
+  if (path.startsWith('/')) {
+    return path;
+  }
+
+  // Otherwise, it's relative to basePath
+  return `${basePath}/${path}`;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // GRID LAYOUT HELPER FUNCTIONS
@@ -359,6 +380,7 @@ async function processSectionHierarchy(
   sessionName: string,
   windowName: string,
   sessionRoot: string,
+  windowPath: string,
   paneMap: Map<string, number>,
   nextPaneIndex: number,
   isAppendMode: boolean,
@@ -400,7 +422,7 @@ async function processSectionHierarchy(
   for (const op of plan) {
     if (op.type === 'split') {
       const actualFromPane = paneMapping.get(op.fromPane) ?? 0;
-      const itemPath = sessionRoot; // Default path for splits
+      const itemPath = windowPath; // Use window's resolved path for splits
 
       if (!isAppendMode) {
         console.log(
@@ -819,12 +841,15 @@ async function initTmuxSession(
 
       // Process window layout if we have a section
       if (sectionToProcess) {
-        // Create initial session/window
+        // Calculate window path: window.path takes priority, falls back to sessionRoot
+        const windowPath = resolvePath(window.path, sessionRoot);
+
+        // Create initial session/window with window path
         if (!sessionExists && windowIndex === 0) {
-          await $`tmux new-session -d -s ${sessionName} -n ${windowName} -c ${sessionRoot}`;
+          await $`tmux new-session -d -s ${sessionName} -n ${windowName} -c ${windowPath}`;
           sessionExists = true;
         } else {
-          await $`tmux new-window -t ${sessionName}: -n ${windowName} -c ${sessionRoot}`;
+          await $`tmux new-window -t ${sessionName}: -n ${windowName} -c ${windowPath}`;
         }
 
         // Add delay to ensure window is fully created before processing
@@ -840,6 +865,7 @@ async function initTmuxSession(
           sessionName,
           windowName,
           sessionRoot,
+          windowPath,
           paneMap,
           nextPaneIndex,
           isAppendMode
@@ -870,10 +896,11 @@ async function initTmuxSession(
             const paneConfig = findPaneInSection(sectionToProcess, paneName);
             if (paneConfig?.command) {
               let commandToExecute = paneConfig.command;
+
+              // Resolve pane path: pane.path overrides windowPath
+              const panePath = resolvePath(paneConfig.path, windowPath);
+
               if (paneConfig.sshTarget) {
-                const panePath = paneConfig.path
-                  ? `${sessionRoot}/${paneConfig.path}`
-                  : sessionRoot;
                 commandToExecute = buildSSHCommand(
                   paneConfig.sshTarget,
                   paneConfig.command,
@@ -1050,16 +1077,15 @@ async function executeSessionCommands(
             let commandToExecute = pane.command;
             let displayCommand = pane.command;
 
+            // Calculate session root and window path
+            const sessionRoot = sessionConfig.root
+              ? `${config.path}/${sessionConfig.root}`
+              : config.path;
+            const windowPath = resolvePath(window.path, sessionRoot);
+            const panePath = resolvePath(pane.path, windowPath);
+
             // If sshTarget is specified, wrap the command in SSH
             if (pane.sshTarget) {
-              // For executeSessionCommands, we need to get the pane path
-              const sessionRoot = sessionConfig.root
-                ? `${config.path}/${sessionConfig.root}`
-                : config.path;
-              const panePath = pane.path
-                ? `${sessionRoot}/${pane.path}`
-                : sessionRoot;
-
               commandToExecute = buildSSHCommand(
                 pane.sshTarget,
                 pane.command,
