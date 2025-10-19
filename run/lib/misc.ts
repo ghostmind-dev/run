@@ -1398,6 +1398,104 @@ export default async function misc(program: any) {
 
       await $`ssh ${config} -t ${sshCommand}`;
     });
+  ////////////////////////////////////////////////////////////////////////////////
+  // MCP SERVERS
+  ////////////////////////////////////////////////////////////////////////////////
+
+  misc
+    .command('mcps')
+    .description(
+      'synchronize MCP servers from $HOME/.claude.json to .claude/.claude.json'
+    )
+    .action(async () => {
+      try {
+        const homeDir = Deno.env.get('HOME');
+        if (!homeDir) {
+          console.error('❌ HOME environment variable not set');
+          Deno.exit(1);
+        }
+
+        const currentPath = Deno.cwd();
+        const sourceFile = `${homeDir}/.claude.json`;
+        const targetFile = `${currentPath}/.claude/.claude.json`;
+
+        console.log(`📂 Source: ${sourceFile}`);
+        console.log(`📂 Target: ${targetFile}`);
+
+        // Read source file
+        let sourceConfig: any;
+        try {
+          const sourceContent = Deno.readTextFileSync(sourceFile);
+          sourceConfig = JSON.parse(sourceContent);
+        } catch (error: any) {
+          console.error(`❌ Failed to read source file: ${error.message}`);
+          Deno.exit(1);
+        }
+
+        // Check if mcpServers exists in source
+        if (!sourceConfig.mcpServers) {
+          console.log('⚠️  No mcpServers property found in source file');
+          Deno.exit(0);
+        }
+
+        const mcpServersCount = Object.keys(sourceConfig.mcpServers).length;
+        console.log(`🔍 Found ${mcpServersCount} MCP servers in source`);
+
+        // Read target file
+        let targetConfig: any;
+        try {
+          const targetContent = Deno.readTextFileSync(targetFile);
+          targetConfig = JSON.parse(targetContent);
+        } catch (error: any) {
+          console.error(`❌ Failed to read target file: ${error.message}`);
+          Deno.exit(1);
+        }
+
+        // Backup the original mcpServers if it exists
+        const originalMcpServers = targetConfig.mcpServers
+          ? { ...targetConfig.mcpServers }
+          : {};
+        const originalCount = Object.keys(originalMcpServers).length;
+
+        // Override mcpServers property
+        targetConfig.mcpServers = sourceConfig.mcpServers;
+
+        // Write target file back
+        try {
+          const targetContent = JSON.stringify(targetConfig, null, 2);
+          Deno.writeTextFileSync(targetFile, targetContent);
+        } catch (error: any) {
+          console.error(`❌ Failed to write target file: ${error.message}`);
+          Deno.exit(1);
+        }
+
+        console.log(`✅ Successfully synchronized MCP servers`);
+        console.log(`📊 Original servers: ${originalCount}`);
+        console.log(`📊 New servers: ${mcpServersCount}`);
+
+        // Show the synchronized servers
+        if (mcpServersCount > 0) {
+          console.log(`\n🔧 Synchronized MCP servers:`);
+          for (const [name, config] of Object.entries(
+            sourceConfig.mcpServers
+          )) {
+            const serverConfig = config as any;
+            if (serverConfig.type) {
+              console.log(`  - ${name} (${serverConfig.type})`);
+            } else if (serverConfig.command) {
+              console.log(`  - ${name} (command: ${serverConfig.command})`);
+            } else {
+              console.log(`  - ${name}`);
+            }
+          }
+        }
+
+        console.log(`\n💡 Restart Claude Code to apply the changes`);
+      } catch (error: any) {
+        console.error(`❌ Unexpected error: ${error.message}`);
+        Deno.exit(1);
+      }
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
