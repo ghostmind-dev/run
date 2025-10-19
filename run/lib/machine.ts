@@ -56,7 +56,7 @@ export async function machineInit() {
       type: 'input',
       name: 'homeDirectory',
       message: 'What is the home directory for projects?',
-      default: '/Volumes/Projects',
+      default: Deno.env.get('RUN_PROJECT') || Deno.env.get('HOME'),
     },
   ]);
 
@@ -112,7 +112,6 @@ export async function machineInit() {
   ///////////////////////////////////////////////////////////////////////////////////////////////
 
   devcontainer.name = projectName;
-  devcontainer.runArgs[1] = `--name=${projectName}`;
 
   ///////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////////////
