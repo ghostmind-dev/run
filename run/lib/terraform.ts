@@ -19,6 +19,7 @@ import type { MetaJson } from '../utils/divers.ts';
 import { getAppName } from '../utils/divers.ts';
 import { getDockerImageDigest } from '../main.ts';
 import _ from 'npm:lodash@4.17.21';
+import type { CustomFunctionOptions } from './custom.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -69,6 +70,14 @@ interface TerraformDestroyOptions {
   arch?: string;
   /** Whether to clean .terraform directory before init */
   clean?: boolean;
+}
+
+/**
+ * Terraform destroy options with component specification
+ */
+interface TerraformDestroyOptionsWithComponent extends TerraformDestroyOptions {
+  /** The Terraform component to destroy */
+  component: string;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -125,8 +134,8 @@ export async function getBucketConfig(
  * This function destroys all resources managed by Terraform for a given component.
  * It handles backend configuration, container image cleanup, and executes the destroy plan.
  *
- * @param component - The Terraform component to destroy
- * @param options - Destroy operation options
+ * @param componentOrOptions - Either the component name or destroy options
+ * @param options - Additional destroy options (when first param is component name)
  *
  * @example
  * ```typescript
@@ -135,12 +144,29 @@ export async function getBucketConfig(
  *
  * // Destroy for specific architecture
  * await terraformDestroy('api-infrastructure', { arch: 'arm64' });
+ *
+ * // Destroy with options object
+ * await terraformDestroy({
+ *   component: 'database-infrastructure',
+ *   clean: true
+ * });
  * ```
  */
 export async function terraformDestroy(
-  component: string,
-  options: TerraformDestroyOptions
+  componentOrOptions: string | TerraformDestroyOptionsWithComponent | CustomFunctionOptions,
+  options?: TerraformDestroyOptions
 ) {
+  let component: string;
+
+  if (typeof componentOrOptions === 'string') {
+    component = componentOrOptions;
+    options = options || {};
+  } else {
+    // Handle both TerraformDestroyOptionsWithComponent and CustomFunctionOptions
+    component = (componentOrOptions as TerraformDestroyOptionsWithComponent).component;
+    options = componentOrOptions as TerraformDestroyOptions;
+  }
+
   try {
     let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
@@ -212,7 +238,7 @@ export async function terraformDestroy(
  * ```
  */
 export async function terraformActivate(
-  componentOrOptions: string | TerraformActivateOptionsWithComponent,
+  componentOrOptions: string | TerraformActivateOptionsWithComponent | CustomFunctionOptions,
   options?: TerraformActivateOptions
 ) {
   let component: string;
@@ -221,8 +247,9 @@ export async function terraformActivate(
     component = componentOrOptions;
     options = options || {};
   } else {
-    component = componentOrOptions.component;
-    options = componentOrOptions;
+    // Handle both TerraformActivateOptionsWithComponent and CustomFunctionOptions
+    component = (componentOrOptions as TerraformActivateOptionsWithComponent).component;
+    options = componentOrOptions as TerraformActivateOptions;
   }
 
   try {
