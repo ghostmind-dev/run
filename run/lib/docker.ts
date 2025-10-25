@@ -794,7 +794,12 @@ export async function dockerComposeUp(
     return;
   }
   let filename = compose[component].filename || 'compose.yaml';
-  let { root } = compose[component];
+  let { root, use_project_env } = compose[component];
+
+  // Check if we should use PROJECT env variable (default to true)
+  const shouldUseProjectEnv = use_project_env !== false;
+  const PROJECT = Deno.env.get('PROJECT');
+
   filesToUp.push('-f');
   filesToUp.push(`${currentPath}/${root}/${filename}`);
 
@@ -802,9 +807,23 @@ export async function dockerComposeUp(
     return;
   }
 
-  const commandDown = ['docker', 'compose', ...filesToUp, 'down'];
+  const commandDown = ['docker', 'compose'];
 
-  const baseCommand = ['docker', 'compose', ...filesToUp];
+  // Add project name if conditions are met
+  if (shouldUseProjectEnv && PROJECT) {
+    commandDown.push('-p', PROJECT);
+  }
+
+  commandDown.push(...filesToUp, 'down');
+
+  const baseCommand = ['docker', 'compose'];
+
+  // Add project name if conditions are met
+  if (shouldUseProjectEnv && PROJECT) {
+    baseCommand.push('-p', PROJECT);
+  }
+
+  baseCommand.push(...filesToUp);
 
   // Handle environment file or create temporary one for env variables
   let tempEnvFile: string | undefined;
@@ -904,7 +923,12 @@ export async function dockerComposeDown(component: any, options: any) {
     return;
   }
   let filename = compose[component].filename || 'compose.yaml';
-  let { root } = compose[component];
+  let { root, use_project_env } = compose[component];
+
+  // Check if we should use PROJECT env variable (default to true)
+  const shouldUseProjectEnv = use_project_env !== false;
+  const PROJECT = Deno.env.get('PROJECT');
+
   filesToDown.push('-f');
   filesToDown.push(`${root}/${filename}`);
 
@@ -912,7 +936,14 @@ export async function dockerComposeDown(component: any, options: any) {
     return;
   }
 
-  const baseCommand = ['docker', 'compose', ...filesToDown, 'down'];
+  const baseCommand = ['docker', 'compose'];
+
+  // Add project name if conditions are met
+  if (shouldUseProjectEnv && PROJECT) {
+    baseCommand.push('-p', PROJECT);
+  }
+
+  baseCommand.push(...filesToDown, 'down');
 
   await $`${baseCommand}`;
 }
@@ -1002,7 +1033,11 @@ export async function dockerComposeExec(
 
   component = component || 'default';
 
-  let { root } = compose[component];
+  let { root, use_project_env } = compose[component];
+
+  // Check if we should use PROJECT env variable (default to true)
+  const shouldUseProjectEnv = use_project_env !== false;
+  const PROJECT = Deno.env.get('PROJECT');
 
   let notReady = true;
 
@@ -1040,17 +1075,15 @@ export async function dockerComposeExec(
       await sleep(5000);
     }
   }
-  const baseCommand = [
-    'docker',
-    'compose',
-    '-f',
-    `${root}/${file}`,
-    'exec',
-    container,
-    '/bin/bash',
-    '-c',
-    instructions,
-  ];
+  const baseCommand = ['docker', 'compose'];
+
+  // Add project name if conditions are met
+  if (shouldUseProjectEnv && PROJECT) {
+    baseCommand.push('-p', PROJECT);
+  }
+
+  baseCommand.push('-f', `${root}/${file}`, 'exec', container, '/bin/bash', '-c', instructions);
+
   if (forceRecreate) {
     baseCommand.push('--force-recreate');
   }
@@ -1117,9 +1150,20 @@ export async function dockerComposeBuild(
 
   component = component || 'default';
 
-  let { root } = compose[component];
+  let { root, use_project_env } = compose[component];
 
-  const baseCommand = ['docker', 'compose', '-f', `${root}/${file}`, 'build'];
+  // Check if we should use PROJECT env variable (default to true)
+  const shouldUseProjectEnv = use_project_env !== false;
+  const PROJECT = Deno.env.get('PROJECT');
+
+  const baseCommand = ['docker', 'compose'];
+
+  // Add project name if conditions are met
+  if (shouldUseProjectEnv && PROJECT) {
+    baseCommand.push('-p', PROJECT);
+  }
+
+  baseCommand.push('-f', `${root}/${file}`, 'build');
 
   if (cache === undefined) {
     baseCommand.push('--no-cache');
@@ -1168,17 +1212,22 @@ export async function dockerComposeLogs(component: any, options: any) {
     component = 'default';
   }
 
-  let { root } = compose[component];
+  let { root, use_project_env } = compose[component];
+
+  // Check if we should use PROJECT env variable (default to true)
+  const shouldUseProjectEnv = use_project_env !== false;
+  const PROJECT = Deno.env.get('PROJECT');
 
   let filename = compose[component].filename || 'compose.yaml';
 
-  const baseCommand = [
-    'docker',
-    'compose',
-    '-f',
-    `${root}/${filename}`,
-    'logs',
-  ];
+  const baseCommand = ['docker', 'compose'];
+
+  // Add project name if conditions are met
+  if (shouldUseProjectEnv && PROJECT) {
+    baseCommand.push('-p', PROJECT);
+  }
+
+  baseCommand.push('-f', `${root}/${filename}`, 'logs');
 
   $.verbose = true;
 
