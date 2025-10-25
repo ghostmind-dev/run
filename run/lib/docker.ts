@@ -19,6 +19,7 @@ import _ from 'npm:lodash@4.17.21';
 import { parse } from 'npm:yaml@2.4.2';
 import { readFileSync } from 'node:fs';
 import yaml from 'npm:yaml@2.4.2';
+import type { CustomFunctionOptions } from './custom.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -318,7 +319,7 @@ export async function getDockerImageDigest(
  * ```
  */
 export async function dockerRegister(
-  componentOrOptions?: string | DockerRegisterOptions,
+  componentOrOptions?: string | DockerRegisterOptions | CustomFunctionOptions,
   options?: DockerRegisterOptions
 ) {
   // verify id componentOrOptions is a string or an object
