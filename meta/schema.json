@@ -45,6 +45,11 @@
             "filename": {
               "type": "string",
               "description": "Custom docker-compose filename."
+            },
+            "use_project_env": {
+              "type": "boolean",
+              "description": "Use PROJECT environment variable as project name for docker compose commands. Defaults to true.",
+              "default": true
             }
           },
           "additionalProperties": false
