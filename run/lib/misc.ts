@@ -994,7 +994,7 @@ export default async function misc(program: any) {
         // Fetch remote settings
         console.log('Fetching default exclusions from remote config...');
         const remoteUrl =
-          'https://raw.githubusercontent.com/ghostmind-dev/config/main/config/vscode/settings.static.json';
+          'https://raw.githubusercontent.com/ghostmind-dev/config/refs/heads/main/config/vscode/features/settings/src/devcontainer-feature.json';
 
         const response = await fetch(remoteUrl);
         if (!response.ok) {
@@ -1006,14 +1006,17 @@ export default async function misc(program: any) {
 
         const remoteSettings = await response.json();
 
-        if (!remoteSettings['files.exclude']) {
+        // Extract files.exclude from devcontainer feature structure
+        if (!remoteSettings.customizations?.vscode?.settings?.['files.exclude']) {
           console.log('No files.exclude property found in remote config');
           Deno.exit(1);
         }
 
+        const fileExclusions = remoteSettings.customizations.vscode.settings['files.exclude'];
+
         console.log(
           `Found ${
-            Object.keys(remoteSettings['files.exclude']).length
+            Object.keys(fileExclusions).length
           } default exclusions`
         );
 
@@ -1028,7 +1031,7 @@ export default async function misc(program: any) {
         }
 
         // Override files.exclude with remote version
-        localSettings['files.exclude'] = remoteSettings['files.exclude'];
+        localSettings['files.exclude'] = fileExclusions;
 
         // Remove any files.excluded property if it exists
         if (localSettings['files.excluded']) {
@@ -1044,7 +1047,7 @@ export default async function misc(program: any) {
         console.log(`Restart your IDE to see the changes`);
 
         // Show what was restored
-        const exclusions = Object.keys(remoteSettings['files.exclude']);
+        const exclusions = Object.keys(fileExclusions);
         console.log(`\nRestored exclusions:`);
         exclusions.forEach((exclusion) => {
           console.log(`  - ${exclusion}`);
