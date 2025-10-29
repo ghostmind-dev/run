@@ -159,8 +159,6 @@ export async function machineInit() {
 
   await $`curl -o ${currentPath}/${projectName}/.vscode/settings.json https://raw.githubusercontent.com/ghostmind-dev/config/main/config/vscode/settings.json`;
 
-  await $`mkdir -p ${currentPath}/${projectName}/.history`;
-
   $.verbose = true;
 
   // Always initialize Git repository
