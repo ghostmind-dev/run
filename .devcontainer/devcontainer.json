@@ -6,6 +6,7 @@
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/ghostmind-dev/config/extensions:latest": {},
     "ghcr.io/ghostmind-dev/config/settings:latest": {},
     "ghcr.io/ghostmind-dev/config/ai:latest": {},
@@ -22,8 +23,5 @@
     "VAULT_TOKEN": "${localEnv:VAULT_TOKEN}",
     "VAULT_ADDR": "${localEnv:VAULT_ADDR}"
   },
-  "runArgs": [
-    "--network=host",
-    "--name=run"
-  ]
+  "runArgs": ["--network=host", "--name=run"]
 }
