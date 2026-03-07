@@ -63,6 +63,31 @@ export async function createUUID(length: number = 12): Promise<string> {
   return id;
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+// SET SRC
+////////////////////////////////////////////////////////////////////////////////
+
+export async function getSrc(): Promise<string> {
+  const envSrc = Deno.env.get('SRC');
+  if (envSrc) {
+    return envSrc;
+  }
+
+  const cwd = Deno.cwd();
+  const projectDir = await findProjectDirectory(cwd);
+  if (projectDir) {
+    return projectDir;
+  }
+
+  return cwd;
+}
+
+export async function getLocalhostSrc(): Promise<string> {
+  return Deno.env.get('LOCALHOST_SRC') || await getSrc();
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // GET APP NAME
 ////////////////////////////////////////////////////////////////////////////////
@@ -106,10 +131,7 @@ export async function getAppName(): Promise<string> {
  * ```
  */
 export async function getProjectName(): Promise<string> {
-  const currentPath = await Deno.cwd();
-  const { name }: any = await verifyIfMetaJsonExists(
-    Deno.env.get('SRC') || currentPath
-  );
+  const { name }: any = await verifyIfMetaJsonExists(await getSrc());
 
   return name;
 }
@@ -208,7 +230,7 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
     /^TF_VAR_GCP_PROJECT_ID=(.*)$/m
   );
   if (!projectHasBeenDefined) {
-    const SRC = Deno.env.get('SRC') || '';
+    const SRC = await getSrc();
     const metaConfig = await verifyIfMetaJsonExists(SRC);
     let name = '';
     if (metaConfig) {
@@ -433,12 +455,13 @@ export async function findProjectDirectory(
 ): Promise<string | undefined> {
   let currentPath = path;
 
-  while (currentPath !== '/') {
+  while (currentPath && currentPath !== '/') {
     const metaConfig = await verifyIfMetaJsonExists(currentPath);
     if (metaConfig && metaConfig.type === 'project') {
       return currentPath;
     }
-    currentPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+    const parent = currentPath.substring(0, currentPath.lastIndexOf('/'));
+    currentPath = parent || '/';
   }
 
   return undefined;
@@ -608,7 +631,7 @@ export async function withMetaMatching({
   value,
   path,
 }: any): Promise<any[]> {
-  let directoryEntryPath = path || Deno.env.get('SRC');
+  let directoryEntryPath = path || await getSrc();
 
   const allDirectories = await recursiveDirectoriesDiscovery(
     directoryEntryPath

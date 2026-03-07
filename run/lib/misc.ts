@@ -14,7 +14,8 @@ import { createUUID } from '../utils/divers.ts';
 import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
-  findProjectDirectory,
+  getSrc,
+  getLocalhostSrc,
 } from '../utils/divers.ts';
 import fs from 'node:fs';
 import { Buffer } from 'node:buffer';
@@ -109,7 +110,7 @@ export default async function misc(program: any) {
     .command('collision')
     .description('verify if all ids are unique')
     .action(async () => {
-      const SRC = Deno.env.get('SRC') || '';
+      const SRC = await getSrc();
 
       const folders = await recursiveDirectoriesDiscovery(SRC);
 
@@ -143,11 +144,7 @@ export default async function misc(program: any) {
     .action(async () => {
       try {
         $.verbose = true;
-        let currentPath = Deno.cwd();
-
-        const projectPath = await findProjectDirectory(currentPath);
-
-        const SRC = Deno.env.get('SRC') || projectPath;
+        const SRC = await getSrc();
 
         if (!SRC) {
           console.log(
@@ -619,7 +616,7 @@ export default async function misc(program: any) {
     .action(async (commandString: string, options: any) => {
       try {
         const envPathInput = options.env || '.env';
-        const SRC = Deno.env.get('SRC') || '';
+        const SRC = await getSrc();
 
         // Determine if path is absolute or relative
         let envPath: string;
@@ -778,12 +775,7 @@ export default async function misc(program: any) {
       try {
         const homeDir = Deno.env.get('HOME') || '';
         const currentPath = Deno.cwd();
-        const SRC = Deno.env.get('SRC') || '';
-
-        if (!SRC) {
-          console.log('SRC environment variable not set');
-          Deno.exit(1);
-        }
+        const SRC = await getSrc();
 
         // Make sure currentPath is within SRC
         if (!currentPath.startsWith(SRC)) {
@@ -1391,8 +1383,8 @@ export default async function misc(program: any) {
 
       // currentPath is based on $SRC
 
-      const SRC = Deno.env.get('SRC') || '';
-      const LOCALHOST_SRC = Deno.env.get('LOCALHOST_SRC') || '';
+      const SRC = await getSrc();
+      const LOCALHOST_SRC = await getLocalhostSrc();
 
       const relativePath = currentPath.replace(SRC, '').replace(/^\//, '');
       const targetPath = `${LOCALHOST_SRC}/${relativePath}`;

@@ -1,5 +1,5 @@
 import { $, cd, within } from 'npm:zx@8.1.0';
-import { verifyIfMetaJsonExists } from '../utils/divers.ts';
+import { verifyIfMetaJsonExists, getSrc } from '../utils/divers.ts';
 import _ from 'npm:lodash@4.17.21';
 import * as main from '../main.ts';
 
@@ -483,7 +483,7 @@ async function runScript(
 
   let { custom } = metaConfig;
 
-  const SRC = Deno.env.get('SRC');
+  const SRC = await getSrc();
   const HOME = Deno.env.get('HOME');
 
   let NODE_PATH = await $`npm root -g`;

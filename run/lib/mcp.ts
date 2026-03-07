@@ -12,6 +12,7 @@ import {
   verifyIfMetaJsonExists,
   withMetaMatching,
   setSecretsOnLocal,
+  getSrc,
 } from '../utils/divers.ts';
 
 import { cd } from 'npm:zx@8.1.0';
@@ -74,12 +75,7 @@ export default async function mcp(program: any) {
 async function setIndividualMCPConfiguration(
   serverName: string
 ): Promise<void> {
-  const SRC = Deno.env.get('SRC');
-
-  if (!SRC) {
-    console.error('SRC environment variable is not defined');
-    Deno.exit(1);
-  }
+  const SRC = await getSrc();
 
   console.log(`🔍 Looking for MCP server: ${serverName}...\n`);
 
@@ -313,12 +309,7 @@ async function updateClaudeMcpJson(
  * Uses the tunnel.ts pattern: CD into each directory and setSecretsOnLocal for proper env var substitution
  */
 async function syncAllMCPConfigurationsFromMetaJson(): Promise<void> {
-  const SRC = Deno.env.get('SRC');
-
-  if (!SRC) {
-    console.error('SRC environment variable is not defined');
-    Deno.exit(1);
-  }
+  const SRC = await getSrc();
 
   const currentPath = Deno.cwd();
   console.log(

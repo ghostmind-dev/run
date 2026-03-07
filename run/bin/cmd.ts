@@ -30,6 +30,10 @@ import { setSecretsOnLocal } from '../utils/divers.ts';
 import { argv } from 'node:process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getSrc, getLocalhostSrc } from '../utils/divers.ts';
+
+console.log('SRC:', await getSrc());
+console.log('LOCALHOST_SRC:', await getLocalhostSrc());
 
 ////////////////////////////////////////////////////////////////////////////////
 // VERBOSE BY DEFAULT
@@ -67,7 +71,7 @@ async function getVersion(): Promise<string> {
   } catch (error) {
     console.error(
       'Error reading version from deno.json:',
-      error instanceof Error ? error.message : String(error)
+      error instanceof Error ? error.message : String(error),
     );
     return 'unknown';
   }
