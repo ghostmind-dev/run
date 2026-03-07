@@ -307,9 +307,10 @@ export default async function routine(program: any) {
       // Run the task tree
       try {
         await executeTasks(JSON.parse(JSON.stringify(result)));
-        console.log('All tasks executed successfully.');
       } catch (error) {
-        console.error('Error executing tasks:', error);
+        try {
+          console.error('Error executing tasks:', error);
+        } catch { /* stdout/stderr may be closed */ }
         Deno.exit(1);
       }
     });
