@@ -305,14 +305,12 @@ export default async function routine(program: any) {
       }
 
       // Run the task tree
-      executeTasks(JSON.parse(JSON.stringify(result)))
-        .then(() => {
-          console.log('All tasks executed successfully.');
-          Deno.exit(0);
-        })
-        .catch((error) => {
-          console.error('Error executing tasks:', error);
-          Deno.exit(1);
-        });
+      try {
+        await executeTasks(JSON.parse(JSON.stringify(result)));
+        console.log('All tasks executed successfully.');
+      } catch (error) {
+        console.error('Error executing tasks:', error);
+        Deno.exit(1);
+      }
     });
 }
