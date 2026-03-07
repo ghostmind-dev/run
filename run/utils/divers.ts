@@ -63,7 +63,6 @@ export async function createUUID(length: number = 12): Promise<string> {
   return id;
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 // SET SRC
 ////////////////////////////////////////////////////////////////////////////////
@@ -84,9 +83,8 @@ export async function getSrc(): Promise<string> {
 }
 
 export async function getLocalhostSrc(): Promise<string> {
-  return Deno.env.get('LOCALHOST_SRC') || await getSrc();
+  return Deno.env.get('LOCALHOST_SRC') || (await getSrc());
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // GET APP NAME
@@ -106,7 +104,7 @@ export async function getLocalhostSrc(): Promise<string> {
 export async function getAppName(): Promise<string> {
   const currentPath = Deno.cwd();
   const { name }: any = await verifyIfMetaJsonExists(
-    Deno.env.get(currentPath) || currentPath
+    Deno.env.get(currentPath) || currentPath,
   );
 
   return name;
@@ -165,7 +163,7 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
   const metaConfig = await verifyIfMetaJsonExists(currentPath);
 
   expand(
-    config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
+    config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false }),
   );
 
   if (metaConfig === undefined) {
@@ -227,10 +225,17 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
   const appNameHasBeenDefined = prefixedVars.match(/^TF_VAR_APP=(.*)$/m);
   const portHasBeenDefined = prefixedVars.match(/^TF_VAR_PORT=(.*)$/m);
   const gcpProjectIdhAsBeenDefined = prefixedVars.match(
-    /^TF_VAR_GCP_PROJECT_ID=(.*)$/m
+    /^TF_VAR_GCP_PROJECT_ID=(.*)$/m,
   );
+
+  const SRC = await getSrc();
+  Deno.env.set('SRC', SRC);
+
+  if (Deno.env.get('LOCALHOST_SRC') === undefined) {
+    Deno.env.set('LOCALHOST_SRC', SRC);
+  }
+
   if (!projectHasBeenDefined) {
-    const SRC = await getSrc();
     const metaConfig = await verifyIfMetaJsonExists(SRC);
     let name = '';
     if (metaConfig) {
@@ -269,13 +274,13 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
   // write content to /tmp/.env.APP_NAME and addd prefixedVars at the end
   await fs.writeFile(
     `/tmp/.env.${target}.${APP_NAME}`,
-    `${content}\n${prefixedVars}`
+    `${content}\n${prefixedVars}`,
   );
   const newExpandedEnvVar = expand(
     config({
       path: `/tmp/.env.${target}.${APP_NAME}`,
       override: true,
-    })
+    }),
   );
 
   // wrtie the new expanded env var to the /tmp/.env.${target}.${APP} file
@@ -291,7 +296,7 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
   await $`cp /tmp/.env.${target}.${APP_NAME} /tmp/.env.current.${APP_NAME}`;
 
   expand(
-    config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false })
+    config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false }),
   );
   return;
 }
@@ -413,7 +418,7 @@ export async function getDirectories(path: string): Promise<string[]> {
  * ```
  */
 export async function recursiveDirectoriesDiscovery(
-  path: string
+  path: string,
 ): Promise<string[]> {
   const directories = await getDirectories(path);
 
@@ -422,7 +427,7 @@ export async function recursiveDirectoriesDiscovery(
   for (let directory of directories) {
     directoriesPath.push(`${path}/${directory}`);
     directoriesPath = directoriesPath.concat(
-      await recursiveDirectoriesDiscovery(`${path}/${directory}`)
+      await recursiveDirectoriesDiscovery(`${path}/${directory}`),
     );
   }
 
@@ -451,7 +456,7 @@ export async function recursiveDirectoriesDiscovery(
  * ```
  */
 export async function findProjectDirectory(
-  path: string
+  path: string,
 ): Promise<string | undefined> {
   let currentPath = path;
 
@@ -489,7 +494,7 @@ export async function findProjectDirectory(
  * ```
  */
 export async function verifyIfMetaJsonExists(
-  path: string
+  path: string,
 ): Promise<MetaJson | undefined> {
   try {
     await fs.access(`${path}/meta.json`);
@@ -526,7 +531,7 @@ export async function verifyIfMetaJsonExists(
               if (!envVariable.includes('this.')) {
                 updatedMetaConfig[key] = updatedMetaConfig[key].replace(
                   match,
-                  Deno.env.get(envVariable)
+                  Deno.env.get(envVariable),
                 );
               }
             }
@@ -550,14 +555,14 @@ export async function verifyIfMetaJsonExists(
         .split('.')
         .reduce(
           (acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined),
-          object
+          object,
         );
     };
 
     const updatedMetaConfigAction = (obj: MetaJson): MetaJson => {
       const resolveTemplateString = (
         value: string,
-        context: AnyObject
+        context: AnyObject,
       ): string => {
         return value.replace(/\${this\.(.*?)}/g, (_: any, path: any): any => {
           const resolvedValue = getProperty(context, path);
@@ -631,11 +636,10 @@ export async function withMetaMatching({
   value,
   path,
 }: any): Promise<any[]> {
-  let directoryEntryPath = path || await getSrc();
+  let directoryEntryPath = path || (await getSrc());
 
-  const allDirectories = await recursiveDirectoriesDiscovery(
-    directoryEntryPath
-  );
+  const allDirectories =
+    await recursiveDirectoriesDiscovery(directoryEntryPath);
 
   let directories = [];
 
@@ -695,7 +699,7 @@ export async function withMetaMatching({
 export function encrypt(
   text: string,
   cryptoKey: string,
-  algorithm?: string
+  algorithm?: string,
 ): string {
   const ALGORITHM = algorithm || 'aes-256-cbc';
   const IV_LENGTH = 16;
@@ -735,7 +739,7 @@ export function encrypt(
 export function decrypt(
   encryptedKey: string,
   cryptoKey: string,
-  algorithm?: string
+  algorithm?: string,
 ): string {
   const ALGORITHM = algorithm || 'aes-256-cbc';
   const textParts = encryptedKey.split(':');

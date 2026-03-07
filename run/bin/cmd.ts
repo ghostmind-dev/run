@@ -30,10 +30,6 @@ import { setSecretsOnLocal } from '../utils/divers.ts';
 import { argv } from 'node:process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getSrc, getLocalhostSrc } from '../utils/divers.ts';
-
-console.log('SRC:', await getSrc());
-console.log('LOCALHOST_SRC:', await getLocalhostSrc());
 
 ////////////////////////////////////////////////////////////////////////////////
 // VERBOSE BY DEFAULT
