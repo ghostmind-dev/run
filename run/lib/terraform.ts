@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs';
 import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
+  getSrc,
 } from '../utils/divers.ts';
 import type { MetaJson } from '../utils/divers.ts';
 import { getAppName } from '../utils/divers.ts';
@@ -404,7 +405,7 @@ export async function terraformVariables(component: any, options: any) {
   );
 
   if (!projectHasBeenDefined) {
-    const SRC = Deno.env.get('SRC') || '';
+    const SRC = await getSrc();
     const metaConfig = await verifyIfMetaJsonExists(SRC);
 
     const name = metaConfig || '';

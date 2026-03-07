@@ -30,6 +30,8 @@ import { $ } from 'npm:zx@8.1.0';
 import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
+  getSrc,
+  getLocalhostSrc,
 } from '../utils/divers.ts';
 import chalk from 'npm:chalk@5.3.0';
 
@@ -625,13 +627,13 @@ function getRandomColor(): string {
  * @param currentPath Current working directory path
  * @returns SSH command string
  */
-function buildSSHCommand(
+async function buildSSHCommand(
   sshTarget: string,
   command: string,
   currentPath: string
-): string {
-  const SRC = Deno.env.get('SRC') || '';
-  const LOCALHOST_SRC = Deno.env.get('LOCALHOST_SRC') || '';
+): Promise<string> {
+  const SRC = await getSrc();
+  const LOCALHOST_SRC = await getLocalhostSrc();
 
   const relativePath = currentPath.replace(SRC, '').replace(/^\//, '');
   const targetPath = `${LOCALHOST_SRC}/${relativePath}`;
@@ -647,7 +649,7 @@ async function initAllTmuxSessions(
   $.verbose = false;
 
   // Find project root
-  const SRC = Deno.env.get('SRC') || Deno.cwd();
+  const SRC = await getSrc();
 
   console.log(
     chalk.green(`🔍 Discovering all tmux configurations in ${SRC}...`)
@@ -901,7 +903,7 @@ async function initTmuxSession(
               const panePath = resolvePath(paneConfig.path, windowPath);
 
               if (paneConfig.sshTarget) {
-                commandToExecute = buildSSHCommand(
+                commandToExecute = await buildSSHCommand(
                   paneConfig.sshTarget,
                   paneConfig.command,
                   panePath
@@ -969,7 +971,7 @@ async function executeSessionCommands(
   );
 
   // Find project root and discover configurations
-  const SRC = Deno.env.get('SRC') || Deno.cwd();
+  const SRC = await getSrc();
   const directories = await recursiveDirectoriesDiscovery(SRC);
   directories.unshift(SRC);
 
@@ -1086,7 +1088,7 @@ async function executeSessionCommands(
 
             // If sshTarget is specified, wrap the command in SSH
             if (pane.sshTarget) {
-              commandToExecute = buildSSHCommand(
+              commandToExecute = await buildSSHCommand(
                 pane.sshTarget,
                 pane.command,
                 panePath

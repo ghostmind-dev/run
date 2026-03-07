@@ -8,6 +8,7 @@
  */
 
 import { $, sleep, cd } from 'npm:zx@8.1.0';
+import { getLocalhostSrc } from '../utils/divers.ts';
 import fs from 'npm:fs-extra@11.2.0';
 import { join, extname } from 'jsr:@std/path@0.225.1';
 import yaml from 'npm:js-yaml@4.1.0';
@@ -23,22 +24,23 @@ $.verbose = false;
 // CONSTANTS
 ////////////////////////////////////////////////////////////////////////////////
 
-const LOCALHOST_SRC = Deno.env.get('LOCALHOST_SRC');
-
 ////////////////////////////////////////////////////////////////////////////////
 // ACT DEFAULT CONFIG
 ////////////////////////////////////////////////////////////////////////////////
 
-const actArgmentsDefault: string[] = [
-  '--platform=ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest',
-  `--directory=${LOCALHOST_SRC}`,
-  '--bind',
-  '--use-gitignore',
-  `--secret=GH_TOKEN=${Deno.env.get('GITHUB_TOKEN')}`,
-  `--secret=GITHUB_TOKEN=${Deno.env.get('GITHUB_TOKEN')}`,
-  `--secret=VAULT_TOKEN=${Deno.env.get('VAULT_TOKEN')}`,
-  `--secret=VAULT_ADDR=${Deno.env.get('VAULT_ADDR')}`,
-];
+async function getActArgumentsDefault(): Promise<string[]> {
+  const LOCALHOST_SRC = await getLocalhostSrc();
+  return [
+    '--platform=ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest',
+    `--directory=${LOCALHOST_SRC}`,
+    '--bind',
+    '--use-gitignore',
+    `--secret==${Deno.env.get('GITHUB_TOKEN')}`,
+    `--secret=GITHUB_TOKEN=${Deno.env.get('GITHUB_TOKEN')}`,
+    `--secret=VAULT_TOKEN=${Deno.env.get('VAULT_TOKEN')}`,
+    `--secret=VAULT_ADDR=${Deno.env.get('VAULT_ADDR')}`,
+  ];
+}
 
 /**
  * Options for running remote GitHub Actions
@@ -73,7 +75,7 @@ export interface ActionRunRemoteOptions {
  */
 export async function actionRunRemote(
   workflow: string,
-  options: ActionRunRemoteOptions
+  options: ActionRunRemoteOptions,
 ): Promise<void> {
   $.verbose = true;
 
@@ -141,9 +143,13 @@ export async function actionRunLocal(
   actArguments: any,
   event: any,
   custom: any,
-  workaround: any
+  workaround: any,
 ): Promise<void> {
-  const actArgmentsArray = [...actArgmentsDefault, ...actArguments];
+  const LOCALHOST_SRC = await getLocalhostSrc();
+  const actArgmentsArray = [
+    ...(await getActArgumentsDefault()),
+    ...actArguments,
+  ];
 
   let workflowsPath = LOCALHOST_SRC + '/.github/workflows';
 
@@ -269,8 +275,8 @@ export async function actionRunLocalEntry(target: any, options: any) {
 
   if (event === 'push') {
     const eventFile = await fs.readFile(
-      `${LOCALHOST_SRC}/.github/mocking/push.json`,
-      'utf8'
+      `${await getLocalhostSrc()}/.github/mocking/push.json`,
+      'utf8',
     );
 
     // this push has 3 properties: ref, before, after
@@ -315,7 +321,7 @@ export default async function act(program: any) {
     .option('--custom', 'custom act container')
     .option(
       '-W, --workaround',
-      'set file path to .github/workflows/workflow_name (workaround for a bug)'
+      'set file path to .github/workflows/workflow_name (workaround for a bug)',
     )
     .option('-i, --input [inputs...]', 'action inputs')
     .option('--event <string>", " trigger event (ex: workflow_run')
