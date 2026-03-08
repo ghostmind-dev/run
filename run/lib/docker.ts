@@ -54,8 +54,7 @@ export interface DockerComposeBuildOptions {
 /**
  * Docker Compose build options with component specification
  */
-export interface DockerComposeBuildOptionsComponent
-  extends DockerComposeBuildOptions {
+export interface DockerComposeBuildOptionsComponent extends DockerComposeBuildOptions {
   /** The component to build */
   component?: string;
 }
@@ -87,8 +86,7 @@ export interface DockerComposeUpOptions {
 /**
  * Docker Compose up options with component specification
  */
-export interface DockerComposeUpOptionsComponent
-  extends DockerComposeUpOptions {
+export interface DockerComposeUpOptionsComponent extends DockerComposeUpOptions {
   /** The component to start */
   component?: string;
 }
@@ -146,7 +144,7 @@ export interface DockerRegisterOptions {
 export async function getDockerfileAndImageName(
   component: any,
   modifier?: string,
-  skip_tag_modifiers?: boolean
+  skip_tag_modifiers?: boolean,
 ): Promise<{
   dockerfile: string;
   dockerContext: string;
@@ -238,7 +236,7 @@ export async function getDockerfileAndImageName(
 export async function getDockerImageDigest(
   arch: any,
   component: any,
-  modifier?: string
+  modifier?: string,
 ): Promise<string> {
   let { image } = await getDockerfileAndImageName(component, modifier);
 
@@ -259,7 +257,7 @@ export async function getDockerImageDigest(
       : [jsonManifest];
 
     const digest = arrayManifest.find(
-      (manifest: any) => manifest.Descriptor.platform.architecture === 'amd64'
+      (manifest: any) => manifest.Descriptor.platform.architecture === 'amd64',
     )?.Descriptor.digest;
 
     image = image.split(':')[0];
@@ -280,7 +278,7 @@ export async function getDockerImageDigest(
       : [jsonManifest];
 
     const digest = arrayManifest.find(
-      (manifest: any) => manifest.Descriptor.platform.architecture === 'arm64'
+      (manifest: any) => manifest.Descriptor.platform.architecture === 'arm64',
     )?.Descriptor.digest;
 
     image = image.split(':')[0];
@@ -322,7 +320,7 @@ export async function getDockerImageDigest(
  */
 export async function dockerRegister(
   componentOrOptions?: string | DockerRegisterOptions | CustomFunctionOptions,
-  options?: DockerRegisterOptions
+  options?: DockerRegisterOptions,
 ) {
   // verify id componentOrOptions is a string or an object
 
@@ -350,7 +348,7 @@ export async function dockerRegister(
     await getDockerfileAndImageName(
       options.component,
       modifier,
-      skip_tag_modifiers
+      skip_tag_modifiers,
     );
 
   Deno.env.set('BUILDX_NO_DEFAULT_ATTESTATIONS', '1');
@@ -457,7 +455,7 @@ export async function dockerRegister(
 
     await Deno.writeTextFile(
       '/tmp/cloud_build.yaml',
-      JSON.stringify(cloudBuildConfig)
+      JSON.stringify(cloudBuildConfig),
     );
 
     await $`gcloud builds submit --config=/tmp/cloud_build.yaml --machine-type=${machineType}`;
@@ -552,7 +550,7 @@ export async function dockerRegister(
 
     await Deno.writeTextFile(
       '/tmp/cloud_build.yaml',
-      JSON.stringify(cloudBuildConfig)
+      JSON.stringify(cloudBuildConfig),
     );
 
     await $`gcloud builds submit --config=/tmp/cloud_build.yaml --machine-type=${machineType}`;
@@ -762,7 +760,7 @@ export async function dockerRegister(
  */
 export async function dockerComposeUp(
   componentOrOptions?: string | DockerComposeUpOptionsComponent,
-  options?: DockerComposeUpOptions
+  options?: DockerComposeUpOptions,
 ) {
   let component: string;
 
@@ -778,7 +776,8 @@ export async function dockerComposeUp(
     }
   }
 
-  let { forceRecreate, detach, build, envfile, env, production } = options || {};
+  let { forceRecreate, detach, build, envfile, env, production } =
+    options || {};
 
   if (production) {
     detach = true;
@@ -800,6 +799,8 @@ export async function dockerComposeUp(
     return;
   }
   let filename = compose[component].filename || 'compose.yaml';
+
+  console.log(`Using compose file: ${filename} for component: ${component}`);
   let { root, use_project_env } = compose[component];
 
   // Check if we should use PROJECT env variable (default to true)
@@ -877,7 +878,7 @@ export async function dockerComposeUp(
         // Ignore errors when cleaning up temp file
         console.warn(
           `Warning: Could not remove temporary file ${tempEnvFile}:`,
-          error instanceof Error ? error.message : String(error)
+          error instanceof Error ? error.message : String(error),
         );
       }
     }
@@ -979,8 +980,7 @@ export interface DockerComposeExecOptions {
 /**
  * Docker Compose exec options with component specification
  */
-export interface DockerComposeExecOptionsComponent
-  extends DockerComposeExecOptions {
+export interface DockerComposeExecOptionsComponent extends DockerComposeExecOptions {
   /** The command/instructions to execute */
   instructions: string;
 }
@@ -1015,7 +1015,7 @@ export interface DockerComposeExecOptionsComponent
  */
 export async function dockerComposeExec(
   instructionsOrOptions: string | DockerComposeExecOptionsComponent,
-  options?: DockerComposeExecOptions
+  options?: DockerComposeExecOptions,
 ) {
   let instructions: string;
 
@@ -1067,7 +1067,7 @@ export async function dockerComposeExec(
       // Parse each line as a separate JSON object
       let jsonState = lines.map((line) => JSON.parse(line));
       let containerDetected = jsonState.find((box) =>
-        box.Names.includes(container)
+        box.Names.includes(container),
       );
       if (containerDetected) {
         console.log('Container found:', container);
@@ -1088,7 +1088,15 @@ export async function dockerComposeExec(
     baseCommand.push('-p', PROJECT);
   }
 
-  baseCommand.push('-f', `${root}/${file}`, 'exec', container, '/bin/bash', '-c', instructions);
+  baseCommand.push(
+    '-f',
+    `${root}/${file}`,
+    'exec',
+    container,
+    '/bin/bash',
+    '-c',
+    instructions,
+  );
 
   if (forceRecreate) {
     baseCommand.push('--force-recreate');
@@ -1124,7 +1132,7 @@ export async function dockerComposeExec(
  */
 export async function dockerComposeBuild(
   componentOrOptions: DockerComposeBuildOptionsComponent,
-  options?: DockerComposeBuildOptions
+  options?: DockerComposeBuildOptions,
 ) {
   let component: string;
 
@@ -1156,7 +1164,9 @@ export async function dockerComposeBuild(
 
   component = component || 'default';
 
-  let { root, use_project_env } = compose[component];
+  let { root, use_project_env, filename } = compose[component];
+
+  let composeFile = filename || file;
 
   // Check if we should use PROJECT env variable (default to true)
   const shouldUseProjectEnv = use_project_env !== false;
@@ -1169,7 +1179,7 @@ export async function dockerComposeBuild(
     baseCommand.push('-p', PROJECT);
   }
 
-  baseCommand.push('-f', `${root}/${file}`, 'build');
+  baseCommand.push('-f', `${root}/${composeFile}`, 'build');
 
   if (cache === undefined) {
     baseCommand.push('--no-cache');
@@ -1275,7 +1285,7 @@ export interface DockerBuildOptions {
  */
 export async function dockerBuild(
   componentOrOptions?: string | DockerBuildOptions,
-  options?: DockerBuildOptions
+  options?: DockerBuildOptions,
 ) {
   let component: string;
 
@@ -1288,9 +1298,8 @@ export async function dockerBuild(
     component = options.component || 'default';
   }
 
-  const { dockerfile, dockerContext, image } = await getDockerfileAndImageName(
-    component
-  );
+  const { dockerfile, dockerContext, image } =
+    await getDockerfileAndImageName(component);
 
   const baseCommand = [
     'docker',
@@ -1328,7 +1337,7 @@ export default async function commandDocker(program: any) {
     .option('-t, --tags <tags...>', 'tags')
     .argument(
       '[component]',
-      'component to build. It has priority over --component'
+      'component to build. It has priority over --component',
     )
     .action(dockerRegister);
 
