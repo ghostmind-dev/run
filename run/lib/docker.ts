@@ -80,6 +80,8 @@ export interface DockerComposeUpOptions {
   envfile?: string;
   /** Environment variables to set (key=value format) */
   env?: string[];
+  /** Production mode: runs detached so the command exits after starting */
+  production?: boolean;
 }
 
 /**
@@ -776,7 +778,11 @@ export async function dockerComposeUp(
     }
   }
 
-  let { forceRecreate, detach, build, envfile, env } = options || {};
+  let { forceRecreate, detach, build, envfile, env, production } = options || {};
+
+  if (production) {
+    detach = true;
+  }
 
   let filesToUp = [];
 
@@ -1344,6 +1350,7 @@ export default async function commandDocker(program: any) {
     .option('--envfile [file]', 'environment file to use')
     .option('--env <env...>', 'environment variables to set (KEY=VALUE format)')
     .option('-d, --detach', 'detach')
+    .option('--production', 'production mode (runs detached)')
     .action(dockerComposeUp);
 
   dockerCompose

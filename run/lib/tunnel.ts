@@ -61,7 +61,7 @@ export default async function tunnel(program: any) {
   run.option(
     '--name <name>',
     'tunel name (or set via CLOUDFLARED_TUNNEL_NAME) ',
-    Deno.env.get('CLOUDFLARED_TUNNEL_NAME') as string
+    Deno.env.get('CLOUDFLARED_TUNNEL_NAME') as string,
   );
   run.action(async (tunnelToRun: string, options: any) => {
     const CLOUDFLARED_TUNNEL_NAME = options.name;
@@ -94,7 +94,7 @@ export default async function tunnel(program: any) {
         try {
           await $`cloudflared tunnel create ${CLOUDFLARED_TUNNEL_NAME}`;
           console.log(
-            `Successfully created tunnel: ${CLOUDFLARED_TUNNEL_NAME}`
+            `Successfully created tunnel: ${CLOUDFLARED_TUNNEL_NAME}`,
           );
         } catch (createError: any) {
           console.error('Failed to create tunnel:', createError.message);
@@ -125,7 +125,9 @@ export default async function tunnel(program: any) {
 
       for (const directory of directories) {
         cd(directory);
-        await setSecretsOnLocal('local');
+
+        const ENV = Deno.env.get('ENV') || 'local';
+        await setSecretsOnLocal(ENV);
         const metaConfig: any = await verifyIfMetaJsonExists(directory);
         for (const tunnel in metaConfig.tunnel) {
           await $`cloudflared tunnel route dns ${CLOUDFLARED_TUNNEL_NAME} ${metaConfig.tunnel[tunnel].hostname}`;
