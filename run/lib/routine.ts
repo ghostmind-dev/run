@@ -313,5 +313,6 @@ export default async function routine(program: any) {
         } catch { /* stdout/stderr may be closed */ }
         Deno.exit(1);
       }
+      Deno.exit(0);
     });
 }
