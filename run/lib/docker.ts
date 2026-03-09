@@ -81,6 +81,8 @@ export interface DockerComposeUpOptions {
   env?: string[];
   /** Production mode: runs detached so the command exits after starting */
   production?: boolean;
+  /** Run docker compose down before up (default: false) */
+  down?: boolean;
 }
 
 /**
@@ -776,7 +778,7 @@ export async function dockerComposeUp(
     }
   }
 
-  let { forceRecreate, detach, build, envfile, env, production } =
+  let { forceRecreate, detach, build, envfile, env, production, down } =
     options || {};
 
   if (production) {
@@ -865,7 +867,9 @@ export async function dockerComposeUp(
 
   $.verbose = true;
 
-  await $`${commandDown}`;
+  if (down) {
+    await $`${commandDown}`;
+  }
 
   try {
     await $`${baseCommand}`;
@@ -1360,6 +1364,7 @@ export default async function commandDocker(program: any) {
     .option('--env <env...>', 'environment variables to set (KEY=VALUE format)')
     .option('-d, --detach', 'detach')
     .option('--production', 'production mode (runs detached)')
+    .option('--down', 'run docker compose down before up')
     .action(dockerComposeUp);
 
   dockerCompose
