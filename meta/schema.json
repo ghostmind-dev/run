@@ -50,6 +50,11 @@
               "type": "boolean",
               "description": "Use PROJECT environment variable as project name for docker compose commands. Defaults to true.",
               "default": true
+            },
+            "down": {
+              "type": "boolean",
+              "description": "Run docker compose down before up. Defaults to true.",
+              "default": true
             }
           },
           "additionalProperties": false
