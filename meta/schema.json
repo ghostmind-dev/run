@@ -164,66 +164,6 @@
         "type": "string"
       }
     },
-    "mcp": {
-      "type": "object",
-      "patternProperties": {
-        ".*": {
-          "type": "object",
-          "oneOf": [
-            {
-              "type": "object",
-              "properties": {
-                "command": {
-                  "type": "string",
-                  "description": "Command to execute for the MCP server."
-                },
-                "args": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "description": "Arguments for the MCP server command."
-                },
-                "env": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "description": "Environment variables for the MCP server."
-                }
-              },
-              "required": [
-                "command"
-              ],
-              "additionalProperties": false
-            },
-            {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "description": "Type of the MCP server."
-                },
-                "url": {
-                  "type": "string",
-                  "description": "URL for the MCP server."
-                },
-                "headers": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "description": "Headers for the MCP server requests."
-                }
-              },
-              "required": [
-                "url"
-              ],
-              "additionalProperties": false
-            }
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
     "template": {
       "type": "object",
       "patternProperties": {
@@ -250,26 +190,6 @@
                 "type": "string"
               },
               "description": "List of initialization commands to run for the template."
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    "tunnel": {
-      "type": "object",
-      "patternProperties": {
-        ".*": {
-          "type": "object",
-          "properties": {
-            "hostname": {
-              "type": "string",
-              "description": "hostname for the tunnel. (example: example.com)"
-            },
-            "service": {
-              "type": "string",
-              "description": "Local service to be tunneled. (example: localhost:8080)"
             }
           },
           "additionalProperties": false
