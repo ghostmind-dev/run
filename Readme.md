@@ -36,13 +36,10 @@ Commands:
   action                                   run a github action
   custom [options] [script] [argument...]  run custom script
   docker                                   docker commands
-  machine                                  create a devcontainer for the project
   meta                                     manage meta.json files
   misc                                     miscellaneous commands
   routine [script...]                      run npm style scripts
-  template                                 template management commands
   terraform                                infrastructure definition
-  tunnel                                   Run a cloudflared tunnel to a local service
   vault                                    manage project secrets
   help [command]                           display help for command
 ```
