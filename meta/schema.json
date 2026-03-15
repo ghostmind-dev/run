@@ -126,8 +126,12 @@
       "properties": {
         "base": {
           "type": "string",
-          "description": "Path to the base environment variables file"
+          "description": "Name of the base environment variables file (e.g., 'base' for .env.base). Defaults to 'base'.",
+          "default": "base"
         }
+      },
+      "default": {
+        "base": "base"
       },
       "additionalProperties": false
     },
