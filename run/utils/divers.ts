@@ -172,42 +172,30 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
 
   const APP_NAME = await getAppName();
 
-  const { secrets, port } = metaConfig;
+  const { secrets = { base: 'base' }, port } = metaConfig;
+  const secretsBase = secrets.base ?? 'base';
   // create a random file nunber
   const randomFileNumber = await createUUID(12);
   let env_file = `/tmp/.env.${randomFileNumber}.${APP_NAME}`;
-  if (secrets?.base) {
-    let base_file = `${currentPath}/.env.${secrets.base}`;
-    let target_file = `${currentPath}/.env.${target}`;
-    try {
-      await fs.access(target_file, fs.constants.R_OK);
-    } catch (err) {
-      return;
-    }
-
-    try {
-      await fs.access(base_file, fs.constants.R_OK);
-    } catch (err) {
-      console.log(chalk.red(`The file .env.${base_file} does not exist`));
-      return;
-    }
-
-    // merge base and target files in /tmp/.env.APP_NAME
-
-    await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
-    await $`cat ${base_file} ${target_file} > /tmp/.env.${randomFileNumber}.${APP_NAME}`;
-  } else {
-    let target_file = `${currentPath}/.env.${target}`;
-
-    await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
-    try {
-      await fs.access(target_file, fs.constants.R_OK);
-    } catch (err) {
-      return;
-    }
-    // Read the .env file
-    await $`cp ${target_file} /tmp/.env.${randomFileNumber}.${APP_NAME}`;
+  let base_file = `${currentPath}/.env.${secretsBase}`;
+  let target_file = `${currentPath}/.env.${target}`;
+  try {
+    await fs.access(target_file, fs.constants.R_OK);
+  } catch (err) {
+    return;
   }
+
+  try {
+    await fs.access(base_file, fs.constants.R_OK);
+  } catch (err) {
+    console.log(chalk.red(`The file .env.${secretsBase} does not exist. A base env file is required.`));
+    Deno.exit(1);
+  }
+
+  // merge base and target files in /tmp/.env.APP_NAME
+
+  await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
+  await $`cat ${base_file} ${target_file} > /tmp/.env.${randomFileNumber}.${APP_NAME}`;
   //
   // // Read the .env file
   const content: any = readFileSync(env_file, 'utf-8');

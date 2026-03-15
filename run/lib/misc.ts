@@ -337,11 +337,11 @@ export default async function misc(program: any) {
       try {
         const metaContent = Deno.readTextFileSync(`${currentPath}/meta.json`);
         meta = JSON.parse(metaContent);
-        if (meta && meta.secrets && meta.secrets.base) {
-          baseFile = `.env.${meta.secrets.base}`;
-        }
+        const secretsBase = meta?.secrets?.base ?? 'base';
+        baseFile = `.env.${secretsBase}`;
       } catch (e) {
-        console.log('No meta.json found or no secrets configuration');
+        console.log('No meta.json found, using default secrets configuration');
+        baseFile = '.env.base';
       }
 
       // Helper function to parse env file into key-value pairs

@@ -355,9 +355,8 @@ export async function terraformVariables(component: any, options: any) {
   let envcotent: string = '';
   let baseContent: string = '';
 
-  if (metaConfig?.secrets?.base) {
-    baseContent = readFileSync(`.env.${metaConfig?.secrets.base}`, 'utf-8');
-  }
+  const secretsBase = metaConfig?.secrets?.base ?? 'base';
+  baseContent = readFileSync(`.env.${secretsBase}`, 'utf-8');
 
   if (metaConfig === undefined) {
     return;
