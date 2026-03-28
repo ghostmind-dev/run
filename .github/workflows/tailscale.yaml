@@ -18,7 +18,7 @@ jobs:
       - name: 'Check out repository'
         uses: actions/checkout@v3
       - name: Tailscale
-        if: ${{ github.event.inputs.LOCAL != 'true' }}
+        # if: ${{ github.event.inputs.LOCAL != 'true' }}
         uses: tailscale/github-action@v4
         with:
             oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
@@ -42,3 +42,4 @@ jobs:
         with:
           global: "true"
       - run: echo $GCP_SERVICE_ACCOUNT_JSON
+      - run : tailscale ssh ghostmind@potion 
