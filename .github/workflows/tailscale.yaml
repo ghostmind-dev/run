@@ -42,4 +42,8 @@ jobs:
         with:
           global: "true"
       - run: echo $GCP_SERVICE_ACCOUNT_JSON
-      - run : tailscale ssh ghostmind@potion 
+      - name: Test SSH
+        run: |
+          tailscale ssh ghostmind@padmin << 'EOF'
+            ls -la /home/ghostmind/Projects/admin
+          EOF
