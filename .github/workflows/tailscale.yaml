@@ -44,6 +44,6 @@ jobs:
       - run: echo $GCP_SERVICE_ACCOUNT_JSON
       - name: Test SSH
         run: |
-          tailscale ssh ghostmind@padmin << 'EOF'
+          tailscale ssh ghostmind@admin << 'EOF'
             ls -la /home/ghostmind/Projects/admin
           EOF
