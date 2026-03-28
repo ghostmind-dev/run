@@ -1,0 +1,44 @@
+name: Test module installation
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+env:
+  SRC: ${{github.workspace}}
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+  VAULT_ADDR: ${{ secrets.VAULT_ADDR}}
+  TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+  TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
+jobs:
+  tailscale:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Check out repository'
+        uses: actions/checkout@v3
+      - name: Tailscale
+        if: ${{ github.event.inputs.LOCAL != 'true' }}
+        uses: tailscale/github-action@v4
+        with:
+            oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+            oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+            tags: tag:ci
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: canary
+      - name: "install run"
+        uses: ghostmind-dev/play/actions/run@main
+        with:
+          dev_mode: ${{ github.event.inputs.LOCAL }}
+      - name: set environment
+        uses: ghostmind-dev/play/actions/env@main
+      - name: "install vault cmd"
+        uses: ghostmind-dev/play/actions/vault@main
+        with:
+          login: "true"
+      - name: "set global secrets"
+        uses: ghostmind-dev/play/actions/secrets@main
+        with:
+          global: "true"
+      - run: echo $GCP_SERVICE_ACCOUNT_JSON

@@ -39,6 +39,8 @@ async function getActArgumentsDefault(): Promise<string[]> {
     `--secret=GITHUB_TOKEN=${Deno.env.get('GITHUB_TOKEN')}`,
     `--secret=VAULT_TOKEN=${Deno.env.get('VAULT_TOKEN')}`,
     `--secret=VAULT_ADDR=${Deno.env.get('VAULT_ADDR')}`,
+    `--secret=TS_OAUTH_CLIENT_ID=${Deno.env.get('TS_OAUTH_CLIENT_ID')}`,
+    `--secret=TS_OAUTH_SECRET=${Deno.env.get('TS_OAUTH_SECRET')}`,
   ];
 }
 
