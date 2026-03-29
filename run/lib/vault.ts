@@ -336,6 +336,7 @@ export async function vaultKvVaultToLocal(options: any) {
         // Export to .env.{environment} file
         const outputFile = `.env.${env}`;
         fs.writeFileSync(outputFile, CREDS, 'utf8');
+        await Deno.chmod(outputFile, 0o600);
 
         console.log(`✓ Exported ${env} to ${outputFile}`);
 
@@ -375,8 +376,10 @@ export async function vaultKvVaultToLocal(options: any) {
   // if .env file exists, create a backup
   if (envfile) {
     fs.writeFileSync(envfile, CREDS, 'utf8');
+    await Deno.chmod(envfile, 0o600);
   } else {
     fs.writeFileSync('.env', CREDS, 'utf8');
+    await Deno.chmod('.env', 0o600);
     if (fs.existsSync('.env.backup')) {
       fs.unlinkSync('.env.backup');
     }

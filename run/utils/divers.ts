@@ -162,10 +162,6 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
 
   const metaConfig = await verifyIfMetaJsonExists(currentPath);
 
-  expand(
-    config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false }),
-  );
-
   if (metaConfig === undefined) {
     return;
   }
@@ -188,7 +184,11 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
   try {
     await fs.access(base_file, fs.constants.R_OK);
   } catch (err) {
-    console.log(chalk.red(`The file .env.${secretsBase} does not exist. A base env file is required.`));
+    console.log(
+      chalk.red(
+        `The file .env.${secretsBase} does not exist. A base env file is required.`,
+      ),
+    );
     Deno.exit(1);
   }
 
@@ -283,9 +283,9 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
   await fs.writeFile(`/tmp/.env.${target}.${APP_NAME}`, envVarString);
   await $`cp /tmp/.env.${target}.${APP_NAME} /tmp/.env.current.${APP_NAME}`;
 
-  expand(
-    config({ path: `${Deno.env.get('HOME')}/.zprofile`, override: false }),
-  );
+  await $`rm -rf /tmp/.env.${target}.${APP_NAME}`;
+  await $`rm -rf /tmp/.env.current.${APP_NAME}`;
+
   return;
 }
 
