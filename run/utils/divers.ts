@@ -8,7 +8,7 @@
  */
 
 import { $, chalk } from 'npm:zx@8.1.0';
-import { config } from 'npm:dotenv@16.4.5';
+import { config, parse } from 'npm:dotenv@16.4.5';
 import { expand } from 'npm:dotenv-expand@11.0.6';
 import fs from 'npm:fs-extra@11.2.0';
 import { nanoid } from 'npm:nanoid@5.0.7';
@@ -155,7 +155,10 @@ export async function getProjectName(): Promise<string> {
  * await setSecretsOnLocal('prod');
  * ```
  */
-export async function setSecretsOnLocal(target: string): Promise<void> {
+export async function setSecretsOnLocal(
+  target: string,
+  envPath?: string,
+): Promise<void> {
   $.verbose = false;
 
   const currentPath = Deno.cwd();
@@ -173,15 +176,13 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
     Deno.env.set('LOCALHOST_SRC', SRC);
   }
 
-  const APP_NAME = await getAppName();
-
   const { secrets = { base: 'base' }, port } = metaConfig;
   const secretsBase = secrets.base ?? 'base';
-  // create a random file nunber
-  const randomFileNumber = await createUUID(12);
-  let env_file = `/tmp/.env.${randomFileNumber}.${APP_NAME}`;
-  let base_file = `${currentPath}/.env.${secretsBase}`;
-  let target_file = `${currentPath}/.env.${target}`;
+
+  const basePath = envPath || currentPath;
+  const base_file = `${basePath}/.env.${secretsBase}`;
+  const target_file = `${basePath}/.env.${target}`;
+
   try {
     await fs.access(target_file, fs.constants.R_OK);
   } catch (err) {
@@ -199,23 +200,19 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
     Deno.exit(1);
   }
 
-  // merge base and target files in /tmp/.env.APP_NAME
+  const baseContent = readFileSync(base_file, 'utf-8');
+  const targetContent = readFileSync(target_file, 'utf-8');
+  const content = `${baseContent}\n${targetContent}`;
 
-  await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
-  await $`cat ${base_file} ${target_file} > /tmp/.env.${randomFileNumber}.${APP_NAME}`;
-  //
-  // // Read the .env file
-  const content: any = readFileSync(env_file, 'utf-8');
   const nonTfVarNames: any = content.match(/^(?!TF_VAR_)[A-Z_]+(?==)/gm);
-  // Extract all variable names that don't start with TF_VAR
-  // remove element TF_VAR_PORT
-  // verify if PORT is in the nonTfVarNames array
+
   let prefixedVars = nonTfVarNames
     .map((varName: any) => {
-      const value = content.match(new RegExp(`^${varName}=(.*)$`, 'm'))[1];
+      const value = content.match(new RegExp(`^${varName}=(.*)$`, 'm'))?.[1] ?? '';
       return `TF_VAR_${varName}=${value}`;
     })
     .join('\n');
+
   const projectHasBeenDefined = prefixedVars.match(/^TF_VAR_PROJECT=(.*)$/m);
   const appNameHasBeenDefined = prefixedVars.match(/^TF_VAR_APP=(.*)$/m);
   const portHasBeenDefined = prefixedVars.match(/^TF_VAR_PORT=(.*)$/m);
@@ -224,21 +221,20 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
   );
 
   if (!projectHasBeenDefined) {
-    const metaConfig = await verifyIfMetaJsonExists(SRC);
+    const srcMetaConfig = await verifyIfMetaJsonExists(SRC);
     let name = '';
-    if (metaConfig) {
-      name = metaConfig.name;
+    if (srcMetaConfig) {
+      name = srcMetaConfig.name;
     }
-    // add the project name to the .env file
     const PROJECT = await getProjectName();
     Deno.env.set('PROJECT', PROJECT);
     prefixedVars += `\nTF_VAR_PROJECT=${name}`;
   }
   if (!appNameHasBeenDefined) {
-    const metaConfig = await verifyIfMetaJsonExists(currentPath);
+    const appMetaConfig = await verifyIfMetaJsonExists(currentPath);
     let name = '';
-    if (metaConfig) {
-      name = metaConfig.name;
+    if (appMetaConfig) {
+      name = appMetaConfig.name;
     }
     const APP = await getAppName();
     Deno.env.set('APP', APP);
@@ -255,36 +251,14 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
       prefixedVars += `\nTF_VAR_PORT=${PORT}`;
     }
   }
-  await $`rm -rf /tmp/.env.${randomFileNumber}.${APP_NAME}`;
-  await $`rm -rf /tmp/.env.${target}.${APP_NAME}`;
-  await $`rm -rf /tmp/.env.current.${APP_NAME}`;
 
-  // write content to /tmp/.env.APP_NAME and addd prefixedVars at the end
-  await fs.writeFile(
-    `/tmp/.env.${target}.${APP_NAME}`,
-    `${content}\n${prefixedVars}`,
-  );
-  const newExpandedEnvVar = expand(
-    config({
-      path: `/tmp/.env.${target}.${APP_NAME}`,
-      override: true,
-    }),
-  );
+  const mergedContent = `${content}\n${prefixedVars}`;
+  const parsed = parse(mergedContent);
+  const expanded = expand({ parsed, processEnv: Deno.env.toObject() });
 
-  // wrtie the new expanded env var to the /tmp/.env.${target}.${APP} file
-  // newExpandedEnvVar is an object so we need to convert it to a string
-
-  let envVarString = '';
-
-  for (let key in newExpandedEnvVar.parsed) {
-    envVarString += `${key}=${newExpandedEnvVar.parsed[key]}\n`;
+  for (const key in expanded.parsed) {
+    Deno.env.set(key, expanded.parsed[key]);
   }
-
-  await fs.writeFile(`/tmp/.env.${target}.${APP_NAME}`, envVarString);
-  await $`cp /tmp/.env.${target}.${APP_NAME} /tmp/.env.current.${APP_NAME}`;
-
-  await $`rm -rf /tmp/.env.${target}.${APP_NAME}`;
-  await $`rm -rf /tmp/.env.current.${APP_NAME}`;
 
   return;
 }
