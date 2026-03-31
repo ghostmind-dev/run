@@ -10,6 +10,7 @@
 import { $, cd } from 'npm:zx@8.1.0';
 import { verifyIfMetaJsonExists } from '../utils/divers.ts';
 import fs from 'npm:fs-extra@11.2.0';
+import path from 'node:path';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -272,6 +273,43 @@ async function getAllEnvironments() {
 }
 
 /**
+ * Write secret content to a file and optionally create a symlink to the current directory
+ *
+ * @param filename - The .env filename (e.g. '.env.prod')
+ * @param content - The secret content to write
+ * @param dest - Optional destination directory (defaults to current directory)
+ * @param symlink - Whether to create a symlink from dest back to current directory
+ */
+async function writeSecretFile(
+  filename: string,
+  content: string,
+  dest?: string,
+  symlink?: boolean
+) {
+  const currentDir = Deno.cwd();
+  const destDir = dest || currentDir;
+
+  fs.ensureDirSync(destDir);
+
+  const filePath = path.join(destDir, filename);
+  fs.writeFileSync(filePath, content, 'utf8');
+  await Deno.chmod(filePath, 0o600);
+
+  if (symlink && dest) {
+    const symlinkPath = path.join(currentDir, filename);
+
+    if (fs.existsSync(symlinkPath)) {
+      fs.unlinkSync(symlinkPath);
+    }
+
+    await Deno.symlink(filePath, symlinkPath);
+    console.log(`Symlinked ${symlinkPath} -> ${filePath}`);
+  }
+
+  return filePath;
+}
+
+/**
  * Export secrets from HashiCorp Vault to a local .env file
  *
  * This function retrieves secrets from HashiCorp Vault and writes them
@@ -305,7 +343,7 @@ export async function vaultKvVaultToLocal(options: any) {
   let currentPath = Deno.cwd();
   cd(currentPath);
 
-  const { target, envfile, all } = options;
+  const { target, envfile, all, dest, symlink } = options;
 
   // Handle export all flag - export all environments
   if (all) {
@@ -323,25 +361,17 @@ export async function vaultKvVaultToLocal(options: any) {
         console.log(`Exporting ${env}...`);
 
         const secretPath = await defineSecretNamespace(env);
-        const randomFilename = Math.floor(Math.random() * 1000000);
         const fullSecretPath = `${secretPath}/secrets`;
 
-        await $`vault kv get -format=json kv/${fullSecretPath} > /tmp/env.${randomFilename}.json`;
-
-        const credsValue = await fs.readJSONSync(
-          `/tmp/env.${randomFilename}.json`
-        );
+        $.verbose = false;
+        const result = await $`vault kv get -format=json kv/${fullSecretPath}`;
+        const credsValue = JSON.parse(result.stdout);
         const { CREDS } = credsValue.data.data;
 
-        // Export to .env.{environment} file
         const outputFile = `.env.${env}`;
-        fs.writeFileSync(outputFile, CREDS, 'utf8');
-        await Deno.chmod(outputFile, 0o600);
+        const writtenPath = await writeSecretFile(outputFile, CREDS, dest, symlink);
 
-        console.log(`✓ Exported ${env} to ${outputFile}`);
-
-        // Cleanup temp file
-        fs.unlinkSync(`/tmp/env.${randomFilename}.json`);
+        console.log(`✓ Exported ${env} to ${writtenPath}`);
       } catch (error) {
         console.error(
           `✗ Failed to export ${env}:`,
@@ -362,28 +392,18 @@ export async function vaultKvVaultToLocal(options: any) {
     secretPath = await defineSecretNamespace(target);
   }
 
-  // generate a random integer number
-  const randomFilename = Math.floor(Math.random() * 1000000);
-
   secretPath = `${secretPath}/secrets`;
 
-  await $`vault kv get -format=json kv/${secretPath}  > /tmp/env.${randomFilename}.json`;
-
-  const credsValue = await fs.readJSONSync(`/tmp/env.${randomFilename}.json`);
+  $.verbose = false;
+  const result = await $`vault kv get -format=json kv/${secretPath}`;
+  const credsValue = JSON.parse(result.stdout);
 
   const { CREDS } = credsValue.data.data;
 
-  // if .env file exists, create a backup
-  if (envfile) {
-    fs.writeFileSync(envfile, CREDS, 'utf8');
-    await Deno.chmod(envfile, 0o600);
-  } else {
-    fs.writeFileSync('.env', CREDS, 'utf8');
-    await Deno.chmod('.env', 0o600);
-    if (fs.existsSync('.env.backup')) {
-      fs.unlinkSync('.env.backup');
-    }
-  }
+  const filename = envfile || `.env.${target || 'env'}`;
+  const writtenPath = await writeSecretFile(filename, CREDS, dest, symlink);
+
+  console.log(`✓ Exported to ${writtenPath}`);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -427,6 +447,8 @@ export default async function vault(program: any) {
     .description('from remote vault to .env')
     .option('--envfile <path>', 'path to .env file')
     .option('--target <environment>', 'environment target')
+    .option('--dest <path>', 'destination directory for .env file (default: current directory)')
+    .option('--symlink', 'create a symlink in current directory pointing to dest file')
     .option('--all', 'export all environments to separate files')
     .action(vaultKvVaultToLocal);
 
