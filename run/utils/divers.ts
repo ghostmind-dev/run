@@ -166,6 +166,13 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
     return;
   }
 
+  const SRC = await getSrc();
+  Deno.env.set('SRC', SRC);
+
+  if (Deno.env.get('LOCALHOST_SRC') === undefined) {
+    Deno.env.set('LOCALHOST_SRC', SRC);
+  }
+
   const APP_NAME = await getAppName();
 
   const { secrets = { base: 'base' }, port } = metaConfig;
@@ -215,13 +222,6 @@ export async function setSecretsOnLocal(target: string): Promise<void> {
   const gcpProjectIdhAsBeenDefined = prefixedVars.match(
     /^TF_VAR_GCP_PROJECT_ID=(.*)$/m,
   );
-
-  const SRC = await getSrc();
-  Deno.env.set('SRC', SRC);
-
-  if (Deno.env.get('LOCALHOST_SRC') === undefined) {
-    Deno.env.set('LOCALHOST_SRC', SRC);
-  }
 
   if (!projectHasBeenDefined) {
     const metaConfig = await verifyIfMetaJsonExists(SRC);
