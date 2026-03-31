@@ -107,6 +107,7 @@ const run = program.name('run');
 
 program
   .option('-c, --cible <env context>', 'target environment context')
+  .option('-e, --env <env path>', 'path to load env variables from')
   .option('-p, --path <path>', 'run the script from a specific path')
   .hook('preAction', async (thisCommand: any) => {
     const { path } = thisCommand.opts();
@@ -119,8 +120,8 @@ program
       !Deno.env.get('GITHUB_ACTIONS') &&
       Deno.env.get('CUSTOM_STATUS') !== 'in_progress'
     ) {
-      const { cible } = thisCommand.opts();
-      await setSecretsOnLocal(cible || 'local');
+      const { cible, env: envPath } = thisCommand.opts();
+      await setSecretsOnLocal(cible || 'local', envPath);
       Deno.env.set('ENV', cible || 'local');
     }
   });
