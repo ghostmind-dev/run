@@ -9,7 +9,8 @@
     "attach": "run tmux attach run",
     "terminate": "run tmux terminate run",
     "mcp": "run mcp set --all",
-    "install": "deno install -A -f -g -n run run/bin/cmd.ts"
+    "install": "deno install -A -f -g -n run run/bin/cmd.ts",
+    "echo": "echo ${SRC}"
   },
   "mcp": {
     "docs": {
