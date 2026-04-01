@@ -254,6 +254,15 @@ export async function setSecretsOnLocal(
 
   const mergedContent = `${content}\n${prefixedVars}`;
   const parsed = parse(mergedContent);
+
+  // Set raw parsed values first to override any inherited env vars (e.g. from
+  // a parent routine process). This replicates the old config({override:true})
+  // behaviour so that expand() resolves ${VAR} references from the file values,
+  // not from stale inherited environment.
+  for (const key in parsed) {
+    Deno.env.set(key, parsed[key]);
+  }
+
   const expanded = expand({ parsed, processEnv: Deno.env.toObject() });
 
   for (const key in expanded.parsed) {
