@@ -68,11 +68,6 @@ export async function createUUID(length: number = 12): Promise<string> {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function getSrc(): Promise<string> {
-  const envSrc = Deno.env.get('SRC');
-  if (envSrc) {
-    return envSrc;
-  }
-
   const cwd = Deno.cwd();
   const projectDir = await findProjectDirectory(cwd);
   if (projectDir) {
