@@ -263,7 +263,7 @@ export async function setSecretsOnLocal(
     $.env[key] = parsed[key];
   }
 
-  const expanded = expand({ parsed, processEnv: { ...$.env } });
+  const expanded = expand({ parsed, processEnv: { ...$.env } as Record<string, string> });
 
   for (const key in expanded.parsed) {
     $.env[key] = expanded.parsed[key];

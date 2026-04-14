@@ -655,7 +655,7 @@ export default async function misc(program: any) {
           stdin: 'piped',
           stdout: 'piped',
           stderr: 'piped',
-          env: { ...$.env }, // Pass all environment variables
+          env: { ...$.env } as Record<string, string>, // Pass all environment variables
         });
 
         const child = process.spawn();
