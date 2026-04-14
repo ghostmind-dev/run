@@ -154,7 +154,7 @@ export async function getDockerfileAndImageName(
   tagsToPush: string[][];
 }> {
   $.verbose = true;
-  const ENV = `${Deno.env.get('ENVIRONMENT')}`;
+  const ENV = `${$.env['ENVIRONMENT']}`;
 
   let currentPath = Deno.cwd();
 
@@ -353,7 +353,7 @@ export async function dockerRegister(
       skip_tag_modifiers,
     );
 
-  Deno.env.set('BUILDX_NO_DEFAULT_ATTESTATIONS', '1');
+  $.env['BUILDX_NO_DEFAULT_ATTESTATIONS'] = '1';
 
   // verify the current architecture
 
@@ -812,7 +812,7 @@ export async function dockerComposeUp(
 
   // Check if we should use PROJECT env variable (default to true)
   const shouldUseProjectEnv = use_project_env !== false;
-  const PROJECT = Deno.env.get('PROJECT');
+  const PROJECT = $.env['PROJECT'];
 
   filesToUp.push('-f');
   filesToUp.push(`${currentPath}/${root}/${filename}`);
@@ -943,7 +943,7 @@ export async function dockerComposeDown(component: any, options: any) {
 
   // Check if we should use PROJECT env variable (default to true)
   const shouldUseProjectEnv = use_project_env !== false;
-  const PROJECT = Deno.env.get('PROJECT');
+  const PROJECT = $.env['PROJECT'];
 
   filesToDown.push('-f');
   filesToDown.push(`${root}/${filename}`);
@@ -1052,7 +1052,7 @@ export async function dockerComposeExec(
 
   // Check if we should use PROJECT env variable (default to true)
   const shouldUseProjectEnv = use_project_env !== false;
-  const PROJECT = Deno.env.get('PROJECT');
+  const PROJECT = $.env['PROJECT'];
 
   let notReady = true;
 
@@ -1179,7 +1179,7 @@ export async function dockerComposeBuild(
 
   // Check if we should use PROJECT env variable (default to true)
   const shouldUseProjectEnv = use_project_env !== false;
-  const PROJECT = Deno.env.get('PROJECT');
+  const PROJECT = $.env['PROJECT'];
 
   const baseCommand = ['docker', 'compose'];
 
@@ -1241,7 +1241,7 @@ export async function dockerComposeLogs(component: any, options: any) {
 
   // Check if we should use PROJECT env variable (default to true)
   const shouldUseProjectEnv = use_project_env !== false;
-  const PROJECT = Deno.env.get('PROJECT');
+  const PROJECT = $.env['PROJECT'];
 
   let filename = compose[component].filename || 'compose.yaml';
 

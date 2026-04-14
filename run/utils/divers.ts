@@ -68,7 +68,7 @@ export async function createUUID(length: number = 12): Promise<string> {
 ////////////////////////////////////////////////////////////////////////////////
 
 export async function getSrc(): Promise<string> {
-  const envSrc = Deno.env.get('SRC');
+  const envSrc = $.env['SRC'];
   if (envSrc) {
     return envSrc;
   }
@@ -83,7 +83,7 @@ export async function getSrc(): Promise<string> {
 }
 
 export async function getLocalhostSrc(): Promise<string> {
-  return Deno.env.get('LOCALHOST_SRC') || (await getSrc());
+  return $.env['LOCALHOST_SRC'] || (await getSrc());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -104,7 +104,7 @@ export async function getLocalhostSrc(): Promise<string> {
 export async function getAppName(): Promise<string> {
   const currentPath = Deno.cwd();
   const { name }: any = await verifyIfMetaJsonExists(
-    Deno.env.get(currentPath) || currentPath,
+    $.env[currentPath] || currentPath,
   );
 
   return name;
@@ -170,10 +170,10 @@ export async function setSecretsOnLocal(
   }
 
   const SRC = await getSrc();
-  Deno.env.set('SRC', SRC);
+  $.env['SRC'] = SRC;
 
-  if (Deno.env.get('LOCALHOST_SRC') === undefined) {
-    Deno.env.set('LOCALHOST_SRC', SRC);
+  if ($.env['LOCALHOST_SRC'] === undefined) {
+    $.env['LOCALHOST_SRC'] = SRC;
   }
 
   const { secrets = { base: 'base' }, port } = metaConfig;
@@ -227,7 +227,7 @@ export async function setSecretsOnLocal(
       name = srcMetaConfig.name;
     }
     const PROJECT = await getProjectName();
-    Deno.env.set('PROJECT', PROJECT);
+    $.env['PROJECT'] = PROJECT;
     prefixedVars += `\nTF_VAR_PROJECT=${name}`;
   }
   if (!appNameHasBeenDefined) {
@@ -237,17 +237,17 @@ export async function setSecretsOnLocal(
       name = appMetaConfig.name;
     }
     const APP = await getAppName();
-    Deno.env.set('APP', APP);
+    $.env['APP'] = APP;
     prefixedVars += `\nTF_VAR_APP=${name}`;
   }
   if (!gcpProjectIdhAsBeenDefined) {
-    const GCP_PROJECT_ID = Deno.env.get('GCP_PROJECT_ID') || '';
+    const GCP_PROJECT_ID = $.env['GCP_PROJECT_ID'] || '';
     prefixedVars += `\nTF_VAR_GCP_PROJECT_ID=${GCP_PROJECT_ID}`;
   }
   if (!portHasBeenDefined) {
     if (port) {
       const PORT = port;
-      Deno.env.set('PORT', `${PORT}`);
+      $.env['PORT'] = `${PORT}`;
       prefixedVars += `\nTF_VAR_PORT=${PORT}`;
     }
   }
@@ -260,13 +260,13 @@ export async function setSecretsOnLocal(
   // behaviour so that expand() resolves ${VAR} references from the file values,
   // not from stale inherited environment.
   for (const key in parsed) {
-    Deno.env.set(key, parsed[key]);
+    $.env[key] = parsed[key];
   }
 
-  const expanded = expand({ parsed, processEnv: Deno.env.toObject() });
+  const expanded = expand({ parsed, processEnv: { ...$.env } });
 
   for (const key in expanded.parsed) {
-    Deno.env.set(key, expanded.parsed[key]);
+    $.env[key] = expanded.parsed[key];
   }
 
   return;
@@ -502,7 +502,7 @@ export async function verifyIfMetaJsonExists(
               if (!envVariable.includes('this.')) {
                 updatedMetaConfig[key] = updatedMetaConfig[key].replace(
                   match,
-                  Deno.env.get(envVariable),
+                  $.env[envVariable],
                 );
               }
             }

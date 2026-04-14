@@ -469,7 +469,7 @@ async function runScript(
     return;
   }
 
-  Deno.env.set('CUSTOM_STATUS', 'in_progress');
+  $.env['CUSTOM_STATUS'] = 'in_progress';
 
   let currentPath = Deno.cwd();
 
@@ -484,7 +484,7 @@ async function runScript(
   let { custom } = metaConfig;
 
   const SRC = await getSrc();
-  const HOME = Deno.env.get('HOME');
+  const HOME = $.env['HOME'];
 
   let NODE_PATH = await $`npm root -g`;
   const NODE_PATH_STRING = NODE_PATH.stdout.trim();
@@ -541,7 +541,7 @@ async function runScript(
     // Set the working directory to the current path which may have been changed
     cd(currentPath);
 
-    let env = Deno.env.toObject();
+    let env = { ...$.env };
 
     await custom_function.default(argument, {
       metaConfig,

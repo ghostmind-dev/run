@@ -225,7 +225,7 @@ export default async function routine(program: any) {
     .argument('[script...]', 'script to run')
     .action(async (scripts: string[], _options: any) => {
       $.verbose = false;
-      Deno.env.set('FORCE_COLOR', '1');
+      $.env['FORCE_COLOR'] = '1';
 
       let metaConfig = await verifyIfMetaJsonExists(currentPath);
 

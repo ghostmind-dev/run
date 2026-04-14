@@ -115,7 +115,7 @@ async function defineSecretNamespace(target?: string) {
   } else if (global === 'true') {
     secretNamespace = `${id}/global`;
   } else {
-    const ENV = Deno.env.get('ENV');
+    const ENV = $.env['ENV'];
     secretNamespace = `${id}/${ENV}`;
   }
   $.verbose = true;

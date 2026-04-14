@@ -36,6 +36,7 @@ import { fileURLToPath } from 'node:url';
 ////////////////////////////////////////////////////////////////////////////////
 
 $.verbose = false;
+$.env = { ...Deno.env.toObject() };
 
 ////////////////////////////////////////////////////////////////////////////////
 // STARTING PROGRAM
@@ -117,12 +118,12 @@ program
     }
 
     if (
-      !Deno.env.get('GITHUB_ACTIONS') &&
-      Deno.env.get('CUSTOM_STATUS') !== 'in_progress'
+      !$.env['GITHUB_ACTIONS'] &&
+      $.env['CUSTOM_STATUS'] !== 'in_progress'
     ) {
       const { cible, env: envPath } = thisCommand.opts();
       await setSecretsOnLocal(cible || 'local', envPath);
-      Deno.env.set('ENV', cible || 'local');
+      $.env['ENV'] = cible || 'local';
     }
   });
 

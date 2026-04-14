@@ -108,7 +108,7 @@ export async function getBucketConfig(
   global: any,
   component: string
 ): Promise<{ bcBucket: string; bcPrefix: string }> {
-  const ENV = `${Deno.env.get('ENVIRONMENT')}`;
+  const ENV = `${$.env['ENVIRONMENT']}`;
   let bucketDirectory;
 
   if (global === true) {
@@ -119,7 +119,7 @@ export async function getBucketConfig(
 
   $.verbose = true;
 
-  const bcBucket = `bucket=${Deno.env.get('TERRAFORM_BUCKET_NAME')}`;
+  const bcBucket = `bucket=${$.env['TERRAFORM_BUCKET_NAME']}`;
   const bcPrefix = `prefix=${bucketDirectory}`;
 
   return { bcBucket, bcPrefix };
@@ -186,7 +186,7 @@ export async function terraformDestroy(
         for (const container of containers) {
           $.verbose = true;
 
-          Deno.env.set(`TF_VAR_IMAGE_DIGEST_${container.toUpperCase()}`, '');
+          $.env[`TF_VAR_IMAGE_DIGEST_${container.toUpperCase()}`] = '';
         }
       }
 
@@ -296,10 +296,7 @@ export async function terraformActivate(
 
         $.verbose = true;
 
-        Deno.env.set(
-          `TF_VAR_IMAGE_DIGEST_${container.toUpperCase()}`,
-          imageDigest
-        );
+        $.env[`TF_VAR_IMAGE_DIGEST_${container.toUpperCase()}`] = imageDigest;
       }
     }
 
@@ -421,7 +418,7 @@ export async function terraformVariables(component: any, options: any) {
   }
 
   if (!gcpProjectIdhAsBeenDefined) {
-    const GCP_PROJECT_ID = Deno.env.get('GCP_PROJECT_ID') || '';
+    const GCP_PROJECT_ID = $.env['GCP_PROJECT_ID'] || '';
     prefixedVars += `\nTF_VAR_GCP_PROJECT_ID=${GCP_PROJECT_ID}`;
   }
 
@@ -552,7 +549,7 @@ export async function cleanDotTerraformFolders() {
  * ```
  */
 export default async function commandTerraform(program: any) {
-  Deno.env.set('GOOGLE_APPLICATION_CREDENTIALS', '/tmp/gsa_key.json');
+  $.env['GOOGLE_APPLICATION_CREDENTIALS'] = '/tmp/gsa_key.json';
 
   const terraform = program.command('terraform');
   terraform.description('infrastructure definition');

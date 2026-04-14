@@ -571,7 +571,7 @@ export default async function misc(program: any) {
     .action(async (env_name: string, file_name: string) => {
       const currentPath = Deno.cwd();
 
-      const env = Deno.env.get(env_name);
+      const env = $.env[env_name];
 
       if (!env) {
         console.log(`${env_name} not found`);
@@ -593,7 +593,7 @@ export default async function misc(program: any) {
     .description('print the value of an environment variable')
     .argument('<variable>', 'environment variable name')
     .action((variable: string) => {
-      const value = Deno.env.get(variable);
+      const value = $.env[variable];
       if (value !== undefined) {
         console.log(value);
       } else {
@@ -655,7 +655,7 @@ export default async function misc(program: any) {
           stdin: 'piped',
           stdout: 'piped',
           stderr: 'piped',
-          env: Deno.env.toObject(), // Pass all environment variables
+          env: { ...$.env }, // Pass all environment variables
         });
 
         const child = process.spawn();
@@ -715,7 +715,7 @@ export default async function misc(program: any) {
         }
 
         // Determine which IDE we're using
-        const homeDir = Deno.env.get('HOME') || '';
+        const homeDir = $.env['HOME'] || '';
         let ideCommand = '';
 
         try {
@@ -773,7 +773,7 @@ export default async function misc(program: any) {
     )
     .action(async (options: any) => {
       try {
-        const homeDir = Deno.env.get('HOME') || '';
+        const homeDir = $.env['HOME'] || '';
         const currentPath = Deno.cwd();
         const SRC = await getSrc();
 
@@ -959,7 +959,7 @@ export default async function misc(program: any) {
     .description('restore default file exclusions from remote config')
     .action(async () => {
       try {
-        const homeDir = Deno.env.get('HOME') || '';
+        const homeDir = $.env['HOME'] || '';
 
         // Determine IDE and settings path
         let settingsPath = '';
@@ -1074,7 +1074,7 @@ export default async function misc(program: any) {
           console.log(`Targeting workspace settings`);
         } else {
           // Target global IDE settings (original behavior)
-          const homeDir = Deno.env.get('HOME') || '';
+          const homeDir = $.env['HOME'] || '';
 
           try {
             await Deno.stat(`${homeDir}/.cursor-server`);
@@ -1201,7 +1201,7 @@ export default async function misc(program: any) {
     )
     .action(async () => {
       try {
-        const homeDir = Deno.env.get('HOME') || '';
+        const homeDir = $.env['HOME'] || '';
         const currentPath = Deno.cwd();
 
         // Define settings paths
@@ -1404,7 +1404,7 @@ export default async function misc(program: any) {
     )
     .action(async () => {
       try {
-        const homeDir = Deno.env.get('HOME');
+        const homeDir = $.env['HOME'];
         if (!homeDir) {
           console.error('❌ HOME environment variable not set');
           Deno.exit(1);
