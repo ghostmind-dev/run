@@ -259,6 +259,88 @@
           }
         }
       }
+    },
+    "herdr": {
+      "type": "object",
+      "description": "Herdr scene configuration for predefined workspaces, tabs, and panes",
+      "properties": {
+        "scenes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Scene name (maps to a named herdr session). Multiple meta.json files can contribute workspaces to the same scene name."
+              },
+              "workspaces": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "description": "Workspace label"
+                    },
+                    "cwd": {
+                      "type": "string",
+                      "description": "Working directory for the workspace. If starts with '/', treated as absolute path. Otherwise, relative to meta.json location."
+                    },
+                    "env": {
+                      "type": "object",
+                      "description": "Environment variables applied to the workspace as key-value pairs",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "tabs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "label": {
+                            "type": "string",
+                            "description": "Tab label"
+                          },
+                          "path": {
+                            "type": "string",
+                            "description": "Starting directory for all panes in this tab. If starts with '/', treated as absolute path. Otherwise, relative to workspace cwd."
+                          },
+                          "layout": {
+                            "type": "string",
+                            "enum": ["sections", "grid", "compact"],
+                            "description": "Layout mode: 'sections' for hierarchical layouts, 'grid' for predefined arrangements, 'compact' for minimal object-based configuration"
+                          },
+                          "section": {
+                            "$ref": "#/$defs/herdrSection"
+                          },
+                          "grid": {
+                            "$ref": "#/$defs/herdrGrid"
+                          },
+                          "compact": {
+                            "$ref": "#/$defs/herdrCompact"
+                          }
+                        },
+                        "required": [
+                          "label"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "tabs"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "name",
+              "workspaces"
+            ]
+          }
+        }
+      }
     }
   },
   "required": [
@@ -367,6 +449,112 @@
             "type": "string"
           },
           "minProperties": 1
+        }
+      },
+      "required": ["type", "panes"],
+      "additionalProperties": false
+    },
+    "herdrPane": {
+      "type": "object",
+      "description": "A herdr pane defining arrangement only — no startup command. The description documents how the team (or an AI agent) should use the pane.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Unique identifier for this pane (used as the pane label)"
+        },
+        "description": {
+          "type": "string",
+          "description": "How to use this pane (documentation, not an executed command)"
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^[0-9]+%?$",
+          "description": "Size of this pane (e.g., '50%', '30'). Only applies when this pane is an item in a section."
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "herdrSection": {
+      "type": "object",
+      "description": "A section defines how to split space - either containing panes or other sections",
+      "properties": {
+        "split": {
+          "type": "string",
+          "enum": ["horizontal", "vertical"],
+          "description": "Split direction: horizontal = split top/bottom, vertical = split left/right"
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^[0-9]+%?$",
+          "description": "Size of this section (e.g., '50%', '30'). Only applies when this section is an item in another section."
+        },
+        "items": {
+          "type": "array",
+          "description": "Items within this section - can be panes or other sections",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/herdrSection",
+                "description": "Nested section"
+              },
+              {
+                "$ref": "#/$defs/herdrPane",
+                "description": "Terminal pane"
+              }
+            ]
+          }
+        }
+      },
+      "required": ["split", "items"],
+      "additionalProperties": false
+    },
+    "herdrGrid": {
+      "type": "object",
+      "description": "Predefined grid layout with auto-fill support for missing panes",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["single", "vertical", "horizontal", "two-by-two", "main-side"],
+          "description": "Grid type: single (1 pane), vertical (2 panes left/right), horizontal (2 panes top/bottom), two-by-two (4 panes in 2x2 grid), main-side (1 large left + 2 stacked right)"
+        },
+        "panes": {
+          "type": "array",
+          "description": "Pane definitions. Missing panes will be auto-generated with default names.",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/herdrPane"
+          }
+        }
+      },
+      "required": ["type", "panes"],
+      "additionalProperties": false
+    },
+    "herdrCompact": {
+      "type": "object",
+      "description": "Compact grid layout with minimal configuration. Panes are an ordered array (top-left to bottom-right); each entry is either just a pane name, or an object with a name and a description of how to use the pane.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["single", "vertical", "horizontal", "two-by-two", "main-side"],
+          "description": "Grid type: single (1 pane), vertical (2 panes left/right), horizontal (2 panes top/bottom), two-by-two (4 panes in 2x2 grid), main-side (1 large left + 2 stacked right)"
+        },
+        "panes": {
+          "type": "array",
+          "description": "Ordered pane definitions (top-left to bottom-right). Each entry is a pane name string, or an object with name and description.",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Pane name"
+              },
+              {
+                "$ref": "#/$defs/herdrPane"
+              }
+            ]
+          }
         }
       },
       "required": ["type", "panes"],
