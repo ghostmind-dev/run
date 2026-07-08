@@ -88,6 +88,7 @@ program
 import commandAction from '../lib/action.ts';
 import commandCustom from '../lib/custom.ts';
 import commandDocker from '../lib/docker.ts';
+import commandHerdr from '../lib/herdr.ts';
 import commandMeta from '../lib/meta.ts';
 import commandMisc from '../lib/misc.ts';
 import commandRoutine from '../lib/routine.ts';
@@ -133,6 +134,7 @@ program
 await commandAction(program);
 await commandCustom(program);
 await commandDocker(program);
+await commandHerdr(program);
 await commandMeta(program);
 await commandMisc(program);
 await commandRoutine(program);

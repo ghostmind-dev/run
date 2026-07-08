@@ -8,15 +8,12 @@
     "init": "run tmux init run",
     "attach": "run tmux attach run",
     "terminate": "run tmux terminate run",
+    "herdr_init": "run herdr init run",
+    "herdr_attach": "run herdr attach run",
+    "herdr_terminate": "run herdr terminate run --delete",
     "mcp": "run mcp set --all",
     "install": "deno install -A -f -g -n run run/bin/cmd.ts",
     "echo": "echo ${SRC}"
-  },
-  "mcp": {
-    "docs": {
-      "type": "http",
-      "url": "https://docs.ghostmind.dev/mcp"
-    }
   },
   "tmux": {
     "sessions": [
@@ -70,6 +67,55 @@
                 }
               ]
             }
+          }
+        ]
+      }
+    ]
+  },
+  "herdr": {
+    "scenes": [
+      {
+        "name": "run",
+        "workspaces": [
+          {
+            "label": "run",
+            "tabs": [
+              {
+                "label": "dev",
+                "layout": "compact",
+                "compact": {
+                  "type": "main-side",
+                  "panes": [
+                    {
+                      "name": "main",
+                      "description": "primary development pane"
+                    },
+                    {
+                      "name": "check",
+                      "description": "run 'run routine check' to type-check the CLI"
+                    },
+                    {
+                      "name": "execution-shell",
+                      "description": "run ad-hoc commands here without interrupting other panes"
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "test",
+                "layout": "compact",
+                "compact": {
+                  "type": "vertical",
+                  "panes": [
+                    {
+                      "name": "tests",
+                      "description": "run 'run routine test' to execute the unit tests"
+                    },
+                    "scratch"
+                  ]
+                }
+              }
+            ]
           }
         ]
       }
