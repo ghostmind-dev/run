@@ -276,7 +276,7 @@ export async function actionRunLocalEntry(target: any, options: any) {
   }
 
   if (event === 'push') {
-    const eventFile = await fs.readFile(
+    const eventFile = readFileSync(
       `${await getLocalhostSrc()}/.github/mocking/push.json`,
       'utf8',
     );
