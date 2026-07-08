@@ -262,81 +262,65 @@
     },
     "herdr": {
       "type": "object",
-      "description": "Herdr scene configuration for predefined workspaces, tabs, and panes",
+      "description": "Herdr workspace configuration. A project maps to one herdr workspace; tmux windows map to herdr tabs. Multiple meta.json files can contribute tabs to the same workspace label (assembled with --all).",
       "properties": {
-        "scenes": {
+        "workspaces": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "name": {
+              "label": {
                 "type": "string",
-                "description": "Scene name (maps to a named herdr session). Multiple meta.json files can contribute workspaces to the same scene name."
+                "description": "Workspace label (typically the project name). Multiple meta.json files can contribute tabs to the same label."
               },
-              "workspaces": {
+              "cwd": {
+                "type": "string",
+                "description": "Working directory for the workspace. If starts with '/', treated as absolute path. Otherwise, relative to meta.json location."
+              },
+              "env": {
+                "type": "object",
+                "description": "Environment variables applied to the workspace as key-value pairs",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "tabs": {
                 "type": "array",
                 "items": {
                   "type": "object",
                   "properties": {
                     "label": {
                       "type": "string",
-                      "description": "Workspace label"
+                      "description": "Tab label (prefixed with the app name at init, mirroring tmux window naming)"
                     },
-                    "cwd": {
+                    "path": {
                       "type": "string",
-                      "description": "Working directory for the workspace. If starts with '/', treated as absolute path. Otherwise, relative to meta.json location."
+                      "description": "Starting directory for all panes in this tab. If starts with '/', treated as absolute path. Otherwise, relative to workspace cwd (the contributing meta.json location by default)."
                     },
-                    "env": {
-                      "type": "object",
-                      "description": "Environment variables applied to the workspace as key-value pairs",
-                      "additionalProperties": {
-                        "type": "string"
-                      }
+                    "layout": {
+                      "type": "string",
+                      "enum": ["sections", "grid", "compact"],
+                      "description": "Layout mode: 'sections' for hierarchical layouts, 'grid' for predefined arrangements, 'compact' for minimal configuration"
                     },
-                    "tabs": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "label": {
-                            "type": "string",
-                            "description": "Tab label"
-                          },
-                          "path": {
-                            "type": "string",
-                            "description": "Starting directory for all panes in this tab. If starts with '/', treated as absolute path. Otherwise, relative to workspace cwd."
-                          },
-                          "layout": {
-                            "type": "string",
-                            "enum": ["sections", "grid", "compact"],
-                            "description": "Layout mode: 'sections' for hierarchical layouts, 'grid' for predefined arrangements, 'compact' for minimal object-based configuration"
-                          },
-                          "section": {
-                            "$ref": "#/$defs/herdrSection"
-                          },
-                          "grid": {
-                            "$ref": "#/$defs/herdrGrid"
-                          },
-                          "compact": {
-                            "$ref": "#/$defs/herdrCompact"
-                          }
-                        },
-                        "required": [
-                          "label"
-                        ]
-                      }
+                    "section": {
+                      "$ref": "#/$defs/herdrSection"
+                    },
+                    "grid": {
+                      "$ref": "#/$defs/herdrGrid"
+                    },
+                    "compact": {
+                      "$ref": "#/$defs/herdrCompact"
                     }
                   },
                   "required": [
-                    "label",
-                    "tabs"
+                    "label"
                   ]
                 }
               }
             },
             "required": [
-              "name",
-              "workspaces"
+              "label",
+              "tabs"
             ]
           }
         }
