@@ -1,11 +1,15 @@
 /**
- * @fileoverview Herdr scene management module for @ghostmind/run
+ * @fileoverview Herdr workspace management module for @ghostmind/run
  *
- * This module provides commands for managing herdr scenes (predefined
- * workspaces, tabs, and panes) for development workflows. A scene maps to a
- * named herdr session. A scene can be fully defined in a single meta.json or
- * spread across multiple meta.json files (each contributing workspaces to the
- * same scene name) and assembled with --all.
+ * This module provides commands for managing predefined herdr workspaces
+ * (tabs and panes) for development workflows. The mapping mirrors the tmux
+ * module: a project maps to ONE herdr workspace, tmux windows map to herdr
+ * tabs. Everything lives in herdr's default session, so the sidebar shows one
+ * workspace per project.
+ *
+ * A workspace can be fully defined in a single meta.json or spread across
+ * multiple meta.json files (each contributing tabs to the same workspace
+ * label) and assembled with --all.
  *
  * Panes define the arrangement only — no startup commands. Each pane carries
  * a description documenting how the team (or an AI agent) should use it.
@@ -13,23 +17,19 @@
  * Example meta.json configuration:
  * {
  *   "herdr": {
- *     "scenes": [{
- *       "name": "platform",
- *       "workspaces": [{
- *         "label": "api",
- *         "cwd": "app",
- *         "tabs": [{
- *           "label": "dev",
- *           "layout": "compact",
- *           "compact": {
- *             "type": "main-side",
- *             "panes": [
- *               { "name": "server", "description": "long-running dev server, do not interrupt" },
- *               "logs",
- *               { "name": "execution-shell", "description": "run ad-hoc commands here" }
- *             ]
- *           }
- *         }]
+ *     "workspaces": [{
+ *       "label": "my-platform",
+ *       "tabs": [{
+ *         "label": "dev",
+ *         "layout": "compact",
+ *         "compact": {
+ *           "type": "main-side",
+ *           "panes": [
+ *             { "name": "server", "description": "long-running dev server, do not interrupt" },
+ *             "logs",
+ *             { "name": "execution-shell", "description": "run ad-hoc commands here" }
+ *           ]
+ *         }
  *       }]
  *     }]
  *   }
@@ -88,36 +88,20 @@ interface HerdrWorkspace {
   tabs: HerdrTab[];
 }
 
-interface HerdrScene {
-  name: string;
-  workspaces: HerdrWorkspace[];
-}
-
 interface HerdrConfig {
-  scenes: HerdrScene[];
+  workspaces: HerdrWorkspace[];
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // HERDR CLI HELPERS
 ////////////////////////////////////////////////////////////////////////////////
 
-/**
- * Create a zx shell scoped to a scene's named herdr session
- */
-function sceneShell(sceneName: string) {
-  return $({
-    env: { ...Deno.env.toObject(), HERDR_SESSION: sceneName },
-    verbose: false,
-  });
-}
+const $$ = $({ verbose: false });
 
 /**
  * Run a herdr CLI command and parse its JSON response
  */
-async function herdrJson(
-  $$: ReturnType<typeof sceneShell>,
-  args: string[]
-): Promise<any> {
+async function herdrJson(args: string[]): Promise<any> {
   const result = await $$`herdr ${args}`.quiet();
   const output = result.stdout.trim();
   if (!output) {
@@ -127,27 +111,21 @@ async function herdrJson(
 }
 
 /**
- * Ensure the herdr server for a scene's session is running, starting it
- * headless if needed
+ * Ensure the herdr server is running, starting it headless if needed
  */
-async function ensureServerRunning(sceneName: string): Promise<void> {
-  const $$ = sceneShell(sceneName);
-
+async function ensureServerRunning(): Promise<void> {
   try {
-    await herdrJson($$, ['workspace', 'list']);
+    await herdrJson(['workspace', 'list']);
     return;
   } catch {
     // Server not running, start it headless
   }
 
-  console.log(
-    chalk.gray(`  🖥️  Starting herdr server for scene '${sceneName}'...`)
-  );
+  console.log(chalk.gray(`  🖥️  Starting herdr server...`));
 
   // Detach fully via nohup so the server outlives this CLI process
   const starter = new Deno.Command('sh', {
     args: ['-c', 'nohup herdr server >/dev/null 2>&1 &'],
-    env: { ...Deno.env.toObject(), HERDR_SESSION: sceneName },
     stdin: 'null',
     stdout: 'null',
     stderr: 'null',
@@ -157,16 +135,22 @@ async function ensureServerRunning(sceneName: string): Promise<void> {
   for (let attempt = 0; attempt < 50; attempt++) {
     await new Promise((resolve) => setTimeout(resolve, 200));
     try {
-      await herdrJson($$, ['workspace', 'list']);
+      await herdrJson(['workspace', 'list']);
       return;
     } catch {
       // Not ready yet
     }
   }
 
-  throw new Error(
-    `herdr server for scene '${sceneName}' did not become ready in time`
-  );
+  throw new Error(`herdr server did not become ready in time`);
+}
+
+/**
+ * Find running workspaces matching a label
+ */
+async function findWorkspacesByLabel(label: string): Promise<any[]> {
+  const list = await herdrJson(['workspace', 'list']);
+  return (list?.workspaces ?? []).filter((ws: any) => ws.label === label);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -487,154 +471,119 @@ function sectionForTab(tab: HerdrTab): HerdrSection | null {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// SCENE BUILDER
+// WORKSPACE BUILDER
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Create one workspace (with its tabs and panes) in a scene's herdr session
+ * Create one tab (with its panes) inside a workspace
  */
-async function createWorkspace(
-  sceneName: string,
-  workspace: HerdrWorkspace,
+async function createTab(
+  workspaceId: string,
+  tabLabel: string,
+  tab: HerdrTab,
   basePath: string,
   isAppendMode: boolean
 ): Promise<void> {
-  const $$ = sceneShell(sceneName);
-  const workspaceCwd = resolvePath(workspace.cwd, basePath);
+  const tabPath = resolvePath(tab.path, basePath);
 
   if (!isAppendMode) {
+    console.log(chalk.gray(`    📁 Creating tab: ${tabLabel}`));
+  }
+
+  const tabResult = await herdrJson([
+    'tab',
+    'create',
+    '--workspace',
+    workspaceId,
+    '--cwd',
+    tabPath,
+    '--label',
+    tabLabel,
+    '--no-focus',
+  ]);
+  const rootPaneId = tabResult.root_pane.pane_id;
+
+  const sectionToProcess = sectionForTab(tab);
+  if (!sectionToProcess) {
+    return;
+  }
+
+  if (!isAppendMode && tab.layout !== 'sections') {
+    const layoutType =
+      tab.layout === 'grid' ? tab.grid?.type : tab.compact?.type;
     console.log(
-      chalk.gray(`  🗂️  Creating workspace: ${workspace.label} (${workspaceCwd})`)
+      chalk.gray(`      📐 Creating ${tab.layout} layout: ${layoutType}`)
     );
   }
 
-  const createArgs = [
-    'workspace',
-    'create',
-    '--cwd',
-    workspaceCwd,
-    '--label',
-    workspace.label,
-    '--no-focus',
-  ];
-  for (const [key, value] of Object.entries(workspace.env ?? {})) {
-    createArgs.push('--env', `${key}=${value}`);
+  // Build and execute the split plan. herdr pane ids are stable strings,
+  // so planned pane ids map directly to real ids with no renumbering.
+  const plan = buildSplitPlan(sectionToProcess);
+  const paneIds = new Map<number, string>();
+  paneIds.set(0, rootPaneId);
+  const paneMap = new Map<string, string>();
+
+  for (const op of plan) {
+    if (op.type === 'split') {
+      const fromPaneId = paneIds.get(op.fromPane);
+      if (!fromPaneId) {
+        throw new Error(`Split plan referenced unknown pane ${op.fromPane}`);
+      }
+
+      const splitArgs = [
+        'pane',
+        'split',
+        fromPaneId,
+        '--direction',
+        op.direction,
+        '--cwd',
+        tabPath,
+        '--no-focus',
+      ];
+      if (op.ratio !== undefined) {
+        splitArgs.push('--ratio', op.ratio.toFixed(2));
+      }
+
+      const splitResult = await herdrJson(splitArgs);
+      paneIds.set(op.resultPane, splitResult.pane.pane_id);
+    } else if (op.type === 'assign') {
+      const paneId = paneIds.get(op.paneIndex);
+      if (paneId) {
+        paneMap.set(op.paneName, paneId);
+      }
+    }
   }
 
-  const created = await herdrJson($$, createArgs);
-  const workspaceId = created.workspace.workspace_id;
-  const autoTabId = created.tab.tab_id;
-
-  const tabs = workspace.tabs ?? [];
-  let createdTabs = 0;
-
-  for (const tab of tabs) {
-    const tabPath = resolvePath(tab.path, workspaceCwd);
+  // Label panes with their configured names and surface their descriptions
+  for (const [paneName, paneId] of paneMap.entries()) {
+    try {
+      await herdrJson(['pane', 'rename', paneId, paneName]);
+    } catch (error) {
+      if (!isAppendMode) {
+        console.log(
+          chalk.yellow(`      ⚠️  Failed to label pane ${paneId}: ${error}`)
+        );
+      }
+    }
 
     if (!isAppendMode) {
-      console.log(chalk.gray(`    📁 Creating tab: ${tab.label}`));
-    }
-
-    const tabResult = await herdrJson($$, [
-      'tab',
-      'create',
-      '--workspace',
-      workspaceId,
-      '--cwd',
-      tabPath,
-      '--label',
-      tab.label,
-      '--no-focus',
-    ]);
-    const rootPaneId = tabResult.root_pane.pane_id;
-    createdTabs++;
-
-    const sectionToProcess = sectionForTab(tab);
-    if (!sectionToProcess) {
-      continue;
-    }
-
-    if (!isAppendMode && tab.layout !== 'sections') {
-      const layoutType =
-        tab.layout === 'grid' ? tab.grid?.type : tab.compact?.type;
-      console.log(
-        chalk.gray(`      📐 Creating ${tab.layout} layout: ${layoutType}`)
-      );
-    }
-
-    // Build and execute the split plan. herdr pane ids are stable strings,
-    // so planned pane ids map directly to real ids with no renumbering.
-    const plan = buildSplitPlan(sectionToProcess);
-    const paneIds = new Map<number, string>();
-    paneIds.set(0, rootPaneId);
-    const paneMap = new Map<string, string>();
-
-    for (const op of plan) {
-      if (op.type === 'split') {
-        const fromPaneId = paneIds.get(op.fromPane);
-        if (!fromPaneId) {
-          throw new Error(`Split plan referenced unknown pane ${op.fromPane}`);
-        }
-
-        const splitArgs = [
-          'pane',
-          'split',
-          fromPaneId,
-          '--direction',
-          op.direction,
-          '--cwd',
-          tabPath,
-          '--no-focus',
-        ];
-        if (op.ratio !== undefined) {
-          splitArgs.push('--ratio', op.ratio.toFixed(2));
-        }
-
-        const splitResult = await herdrJson($$, splitArgs);
-        paneIds.set(op.resultPane, splitResult.pane.pane_id);
-      } else if (op.type === 'assign') {
-        const paneId = paneIds.get(op.paneIndex);
-        if (paneId) {
-          paneMap.set(op.paneName, paneId);
-        }
+      const paneConfig = findPaneInSection(sectionToProcess, paneName);
+      if (paneConfig?.description) {
+        console.log(
+          chalk.gray(`      🏷️  ${paneName}: ${paneConfig.description}`)
+        );
       }
     }
-
-    // Label panes with their configured names and surface their descriptions
-    for (const [paneName, paneId] of paneMap.entries()) {
-      try {
-        await herdrJson($$, ['pane', 'rename', paneId, paneName]);
-      } catch (error) {
-        if (!isAppendMode) {
-          console.log(
-            chalk.yellow(`      ⚠️  Failed to label pane ${paneId}: ${error}`)
-          );
-        }
-      }
-
-      if (!isAppendMode) {
-        const paneConfig = findPaneInSection(sectionToProcess, paneName);
-        if (paneConfig?.description) {
-          console.log(
-            chalk.gray(`      🏷️  ${paneName}: ${paneConfig.description}`)
-          );
-        }
-      }
-    }
-  }
-
-  // The workspace was created with an automatic first tab; close it once the
-  // configured tabs exist so only defined tabs remain
-  if (createdTabs > 0) {
-    await herdrJson($$, ['tab', 'close', autoTabId]);
   }
 }
 
 /**
- * Initialize the workspaces a single meta.json contributes to a scene
+ * Initialize the tabs a single meta.json contributes to a workspace.
+ * Reuses the workspace when one with the same label already exists, and
+ * skips tabs whose label already exists (idempotent by default).
  */
-async function initHerdrScene(
-  sceneName: string,
+async function initHerdrWorkspace(
+  workspaceName: string,
   reset: boolean,
   currentPath: string,
   isAppendMode: boolean = false
@@ -649,7 +598,7 @@ async function initHerdrScene(
     return;
   }
 
-  if (!metaConfig.herdr || !metaConfig.herdr.scenes) {
+  if (!metaConfig.herdr || !metaConfig.herdr.workspaces) {
     console.log(
       chalk.yellow(`⚠️  No herdr configuration found in ${metaConfig.name}`)
     );
@@ -658,13 +607,15 @@ async function initHerdrScene(
 
   const herdrConfig: HerdrConfig = metaConfig.herdr;
 
-  const filteredScenes = herdrConfig.scenes.filter(
-    (scene: HerdrScene) => scene.name === sceneName
+  const filteredWorkspaces = herdrConfig.workspaces.filter(
+    (workspace: HerdrWorkspace) => workspace.label === workspaceName
   );
 
-  if (filteredScenes.length === 0) {
+  if (filteredWorkspaces.length === 0) {
     console.log(
-      chalk.yellow(`⚠️  Scene '${sceneName}' not defined in ${metaConfig.name}`)
+      chalk.yellow(
+        `⚠️  Workspace '${workspaceName}' not defined in ${metaConfig.name}`
+      )
     );
     return;
   }
@@ -672,34 +623,105 @@ async function initHerdrScene(
   if (!isAppendMode) {
     console.log(
       chalk.green(
-        `🚀 Initializing herdr scene '${sceneName}' for ${metaConfig.name}...`
+        `🚀 Initializing herdr workspace '${workspaceName}' for ${metaConfig.name}...`
       )
     );
-
-    if (reset) {
-      await terminateHerdrScene(sceneName, true, true);
-    }
   }
 
-  await ensureServerRunning(sceneName);
+  await ensureServerRunning();
 
-  for (const scene of filteredScenes) {
-    for (const workspace of scene.workspaces ?? []) {
-      await createWorkspace(sceneName, workspace, currentPath, isAppendMode);
+  // Handle reset (only once, in the non-append entry path; initAllHerdrWorkspaces
+  // handles reset itself before looping)
+  if (reset && !isAppendMode) {
+    await closeWorkspacesByLabel(workspaceName, true);
+  }
+
+  for (const workspaceConfig of filteredWorkspaces) {
+    const basePath = resolvePath(workspaceConfig.cwd, currentPath);
+
+    // Reuse the existing workspace if one with this label is already open
+    const existing = await findWorkspacesByLabel(workspaceName);
+    let workspaceId: string;
+    let autoTabId: string | null = null;
+
+    if (existing.length > 0) {
+      workspaceId = existing[0].workspace_id;
+      if (!isAppendMode) {
+        console.log(
+          chalk.gray(`  🗂️  Reusing workspace: ${workspaceName} (${workspaceId})`)
+        );
+      }
+    } else {
+      if (!isAppendMode) {
+        console.log(
+          chalk.gray(`  🗂️  Creating workspace: ${workspaceName} (${basePath})`)
+        );
+      }
+
+      const createArgs = [
+        'workspace',
+        'create',
+        '--cwd',
+        basePath,
+        '--label',
+        workspaceName,
+        '--no-focus',
+      ];
+      for (const [key, value] of Object.entries(workspaceConfig.env ?? {})) {
+        createArgs.push('--env', `${key}=${value}`);
+      }
+
+      const created = await herdrJson(createArgs);
+      workspaceId = created.workspace.workspace_id;
+      autoTabId = created.tab.tab_id;
+    }
+
+    // Existing tab labels, to skip tabs that are already present
+    const tabList = await herdrJson([
+      'tab',
+      'list',
+      '--workspace',
+      workspaceId,
+    ]);
+    const existingTabLabels = new Set(
+      (tabList?.tabs ?? []).map((tab: any) => tab.label)
+    );
+
+    let createdTabs = 0;
+    for (const tab of workspaceConfig.tabs ?? []) {
+      // Prefix tab labels with the app name, mirroring tmux window naming
+      const tabLabel = `${metaConfig.name}-${tab.label}`;
+
+      if (existingTabLabels.has(tabLabel)) {
+        console.log(chalk.gray(`    ⏭️  Tab '${tabLabel}' already exists`));
+        continue;
+      }
+
+      await createTab(workspaceId, tabLabel, tab, basePath, isAppendMode);
+      createdTabs++;
+    }
+
+    // A freshly created workspace comes with an automatic first tab; close it
+    // once the configured tabs exist so only defined tabs remain
+    if (autoTabId && createdTabs > 0) {
+      await herdrJson(['tab', 'close', autoTabId]);
     }
   }
 
   if (!isAppendMode) {
-    console.log(chalk.green(`✅ Scene '${sceneName}' created successfully!`));
-    console.log(chalk.cyan(`   To attach: run herdr attach ${sceneName}`));
+    console.log(
+      chalk.green(`✅ Workspace '${workspaceName}' initialized successfully!`)
+    );
+    console.log(chalk.cyan(`   To attach: run herdr attach`));
   }
 }
 
 /**
- * Initialize a scene from all meta.json files in the project that define it
+ * Initialize a workspace from all meta.json files in the project that
+ * contribute tabs to it
  */
-async function initAllHerdrScenes(
-  sceneName: string,
+async function initAllHerdrWorkspaces(
+  workspaceName: string,
   reset: boolean
 ): Promise<void> {
   $.verbose = false;
@@ -720,14 +742,14 @@ async function initAllHerdrScenes(
 
   const herdrConfigs: { path: string; meta: any }[] = [];
 
-  // Find all meta.json files with herdr config AND filter for the requested scene
+  // Find all meta.json files with herdr config AND filter for the requested workspace
   for (const directory of directories) {
     const metaConfig = await verifyIfMetaJsonExists(directory);
-    if (metaConfig?.herdr?.scenes) {
-      const hasRequestedScene = metaConfig.herdr.scenes.some(
-        (scene: any) => scene.name === sceneName
+    if (metaConfig?.herdr?.workspaces) {
+      const hasRequestedWorkspace = metaConfig.herdr.workspaces.some(
+        (workspace: any) => workspace.label === workspaceName
       );
-      if (hasRequestedScene) {
+      if (hasRequestedWorkspace) {
         herdrConfigs.push({ path: directory, meta: metaConfig });
       }
     }
@@ -736,7 +758,7 @@ async function initAllHerdrScenes(
   if (herdrConfigs.length === 0) {
     console.error(
       chalk.yellow(
-        `⚠️  No herdr configurations found for scene '${sceneName}' in project`
+        `⚠️  No herdr configurations found for workspace '${workspaceName}' in project`
       )
     );
     Deno.exit(1);
@@ -744,60 +766,65 @@ async function initAllHerdrScenes(
 
   console.log(
     chalk.blue(
-      `📦 Found ${herdrConfigs.length} herdr configurations with scene '${sceneName}'`
+      `📦 Found ${herdrConfigs.length} herdr configurations with workspace '${workspaceName}'`
     )
   );
 
+  await ensureServerRunning();
+
   // Handle reset if requested
   if (reset) {
-    await terminateHerdrScene(sceneName, true, true);
+    await closeWorkspacesByLabel(workspaceName, true);
   }
-
-  await ensureServerRunning(sceneName);
 
   // Process each configuration
   for (const config of herdrConfigs) {
     console.log(
       chalk.gray(`📁 Processing: ${config.meta.name} (${config.path})`)
     );
-    await initHerdrScene(sceneName, false, config.path, true);
+    await initHerdrWorkspace(workspaceName, false, config.path, true);
   }
 
   console.log(
-    chalk.green(`✅ All configurations processed for scene '${sceneName}'!`)
+    chalk.green(
+      `✅ All configurations processed for workspace '${workspaceName}'!`
+    )
   );
-  console.log(chalk.cyan(`   To attach: run herdr attach ${sceneName}`));
+  console.log(chalk.cyan(`   To attach: run herdr attach`));
 }
 
 /**
- * Stop (and optionally delete) a scene's herdr session
+ * Close all workspaces matching a label
  */
-async function terminateHerdrScene(
-  sceneName: string,
-  deleteSession: boolean,
+async function closeWorkspacesByLabel(
+  label: string,
   quiet: boolean = false
 ): Promise<void> {
-  const $$ = sceneShell(sceneName);
-
+  let matches: any[] = [];
   try {
-    await $$`herdr session stop ${sceneName}`.quiet();
-    if (!quiet) {
-      console.log(chalk.green(`✅ Scene '${sceneName}' stopped successfully`));
-    }
+    matches = await findWorkspacesByLabel(label);
   } catch {
     if (!quiet) {
-      console.log(chalk.yellow(`⚠️  Scene '${sceneName}' is not running`));
+      console.log(chalk.yellow(`⚠️  herdr server is not running`));
     }
+    return;
   }
 
-  if (deleteSession) {
-    try {
-      await $$`herdr session delete ${sceneName}`.quiet();
-      if (!quiet) {
-        console.log(chalk.green(`   Session state deleted`));
-      }
-    } catch {
-      // Session state doesn't exist, nothing to delete
+  if (matches.length === 0) {
+    if (!quiet) {
+      console.log(chalk.yellow(`⚠️  Workspace '${label}' not found`));
+    }
+    return;
+  }
+
+  for (const workspace of matches) {
+    await herdrJson(['workspace', 'close', workspace.workspace_id]);
+    if (!quiet) {
+      console.log(
+        chalk.green(
+          `✅ Workspace '${label}' (${workspace.workspace_id}) closed`
+        )
+      );
     }
   }
 }
@@ -808,7 +835,7 @@ async function terminateHerdrScene(
 
 export default async function herdr(program: any) {
   const herdr = program.command('herdr');
-  herdr.description('herdr scene management commands');
+  herdr.description('herdr workspace management commands');
 
   ////////////////////////////////////////////////////////////////////////////
   // INIT COMMAND
@@ -816,13 +843,13 @@ export default async function herdr(program: any) {
 
   herdr
     .command('init')
-    .description('initialize herdr scene from meta.json configurations')
-    .argument('<scene>', 'scene name to create/append to')
+    .description('initialize herdr workspace from meta.json configurations')
+    .argument('<workspace>', 'workspace label to create/append to')
     .option('--all', 'process all herdr configurations found in the project')
-    .option('--reset', 'reset existing scene if it exists')
+    .option('--reset', 'close and rebuild the workspace if it exists')
     .action(
       async (
-        sceneName: string,
+        workspaceName: string,
         options: {
           all?: boolean;
           reset?: boolean;
@@ -832,12 +859,20 @@ export default async function herdr(program: any) {
           const { all, reset } = options;
 
           if (all) {
-            await initAllHerdrScenes(sceneName, reset ?? false);
+            await initAllHerdrWorkspaces(workspaceName, reset ?? false);
           } else {
-            await initHerdrScene(sceneName, reset ?? false, Deno.cwd(), false);
+            await initHerdrWorkspace(
+              workspaceName,
+              reset ?? false,
+              Deno.cwd(),
+              false
+            );
           }
         } catch (error) {
-          console.error(chalk.red('❌ Error initializing herdr scene:'), error);
+          console.error(
+            chalk.red('❌ Error initializing herdr workspace:'),
+            error
+          );
           Deno.exit(1);
         }
       }
@@ -849,24 +884,35 @@ export default async function herdr(program: any) {
 
   herdr
     .command('attach')
-    .description('attach to a herdr scene')
-    .argument('<scene>', 'scene name to attach to')
-    .action(async (sceneName: string) => {
+    .description('attach to herdr (optionally focusing a workspace)')
+    .argument('[workspace]', 'workspace label to focus after attaching')
+    .action(async (workspaceName?: string) => {
       try {
         $.verbose = false;
 
+        if (workspaceName) {
+          try {
+            const matches = await findWorkspacesByLabel(workspaceName);
+            if (matches.length > 0) {
+              await herdrJson([
+                'workspace',
+                'focus',
+                matches[0].workspace_id,
+              ]);
+            }
+          } catch {
+            // Server not running yet; plain attach below will start it
+          }
+        }
+
         const attach = new Deno.Command('herdr', {
-          args: ['session', 'attach', sceneName],
-          env: { ...Deno.env.toObject(), HERDR_SESSION: sceneName },
           stdin: 'inherit',
           stdout: 'inherit',
           stderr: 'inherit',
         }).spawn();
         await attach.status;
       } catch (error) {
-        console.error(
-          chalk.red(`❌ Error attaching to herdr scene '${sceneName}':`, error)
-        );
+        console.error(chalk.red(`❌ Error attaching to herdr:`, error));
         Deno.exit(1);
       }
     });
@@ -877,16 +923,18 @@ export default async function herdr(program: any) {
 
   herdr
     .command('terminate')
-    .description('terminate a herdr scene')
-    .argument('<scene>', 'scene name to terminate')
-    .option('--delete', 'also delete the stored session state')
-    .action(async (sceneName: string, options: { delete?: boolean }) => {
+    .description('close a herdr workspace')
+    .argument('<workspace>', 'workspace label to close')
+    .action(async (workspaceName: string) => {
       try {
         $.verbose = false;
-        await terminateHerdrScene(sceneName, options.delete ?? false);
+        await closeWorkspacesByLabel(workspaceName);
       } catch (error) {
         console.error(
-          chalk.red(`❌ Error terminating herdr scene '${sceneName}':`, error)
+          chalk.red(
+            `❌ Error terminating herdr workspace '${workspaceName}':`,
+            error
+          )
         );
         Deno.exit(1);
       }
@@ -898,13 +946,25 @@ export default async function herdr(program: any) {
 
   herdr
     .command('list')
-    .description('list all herdr sessions')
+    .description('list open herdr workspaces')
     .action(async () => {
       try {
-        $.verbose = true;
-        await $`herdr session list`;
-      } catch (error) {
-        console.log(chalk.yellow('No herdr sessions found'));
+        $.verbose = false;
+        const list = await herdrJson(['workspace', 'list']);
+        const workspaces: any[] = list?.workspaces ?? [];
+
+        if (workspaces.length === 0) {
+          console.log(chalk.yellow('No herdr workspaces open'));
+          return;
+        }
+
+        for (const workspace of workspaces) {
+          console.log(
+            `${workspace.workspace_id}  ${workspace.label}  (${workspace.tab_count} tabs, ${workspace.pane_count} panes)`
+          );
+        }
+      } catch {
+        console.log(chalk.yellow('herdr server is not running'));
       }
     });
 }
