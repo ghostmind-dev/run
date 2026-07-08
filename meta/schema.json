@@ -284,6 +284,10 @@
                   "type": "string"
                 }
               },
+              "focus": {
+                "type": "boolean",
+                "description": "Focus this workspace after init (init never steals focus by default)"
+              },
               "tabs": {
                 "type": "array",
                 "items": {
@@ -296,6 +300,17 @@
                     "path": {
                       "type": "string",
                       "description": "Starting directory for all panes in this tab. If starts with '/', treated as absolute path. Otherwise, relative to workspace cwd (the contributing meta.json location by default)."
+                    },
+                    "env": {
+                      "type": "object",
+                      "description": "Environment variables applied to this tab as key-value pairs",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "focus": {
+                      "type": "boolean",
+                      "description": "Focus this tab after the workspace is built"
                     },
                     "layout": {
                       "type": "string",
@@ -453,7 +468,26 @@
         "size": {
           "type": "string",
           "pattern": "^[0-9]+%?$",
-          "description": "Size of this pane (e.g., '50%', '30'). Only applies when this pane is an item in a section."
+          "description": "Size of this pane (e.g., '50%', '30'). In grid/compact layouts, overrides the default proportions (the paired pane gets the complement). In sections, applies when this pane is an item in a section."
+        },
+        "path": {
+          "type": "string",
+          "description": "Starting directory for this pane. If starts with '/', treated as absolute path. Otherwise, relative to the tab path. The first pane of a layout always inherits the tab path."
+        },
+        "env": {
+          "type": "object",
+          "description": "Environment variables applied to this pane as key-value pairs (split-created panes only)",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "focus": {
+          "type": "boolean",
+          "description": "Focus this pane after the workspace is built"
+        },
+        "zoom": {
+          "type": "boolean",
+          "description": "Zoom (fullscreen) this pane after the workspace is built; zooming also focuses it"
         }
       },
       "required": ["name"],

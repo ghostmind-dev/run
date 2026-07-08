@@ -54,6 +54,10 @@ interface HerdrPane {
   name: string;
   description?: string;
   size?: string;
+  path?: string;
+  env?: Record<string, string>;
+  focus?: boolean;
+  zoom?: boolean;
 }
 
 interface HerdrSection {
@@ -76,6 +80,8 @@ interface HerdrTab {
   label: string;
   layout: 'sections' | 'grid' | 'compact';
   path?: string;
+  env?: Record<string, string>;
+  focus?: boolean;
   section?: HerdrSection;
   grid?: HerdrGrid;
   compact?: HerdrCompact;
@@ -85,6 +91,7 @@ interface HerdrWorkspace {
   label: string;
   cwd?: string;
   env?: Record<string, string>;
+  focus?: boolean;
   tabs: HerdrTab[];
 }
 
@@ -225,7 +232,22 @@ function autoFillGridPanes(grid: HerdrGrid): HerdrPane[] {
   return grid.panes;
 }
 
-// Convert grid configuration to section hierarchy for processing
+// Resolve a pair of complementary sizes. A pane's configured size wins; the
+// other side gets the complement; with neither configured, use the default.
+function pairSizes(
+  a: string | undefined,
+  b: string | undefined,
+  defaultA: number = 50
+): [string, string] {
+  const parse = (size: string) => parseInt(size.replace('%', ''), 10);
+  const aPct = a ? parse(a) : b ? 100 - parse(b) : defaultA;
+  const bPct = b ? parse(b) : 100 - aPct;
+  return [`${aPct}%`, `${bPct}%`];
+}
+
+// Convert grid configuration to section hierarchy for processing.
+// Default proportions can be overridden with a `size` on any pane; the
+// opposite pane of the pair gets the complement automatically.
 function gridToSection(grid: HerdrGrid): HerdrSection {
   const panes = autoFillGridPanes(grid);
 
@@ -236,25 +258,31 @@ function gridToSection(grid: HerdrGrid): HerdrSection {
         items: [panes[0]],
       };
 
-    case 'vertical':
+    case 'vertical': {
+      const [first, second] = pairSizes(panes[0].size, panes[1].size);
       return {
         split: 'vertical',
         items: [
-          { ...panes[0], size: '50%' },
-          { ...panes[1], size: '50%' },
+          { ...panes[0], size: first },
+          { ...panes[1], size: second },
         ],
       };
+    }
 
-    case 'horizontal':
+    case 'horizontal': {
+      const [first, second] = pairSizes(panes[0].size, panes[1].size);
       return {
         split: 'horizontal',
         items: [
-          { ...panes[0], size: '50%' },
-          { ...panes[1], size: '50%' },
+          { ...panes[0], size: first },
+          { ...panes[1], size: second },
         ],
       };
+    }
 
-    case 'two-by-two':
+    case 'two-by-two': {
+      const [leftTop, leftBottom] = pairSizes(panes[0].size, panes[1].size);
+      const [rightTop, rightBottom] = pairSizes(panes[2].size, panes[3].size);
       return {
         split: 'vertical',
         items: [
@@ -262,36 +290,40 @@ function gridToSection(grid: HerdrGrid): HerdrSection {
             split: 'horizontal',
             size: '50%',
             items: [
-              { ...panes[0], size: '50%' },
-              { ...panes[1], size: '50%' },
+              { ...panes[0], size: leftTop },
+              { ...panes[1], size: leftBottom },
             ],
           },
           {
             split: 'horizontal',
             size: '50%',
             items: [
-              { ...panes[2], size: '50%' },
-              { ...panes[3], size: '50%' },
+              { ...panes[2], size: rightTop },
+              { ...panes[3], size: rightBottom },
             ],
           },
         ],
       };
+    }
 
-    case 'main-side':
+    case 'main-side': {
+      const [main, side] = pairSizes(panes[0].size, undefined, 66);
+      const [sideTop, sideBottom] = pairSizes(panes[1].size, panes[2].size);
       return {
         split: 'vertical',
         items: [
-          { ...panes[0], size: '66%' },
+          { ...panes[0], size: main },
           {
             split: 'horizontal',
-            size: '34%',
+            size: side,
             items: [
-              { ...panes[1], size: '50%' },
-              { ...panes[2], size: '50%' },
+              { ...panes[1], size: sideTop },
+              { ...panes[2], size: sideBottom },
             ],
           },
         ],
       };
+    }
 
     default:
       throw new Error(`Unknown grid type: ${grid.type}`);
@@ -358,6 +390,23 @@ function isSection(item: HerdrSection | HerdrPane): item is HerdrSection {
   return 'split' in item;
 }
 
+// The pane that will occupy an item's initial split: the item itself if it is
+// a pane, otherwise the first leaf pane of the nested section
+function firstLeafPane(
+  item: HerdrSection | HerdrPane
+): HerdrPane | undefined {
+  if (isPane(item)) {
+    return item;
+  }
+  for (const child of item.items) {
+    const leaf = firstLeafPane(child);
+    if (leaf) {
+      return leaf;
+    }
+  }
+  return undefined;
+}
+
 // Build a plan of split operations needed for the entire layout.
 // Section split semantics: 'horizontal' = top/bottom (herdr direction 'down'),
 // 'vertical' = left/right (herdr direction 'right').
@@ -370,6 +419,7 @@ function buildSplitPlan(section: HerdrSection): Array<
       direction: 'right' | 'down';
       ratio?: number;
       resultPane: number;
+      pane?: HerdrPane;
     }
   | {
       type: 'assign';
@@ -412,6 +462,10 @@ function buildSplitPlan(section: HerdrSection): Array<
         direction,
         ratio,
         resultPane: newPane,
+        // The new pane ends up hosting either the item itself (a pane) or,
+        // for a nested section, the section's first leaf pane — carry that
+        // config so the split can apply per-pane path/env
+        pane: firstLeafPane(item),
       });
 
       itemPanes.push(newPane);
@@ -490,7 +544,7 @@ async function createTab(
     console.log(chalk.gray(`    📁 Creating tab: ${tabLabel}`));
   }
 
-  const tabResult = await herdrJson([
+  const tabArgs = [
     'tab',
     'create',
     '--workspace',
@@ -500,8 +554,14 @@ async function createTab(
     '--label',
     tabLabel,
     '--no-focus',
-  ]);
+  ];
+  for (const [key, value] of Object.entries(tab.env ?? {})) {
+    tabArgs.push('--env', `${key}=${value}`);
+  }
+
+  const tabResult = await herdrJson(tabArgs);
   const rootPaneId = tabResult.root_pane.pane_id;
+  const tabId = tabResult.tab.tab_id;
 
   const sectionToProcess = sectionForTab(tab);
   if (!sectionToProcess) {
@@ -530,6 +590,8 @@ async function createTab(
         throw new Error(`Split plan referenced unknown pane ${op.fromPane}`);
       }
 
+      // Per-pane path/env override the tab defaults for the new pane
+      const paneCwd = resolvePath(op.pane?.path, tabPath);
       const splitArgs = [
         'pane',
         'split',
@@ -537,11 +599,14 @@ async function createTab(
         '--direction',
         op.direction,
         '--cwd',
-        tabPath,
+        paneCwd,
         '--no-focus',
       ];
       if (op.ratio !== undefined) {
         splitArgs.push('--ratio', op.ratio.toFixed(2));
+      }
+      for (const [key, value] of Object.entries(op.pane?.env ?? {})) {
+        splitArgs.push('--env', `${key}=${value}`);
       }
 
       const splitResult = await herdrJson(splitArgs);
@@ -573,6 +638,35 @@ async function createTab(
           chalk.gray(`      🏷️  ${paneName}: ${paneConfig.description}`)
         );
       }
+    }
+  }
+
+  // Post-pass: apply pane zoom and focus. Zooming a pane also focuses it;
+  // for focus without zoom, a zoom on/off round-trip is the only way to
+  // focus a specific pane by id (herdr's `pane focus` is directional-only).
+  for (const [paneName, paneId] of paneMap.entries()) {
+    const paneConfig = findPaneInSection(sectionToProcess, paneName);
+    if (!paneConfig) continue;
+
+    if (paneConfig.zoom) {
+      await herdrJson(['pane', 'zoom', paneId, '--on']);
+      if (!isAppendMode) {
+        console.log(chalk.gray(`      🔍 Zoomed pane: ${paneName}`));
+      }
+    } else if (paneConfig.focus) {
+      await herdrJson(['pane', 'zoom', paneId, '--on']);
+      await herdrJson(['pane', 'zoom', paneId, '--off']);
+      if (!isAppendMode) {
+        console.log(chalk.gray(`      🎯 Focused pane: ${paneName}`));
+      }
+    }
+  }
+
+  // Focus the tab itself when requested
+  if (tab.focus) {
+    await herdrJson(['tab', 'focus', tabId]);
+    if (!isAppendMode) {
+      console.log(chalk.gray(`      🎯 Focused tab: ${tabLabel}`));
     }
   }
 }
@@ -705,6 +799,14 @@ async function initHerdrWorkspace(
     // once the configured tabs exist so only defined tabs remain
     if (autoTabId && createdTabs > 0) {
       await herdrJson(['tab', 'close', autoTabId]);
+    }
+
+    // Focus the workspace when requested (init never steals focus otherwise)
+    if (workspaceConfig.focus) {
+      await herdrJson(['workspace', 'focus', workspaceId]);
+      if (!isAppendMode) {
+        console.log(chalk.gray(`  🎯 Focused workspace: ${workspaceName}`));
+      }
     }
   }
 
