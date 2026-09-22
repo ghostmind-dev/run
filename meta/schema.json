@@ -295,7 +295,12 @@
                   "properties": {
                     "label": {
                       "type": "string",
-                      "description": "Tab label (prefixed with the app name at init, mirroring tmux window naming)"
+                      "description": "Tab label (prefixed with the app name at init, mirroring tmux window naming, unless prefix is false)"
+                    },
+                    "prefix": {
+                      "type": "boolean",
+                      "default": true,
+                      "description": "Prefix the label with the app name. Set false when the label already names the app, to keep the tab row readable in a workspace with many apps."
                     },
                     "path": {
                       "type": "string",
