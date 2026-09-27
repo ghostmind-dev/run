@@ -5,72 +5,11 @@
   "routines": {
     "check": "deno check run/bin/cmd.ts",
     "test": "deno test  --allow-all run/test/units.ts",
-    "init": "run tmux init run",
-    "attach": "run tmux attach run",
-    "terminate": "run tmux terminate run",
     "herdr_init": "run herdr init run",
     "herdr_attach": "run herdr attach run",
     "herdr_terminate": "run herdr terminate run",
-    "mcp": "run mcp set --all",
     "install": "deno install -A -f -g -n run run/bin/cmd.ts",
     "echo": "echo ${SRC}"
-  },
-  "tmux": {
-    "sessions": [
-      {
-        "name": "run",
-        "windows": [
-          {
-            "name": "single",
-            "layout": "grid",
-            "grid": {
-              "type": "single",
-              "panes": [
-                {
-                  "name": "main"
-                }
-              ]
-            }
-          },
-          {
-            "name": "four-pane",
-            "layout": "grid",
-            "grid": {
-              "type": "two-by-two",
-              "panes": [
-                {
-                  "name": "top-left"
-                },
-                {
-                  "name": "top-right"
-                },
-                {
-                  "name": "bottom-left"
-                },
-                {
-                  "name": "bottom-right"
-                }
-              ]
-            }
-          },
-          {
-            "name": "vertical-split",
-            "layout": "grid",
-            "grid": {
-              "type": "vertical",
-              "panes": [
-                {
-                  "name": "left"
-                },
-                {
-                  "name": "right"
-                }
-              ]
-            }
-          }
-        ]
-      }
-    ]
   },
   "herdr": {
     "workspaces": [
@@ -78,38 +17,30 @@
         "label": "run",
         "tabs": [
           {
-            "label": "dev",
+            "label": "single",
+            "prefix": false,
             "layout": "compact",
             "compact": {
-              "type": "main-side",
-              "panes": [
-                {
-                  "name": "main",
-                  "description": "primary development pane"
-                },
-                {
-                  "name": "check",
-                  "description": "run 'run routine check' to type-check the CLI"
-                },
-                {
-                  "name": "execution-shell",
-                  "description": "run ad-hoc commands here without interrupting other panes"
-                }
-              ]
+              "type": "single",
+              "panes": ["main"]
             }
           },
           {
-            "label": "test",
+            "label": "quad",
+            "prefix": false,
+            "layout": "compact",
+            "compact": {
+              "type": "two-by-two",
+              "panes": ["top-left", "top-right", "bottom-left", "bottom-right"]
+            }
+          },
+          {
+            "label": "split",
+            "prefix": false,
             "layout": "compact",
             "compact": {
               "type": "vertical",
-              "panes": [
-                {
-                  "name": "tests",
-                  "description": "run 'run routine test' to execute the unit tests"
-                },
-                "scratch"
-              ]
+              "panes": ["left", "right"]
             }
           }
         ]

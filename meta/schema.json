@@ -29,8 +29,9 @@
       "description": "The type of the configuration."
     },
     "global": {
+      "deprecated": true,
       "type": "boolean",
-      "description": "Flag to indicar if the configuration is global."
+      "description": "Deprecated: flag to indicate if the configuration is global; see the system skill."
     },
     "compose": {
       "type": "object",
@@ -63,6 +64,8 @@
       "additionalProperties": false
     },
     "custom": {
+      "deprecated": true,
+      "description": "Deprecated: 'run custom' is replaced by plain scripts/*.sh; see the system skill.",
       "type": "object",
       "properties": {
         "root": {
@@ -73,6 +76,8 @@
       "additionalProperties": false
     },
     "docker": {
+      "deprecated": true,
+      "description": "Deprecated: 'run docker' will be removed; see the system skill.",
       "type": "object",
       "patternProperties": {
         ".*": {
@@ -122,6 +127,8 @@
       "additionalProperties": false
     },
     "secrets": {
+      "deprecated": true,
+      "description": "Deprecated: .env.base/.env.<env> loading is replaced by varlock (.env.schema); see the system skill.",
       "type": "object",
       "properties": {
         "base": {
@@ -136,6 +143,8 @@
       "additionalProperties": false
     },
     "terraform": {
+      "deprecated": true,
+      "description": "Deprecated: 'run terraform' will be removed; see the system skill.",
       "type": "object",
       "patternProperties": {
         ".*": {
@@ -169,6 +178,8 @@
       }
     },
     "template": {
+      "deprecated": true,
+      "description": "Deprecated: templates will be removed; see the system skill.",
       "type": "object",
       "patternProperties": {
         ".*": {
@@ -203,7 +214,8 @@
     },
     "tmux": {
       "type": "object",
-      "description": "Tmux session configuration",
+      "deprecated": true,
+      "description": "Deprecated: tmux sessions are replaced by herdr; see the system skill.",
       "properties": {
         "sessions": {
           "type": "array",
