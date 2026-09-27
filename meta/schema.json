@@ -34,6 +34,8 @@
       "description": "Deprecated: flag to indicate if the configuration is global; see the system skill."
     },
     "compose": {
+      "deprecated": true,
+      "description": "Deprecated: 'run docker compose' will be removed; call docker compose from scripts/*.sh instead. See the system skill.",
       "type": "object",
       "patternProperties": {
         ".*": {
