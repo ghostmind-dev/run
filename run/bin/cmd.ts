@@ -28,6 +28,7 @@ import { $ } from 'npm:zx@8.1.0';
 import { Command } from 'npm:commander@12.1.0';
 import { setSecretsOnLocal } from '../utils/divers.ts';
 import { argv } from 'node:process';
+import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -110,22 +111,57 @@ program
   .option('-c, --cible <env context>', 'target environment context')
   .option('-e, --env <env path>', 'path to load env variables from')
   .option('-p, --path <path>', 'run the script from a specific path')
-  .hook('preAction', async (thisCommand: any) => {
-    const { path } = thisCommand.opts();
+  .hook('preAction', async (thisCommand: any, actionCommand: any) => {
+    const { path, cible, env: envPath } = thisCommand.opts();
 
     if (path) {
       Deno.chdir(path);
     }
 
+    warnIfDeprecated(actionCommand);
+
+    if (cible || envPath) {
+      deprecationWarning("'-c/--cible' and '-e/--env' env injection");
+    }
+
+    // A varlock app (.env.schema) resolves its own env; loading .env files here
+    // would fail without .env.base, or override its secrets with raw pointers.
+    const isVarlockApp = existsSync(join(Deno.cwd(), '.env.schema'));
+
     if (
+      !isVarlockApp &&
       !Deno.env.get('GITHUB_ACTIONS') &&
       Deno.env.get('CUSTOM_STATUS') !== 'in_progress'
     ) {
-      const { cible, env: envPath } = thisCommand.opts();
       await setSecretsOnLocal(cible || 'local', envPath);
       Deno.env.set('ENV', cible || 'local');
     }
   });
+
+////////////////////////////////////////////////////////////////////////////////
+// DEPRECATIONS
+////////////////////////////////////////////////////////////////////////////////
+
+// Everything but herdr and routine is on its way out. Warnings go to stderr
+// only, so stdout and exit codes are unchanged for scripts that parse them.
+const KEPT_COMMANDS = ['herdr', 'routine', 'version'];
+const KEPT_MISC = ['uuid', 'token', 'wait', 'stop'];
+
+function deprecationWarning(what: string) {
+  if (Deno.env.get('RUN_NO_DEPRECATION') === '1') return;
+  console.error(`[run] DEPRECATED: ${what} will be removed; see system skill`);
+}
+
+function warnIfDeprecated(actionCommand: any) {
+  const names: string[] = [];
+  for (let cmd = actionCommand; cmd && cmd.parent; cmd = cmd.parent) {
+    names.unshift(cmd.name());
+  }
+  const [top, sub] = names;
+  if (!top || KEPT_COMMANDS.includes(top)) return;
+  if (top === 'misc' && KEPT_MISC.includes(sub)) return;
+  deprecationWarning(`'run ${names.join(' ')}'`);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // GIT COMMAND

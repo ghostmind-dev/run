@@ -78,6 +78,12 @@ interface HerdrCompact {
 
 interface HerdrTab {
   label: string;
+  /**
+   * Prefix the tab label with the app name (the default, mirroring tmux window
+   * naming). Set to false when the label already identifies the app, so a
+   * workspace with many apps keeps its tab row readable.
+   */
+  prefix?: boolean;
   layout: 'sections' | 'grid' | 'compact';
   path?: string;
   env?: Record<string, string>;
@@ -783,8 +789,11 @@ async function initHerdrWorkspace(
 
     let createdTabs = 0;
     for (const tab of workspaceConfig.tabs ?? []) {
-      // Prefix tab labels with the app name, mirroring tmux window naming
-      const tabLabel = `${metaConfig.name}-${tab.label}`;
+      // Prefix tab labels with the app name, mirroring tmux window naming.
+      // A tab opts out with "prefix": false when its label already says which
+      // app it belongs to.
+      const tabLabel =
+        tab.prefix === false ? tab.label : `${metaConfig.name}-${tab.label}`;
 
       if (existingTabLabels.has(tabLabel)) {
         console.log(chalk.gray(`    ⏭️  Tab '${tabLabel}' already exists`));
