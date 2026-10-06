@@ -1,22 +1,18 @@
 /**
- * @fileoverview Main entry point for @ghostmind/run - A comprehensive DevOps automation toolkit
+ * @fileoverview Main entry point for @ghostmind/run
  *
- * This module provides a complete set of tools for managing Docker containers, GitHub Actions,
- * Terraform infrastructure, HashiCorp Vault, SSH tunnels, and more. It supports both
- * programmatic usage and CLI operations for streamlined development workflows.
+ * This module exposes the toolkit programmatically: the projects dashboard,
+ * herdr workspaces and routines.
  *
  * @example
  * ```typescript
- * import { dockerBuild, dockerComposeUp, actionRunLocal } from "@ghostmind/run";
+ * import { discoverProjects, readHerdrState } from "@ghostmind/run";
  *
- * // Build a Docker image
- * await dockerBuild("my-component");
+ * // Every folder under the root whose meta.json has type "project"
+ * const projects = await discoverProjects("/Volumes/Projects");
  *
- * // Start Docker Compose services
- * await dockerComposeUp("web-service", { build: true, detach: true });
- *
- * // Run GitHub Action locally
- * await actionRunLocal("test-workflow", [], "push", false, false);
+ * // The workspaces open in herdr right now
+ * const { workspaces } = await readHerdrState();
  * ```
  *
  * @module
@@ -35,16 +31,9 @@ expand(config({ override: true }));
 // STARTING PROGRAM
 ////////////////////////////////////////////////////////////////////////////////
 
-export * from './lib/action.ts';
-export * from './lib/custom.ts';
-export * from './lib/docker.ts';
 export * from './lib/herdr.ts';
-export * from './lib/meta.ts';
-export * from './lib/misc.ts';
+export * from './lib/projects.tsx';
 export * from './lib/routine.ts';
-export * from './lib/terraform.ts';
-export * from './lib/tmux.ts';
-export * from './lib/vault.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // EXPORT UTILS
