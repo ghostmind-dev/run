@@ -38,6 +38,10 @@ export interface Project {
   label: string | null;
   /** Names of the `type: "app"` folders below it */
   apps: string[];
+  /** The routine each of its panes names, when it names one */
+  routines: PaneRoutine[];
+  /** Where each tab of its workspace is defined, and that folder's routines */
+  tabs: TabSource[];
   /** The `tags` of its meta.json */
   tags: string[];
   /** The `groups` of its meta.json: sets of projects worked on together */
@@ -46,6 +50,51 @@ export interface Project {
   branch: string;
   /** Uncommitted files and unpushed commits; see readChanges */
   changes: string;
+}
+
+/**
+ * A pane of a project's workspace that names the routine it usually runs
+ */
+export interface PaneRoutine {
+  /** The tab's label as herdr shows it */
+  tab: string;
+  /** The pane's name, which is its label in herdr */
+  pane: string;
+  routine: string;
+  /** Folder of the meta.json that defines the routine */
+  path: string;
+}
+
+/**
+ * The meta.json a tab of a project's workspace is defined in
+ */
+export interface TabSource {
+  /** The tab's label as herdr shows it */
+  tab: string;
+  /** Folder of that meta.json */
+  path: string;
+  /** Names of its routines, less the ones that only manage herdr itself */
+  routines: string[];
+}
+
+/**
+ * A pane of an open workspace, as herdr reports it right now
+ */
+export interface PaneState {
+  paneId: string;
+  tab: string;
+  name: string;
+  cwd: string;
+  /** The routine this pane names, when its project defines one for it */
+  routine: PaneRoutine | null;
+  /** The meta.json its tab comes from: the routines it could run */
+  source: TabSource | null;
+  /** True when nothing but the shell is in the foreground */
+  isIdle: boolean;
+  /** True when a coding agent occupies the pane */
+  isAgent: boolean;
+  /** The command in the foreground, or the agent and its state */
+  running: string;
 }
 
 /**
@@ -59,6 +108,8 @@ export interface HerdrWorkspaceState {
   pane_count: number;
   agent_status: string;
   focused: boolean;
+  /** The coding agents in its panes, each with its own state */
+  agents: { kind: string; status: string }[];
 }
 
 /**
@@ -95,6 +146,27 @@ interface Row {
 const SKIPPED_FOLDERS = ['node_modules', 'dist', 'build', 'target', 'vendor'];
 
 const MAX_DEPTH = 4;
+
+/**
+ * The routines the panes of one herdr tab name
+ */
+function paneRoutines(tab: any, tabLabel: string, path: string): PaneRoutine[] {
+  const found: PaneRoutine[] = [];
+
+  const visit = (item: any) => {
+    if (!item || typeof item !== 'object') return;
+    if (item.name && item.routine) {
+      found.push({ tab: tabLabel, pane: item.name, routine: item.routine, path });
+    }
+    for (const child of item.items ?? []) visit(child);
+  };
+
+  for (const pane of tab.compact?.panes ?? []) visit(pane);
+  for (const pane of tab.grid?.panes ?? []) visit(pane);
+  visit(tab.section);
+
+  return found;
+}
 
 /**
  * Find every project under a root folder
@@ -155,6 +227,8 @@ export async function discoverProjects(root: string): Promise<Project[]> {
       folder: relative(root, path).split('/')[0],
       label: meta.herdr?.workspaces?.[0]?.label ?? null,
       apps: [],
+      routines: [],
+      tabs: [],
       tags: Array.isArray(meta.tags) ? meta.tags : [],
       groups: Array.isArray(meta.groups) ? meta.groups : [],
       branch: '',
@@ -176,6 +250,32 @@ export async function discoverProjects(root: string): Promise<Project[]> {
       path.startsWith(project.path + '/')
     );
     owner?.apps.push(meta.name ?? path.split('/').pop());
+  }
+
+  // A project's workspace is assembled from its own meta.json and its apps'
+  for (const { path, meta } of metas) {
+    const owner = projects.find(
+      (project) =>
+        path === project.path || path.startsWith(project.path + '/')
+    );
+    if (!owner) continue;
+
+    for (const workspace of meta.herdr?.workspaces ?? []) {
+      if (workspace.label !== owner.label) continue;
+      for (const tab of workspace.tabs ?? []) {
+        // `run herdr init` prefixes a tab's label with its app's name
+        const tabLabel =
+          tab.prefix === false ? tab.label : `${meta.name}-${tab.label}`;
+        owner.routines.push(...paneRoutines(tab, tabLabel, path));
+        owner.tabs.push({
+          tab: tabLabel,
+          path,
+          routines: Object.keys(meta.routines ?? {}).filter(
+            (name) => !/herdr/.test(name)
+          ),
+        });
+      }
+    }
   }
 
   return projects.sort(
@@ -313,20 +413,115 @@ async function capture(
  * @returns Whether the server answers, and its open workspaces
  */
 export async function readHerdrState(): Promise<HerdrState> {
-  const { isOk, output } = await capture('herdr', ['workspace', 'list']);
+  const [list, agentList] = await Promise.all([
+    capture('herdr', ['workspace', 'list']),
+    capture('herdr', ['agent', 'list']),
+  ]);
 
-  if (!isOk) {
+  if (!list.isOk) {
     return { isRunning: false, workspaces: [] };
   }
 
   try {
+    // A workspace's own agent_status reads "unknown" when it holds no agent
+    // at all, so which workspaces have one comes from the agents themselves
+    let agents: any[] = [];
+    try {
+      agents = JSON.parse(agentList.output).result?.agents ?? [];
+    } catch {
+      // No agent list: every workspace shows as having none
+    }
+
+    const workspaces: any[] = JSON.parse(list.output).result?.workspaces ?? [];
     return {
       isRunning: true,
-      workspaces: JSON.parse(output).result?.workspaces ?? [],
+      workspaces: workspaces.map((workspace) => ({
+        ...workspace,
+        agents: agents
+          .filter((agent) => agent.workspace_id === workspace.workspace_id)
+          .map((agent) => ({
+            kind: agent.agent ?? 'agent',
+            status: agent.agent_status ?? 'unknown',
+          })),
+      })),
     };
   } catch {
     return { isRunning: false, workspaces: [] };
   }
+}
+
+/**
+ * Read what every pane of an open workspace is doing
+ *
+ * @param workspaceId - The herdr workspace
+ * @param routines - The routines the project's panes name
+ * @param sources - Where each tab of the project's workspace is defined
+ * @returns One entry per pane, in herdr's order
+ */
+export async function readPanes(
+  workspaceId: string,
+  routines: PaneRoutine[],
+  sources: TabSource[] = []
+): Promise<PaneState[]> {
+  const parse = (output: string) => {
+    try {
+      return JSON.parse(output).result ?? {};
+    } catch {
+      return {};
+    }
+  };
+
+  const [tabList, paneList] = await Promise.all([
+    capture('herdr', ['tab', 'list', '--workspace', workspaceId]),
+    capture('herdr', ['pane', 'list', '--workspace', workspaceId]),
+  ]);
+  const tabs: any[] = parse(tabList.output).tabs ?? [];
+  const panes: any[] = parse(paneList.output).panes ?? [];
+
+  return await Promise.all(
+    panes.map(async (pane) => {
+      const tab = tabs.find((entry) => entry.tab_id === pane.tab_id);
+      const tabLabel: string = tab?.label ?? pane.tab_id;
+      const name: string = pane.label ?? '-';
+
+      const info =
+        parse(
+          (
+            await capture('herdr', [
+              'pane',
+              'process-info',
+              '--pane',
+              pane.pane_id,
+            ])
+          ).output
+        ).process_info ?? {};
+      const isIdle =
+        info.foreground_process_group_id === undefined ||
+        info.foreground_process_group_id === info.shell_pid;
+      const leader = (info.foreground_processes ?? []).find(
+        (process: any) => process.pid === info.foreground_process_group_id
+      );
+
+      return {
+        paneId: pane.pane_id,
+        tab: tabLabel,
+        name,
+        cwd: pane.cwd ?? '',
+        routine:
+          routines.find(
+            (routine) => routine.tab === tabLabel && routine.pane === name
+          ) ?? null,
+        source: sources.find((source) => source.tab === tabLabel) ?? null,
+        isIdle,
+        isAgent: !!pane.agent,
+        running: pane.agent
+          ? `${pane.agent} (${pane.agent_status})`
+          : isIdle
+            ? ''
+            : (leader?.cmdline ?? 'running'),
+      };
+    })
+  );
 }
 
 /**
@@ -389,10 +584,10 @@ function buildRows(projects: Project[], herdr: HerdrState): Row[] {
 }
 
 function statusOf(row: Row): string {
-  if (row.workspace && !row.project) return 'stray';
   if (row.workspace?.workspace_id === Deno.env.get('HERDR_WORKSPACE_ID')) {
     return 'here';
   }
+  if (row.workspace && !row.project) return 'stray';
   if (row.workspace) return row.workspace.focused ? 'focused' : 'open';
   if (!row.label) return 'no herdr';
   return 'closed';
@@ -429,21 +624,80 @@ const COLUMNS: { title: string; width: number; cell: (row: Row) => string }[] =
       cell: (row) => String(row.workspace?.pane_count ?? '-'),
     },
     {
-      title: 'AGENT',
+      title: 'AGENTS',
       width: 9,
-      cell: (row) => row.workspace?.agent_status ?? '-',
+      // How many of the workspace's agents are working, out of how many it has
+      cell: (row) => {
+        const agents = row.workspace?.agents ?? [];
+        if (agents.length === 0) return '-';
+        const active = agents.filter(
+          (agent) => agent.status === 'working'
+        ).length;
+        return `${active} of ${agents.length}`;
+      },
     },
     { title: 'APPS', width: 6, cell: (row) => String(row.apps || '-') },
     { title: 'GROUPS', width: 18, cell: (row) => row.groups.join(',') || '-' },
   ];
 
-function line(cells: string[], pathCell: string, width: number): string {
+function line(
+  cells: string[],
+  pathCell: string,
+  width: number,
+  columns: typeof COLUMNS = COLUMNS
+): string {
   const fixed = cells
     .map((cell, index) =>
-      cell.slice(0, COLUMNS[index].width - 1).padEnd(COLUMNS[index].width)
+      cell.slice(0, columns[index].width - 1).padEnd(columns[index].width)
     )
     .join('');
   return (' ' + fixed + pathCell).slice(0, width).padEnd(width);
+}
+
+/** The dashboard's screens, each with its own set of columns */
+type Screen = 'projects' | 'tabs' | 'panes' | 'flat';
+
+// The pane view's three listings: each column's title and width. A width of 0
+// takes what is left. The first title of each line always shows.
+const PANE_COLUMNS: Record<Exclude<Screen, 'projects'>, [string, number][]> = {
+  tabs: [
+    ['TAB', 24],
+    ['PANES', 8],
+    ['ROUTINES', 10],
+    ['RUNNING', 10],
+  ],
+  panes: [
+    ['PANE', 26],
+    ['ROUTINE', 12],
+    ['STATE', 9],
+    ['RUNNING', 0],
+  ],
+  flat: [
+    ['PANE', 22],
+    ['TAB', 20],
+    ['ROUTINE', 12],
+    ['STATE', 9],
+    ['RUNNING', 0],
+  ],
+};
+
+/**
+ * One line of a pane view listing; a missing value prints the column's title
+ */
+function paneLine(
+  screen: Exclude<Screen, 'projects'>,
+  values: Record<string, string> | null,
+  width: number,
+  hidden: string[]
+): string {
+  const text = PANE_COLUMNS[screen]
+    .filter(([title]) => !hidden.includes(title))
+    .map(([title, size]) => {
+      const cell = values ? (values[title] ?? '') : title;
+      return size > 0 ? cell.slice(0, size - 1).padEnd(size) : cell;
+    })
+    .join('');
+  return (' ' + text).slice(0, width).padEnd(width);
 }
 
 function printPlain(root: string, rows: Row[], herdr: HerdrState) {
@@ -621,23 +875,34 @@ function settingsPath(): string {
   return join(Deno.env.get('HOME') ?? '.', '.config', 'run', 'projects.json');
 }
 
-function readSavedTheme(): string | undefined {
+/**
+ * What the dashboard remembers between runs
+ */
+interface Settings {
+  theme?: string;
+  /** Titles of the columns left out, for each screen */
+  hidden?: Record<string, string[]>;
+  /** How the pane view opens: by tab, or every pane at once */
+  panes?: 'tabs' | 'flat';
+}
+
+function readSettings(): Settings {
   try {
-    return JSON.parse(Deno.readTextFileSync(settingsPath())).theme;
+    return JSON.parse(Deno.readTextFileSync(settingsPath())) ?? {};
   } catch {
-    return undefined;
+    return {};
   }
 }
 
-function saveTheme(theme: string) {
+function saveSettings(changes: Settings) {
   try {
     Deno.mkdirSync(dirname(settingsPath()), { recursive: true });
     Deno.writeTextFileSync(
       settingsPath(),
-      JSON.stringify({ theme }, null, 2) + '\n'
+      JSON.stringify({ ...readSettings(), ...changes }, null, 2) + '\n'
     );
   } catch {
-    // The theme still applies for this run
+    // The choice still applies for this run
   }
 }
 
@@ -650,7 +915,6 @@ const TABLE_TOP = 7;
  */
 const BUTTONS: { kind: ActionKind; label: string }[] = [
   { kind: 'open', label: 'Open' },
-  { kind: 'start', label: 'Open in background' },
   { kind: 'stop', label: 'Close' },
   { kind: 'only', label: 'Close others' },
 ];
@@ -658,19 +922,31 @@ const BUTTONS: { kind: ActionKind; label: string }[] = [
 const KEYS: [string, string][] = [
   ['<enter>', 'Press'],
   ['<space>', 'Mark'],
+  ['<A>', 'Mark all'],
   ['<a>', 'Open only'],
   ['<t>', 'Tag/group'],
+  ['<p>', 'Panes'],
   ['<T>', 'Theme'],
+  ['<,>', 'Columns'],
+  ['<⇧,>', 'Settings'],
   ['</>', 'Filter'],
   ['<r>', 'Rescan'],
+  ['<R>', 'Restart'],
   ['<tab>', 'Button'],
   ['<click>', 'Select'],
-  ['<1-4>', 'Button'],
+  ['<1-3>', 'Button'],
   ['<esc>', 'Clear'],
   ['<q>', 'Quit'],
 ];
 
-type Mode = 'browse' | 'filter' | 'confirm' | 'pick';
+type Mode =
+  | 'browse'
+  | 'filter'
+  | 'confirm'
+  | 'pick'
+  | 'ask'
+  | 'routine'
+  | 'settings';
 
 /**
  * A tag or a group the table is narrowed to
@@ -680,7 +956,7 @@ interface Scope {
   value: string;
 }
 
-type ActionKind = 'open' | 'start' | 'stop' | 'only';
+type ActionKind = 'open' | 'stop' | 'only';
 
 /**
  * A piece of one screen line, drawn in one style
@@ -751,21 +1027,12 @@ function actionsFor(targets: Row[], allRows: Row[]): Action[] {
     (row) => row.workspace && !isOwn(row) && !targets.includes(row)
   );
 
-  if (targets.length === 1 && (targets[0].workspace || targets[0].label)) {
-    actions.push({
-      kind: 'open',
-      title: targets[0].workspace ? 'Open' : 'Start and open',
-      rows: targets,
-      isDestructive: false,
-    });
-  }
+  // Open builds the workspace of each closed target and never moves the
+  // focus: switching to a workspace is herdr's job
   if (stopped.length > 0) {
     actions.push({
-      kind: 'start',
-      title:
-        targets.length === 1
-          ? 'Start in the background'
-          : `Start ${stopped.length} stopped`,
+      kind: 'open',
+      title: targets.length === 1 ? 'Open' : `Open ${stopped.length} closed`,
       rows: stopped,
       isDestructive: false,
     });
@@ -789,6 +1056,9 @@ function actionsFor(targets: Row[], allRows: Row[]): Action[] {
 
   return actions;
 }
+
+/** Set when the person asks for a restart; read once the dashboard has left */
+let isRestartRequested = false;
 
 function Dashboard({
   root,
@@ -820,6 +1090,104 @@ function Dashboard({
   const [themeName, setThemeName] = useState(initialTheme);
   const theme = THEMES[themeName];
   const [scope, setScope] = useState<Scope | null>(null);
+  // The open project whose panes are on screen, when the pane view is up
+  const [viewing, setViewing] = useState<Row | null>(null);
+  const [panes, setPanes] = useState<PaneState[]>([]);
+  const [paneSelected, setPaneSelected] = useState(0);
+  // The tab whose panes are listed; null lists the tabs themselves
+  const [tabOpen, setTabOpen] = useState<string | null>(null);
+  // The pane a routine is being chosen for, and the highlighted choice
+  const [choosing, setChoosing] = useState<PaneState | null>(null);
+  const [routineIndex, setRoutineIndex] = useState(0);
+  // Lists every pane of every tab at once, in place of the two levels
+  const [isFlat, setIsFlat] = useState(false);
+  // Columns left out of the projects table, and the settings list's cursor
+  const [hidden, setHidden] = useState<Record<string, string[]>>(() => {
+    const saved = readSettings().hidden;
+    // An earlier version saved one list, for the projects table
+    return Array.isArray(saved) ? { projects: saved } : (saved ?? {});
+  });
+  const [settingIndex, setSettingIndex] = useState(0);
+  // Which list is up: the whole dashboard's, or the current screen's columns
+  const [settingsKind, setSettingsKind] = useState<'global' | 'columns'>(
+    'global'
+  );
+  const [, setRevision] = useState(0);
+  const screenNow: Screen = !viewing
+    ? 'projects'
+    : isFlat
+      ? 'flat'
+      : tabOpen !== null
+        ? 'panes'
+        : 'tabs';
+  const hiddenHere = hidden[screenNow] ?? [];
+  const columns = COLUMNS.filter(
+    (column) => !(hidden.projects ?? []).includes(column.title)
+  );
+
+  const cycleTheme = () => {
+    const all = Object.keys(THEMES);
+    const next = all[(all.indexOf(themeName) + 1) % all.length];
+    paintBackground(THEMES[next]);
+    setThemeName(next);
+    saveSettings({ theme: next });
+    return next;
+  };
+
+  // The titles of the current screen's columns that can be hidden: all but
+  // the one that names the line
+  const hideable =
+    screenNow === 'projects'
+      ? [...COLUMNS.slice(1).map((column) => column.title), 'TAGS']
+      : PANE_COLUMNS[screenNow].slice(1).map(([title]) => title);
+
+  const settingItems =
+    settingsKind === 'global'
+      ? [
+          { text: `Theme: ${themeName}`, run: () => void cycleTheme() },
+          {
+            text: `Pane view opens: ${
+              readSettings().panes === 'flat' ? 'all panes' : 'by tab'
+            }`,
+            run: () =>
+              saveSettings({
+                panes: readSettings().panes === 'flat' ? 'tabs' : 'flat',
+              }),
+          },
+        ]
+      : hideable.map((title) => ({
+          text: `${hiddenHere.includes(title) ? '[ ]' : '[x]'} ${title}`,
+          run: () => {
+            const next = {
+              ...hidden,
+              [screenNow]: hiddenHere.includes(title)
+                ? hiddenHere.filter((name) => name !== title)
+                : [...hiddenHere, title],
+            };
+            setHidden(next);
+            saveSettings({ hidden: next });
+          },
+        }));
+
+  // What the pane view lists: the tabs, one tab's panes, or every pane
+  const paneItems = useMemo(() => {
+    const ofPane = (pane: PaneState) => ({
+      tab: pane.tab,
+      pane: pane as PaneState | null,
+      members: [pane],
+    });
+    if (isFlat) return panes.map(ofPane);
+    if (tabOpen !== null) {
+      return panes.filter((pane) => pane.tab === tabOpen).map(ofPane);
+    }
+    return [...new Set(panes.map((pane) => pane.tab))].map((tab) => ({
+      tab,
+      pane: null as PaneState | null,
+      members: panes.filter((pane) => pane.tab === tab),
+    }));
+  }, [panes, tabOpen, isFlat]);
+  const viewingRef = useRef<Row | null>(null);
+  viewingRef.current = viewing;
   const [pickIndex, setPickIndex] = useState(0);
   const [pending, setPending] = useState<Action | null>(null);
   const [message, setMessage] = useState('');
@@ -842,9 +1210,20 @@ function Dashboard({
   const ticks = useRef(0);
   themeRef.current = themeName;
   const rescan = async () => setProjects(await discoverProjects(root));
+  const refreshPanes = async (row: Row | null = viewingRef.current) => {
+    if (!row?.workspace) return;
+    setPanes(
+      await readPanes(
+        row.workspace.workspace_id,
+        row.project?.routines ?? [],
+        row.project?.tabs ?? []
+      )
+    );
+  };
   const refresh = async () => {
     ticks.current += 1;
     setHerdr(await readHerdrState());
+    await refreshPanes();
     // Branches change under the dashboard, so they are re-read with herdr
     setProjects(
       await Promise.all(
@@ -926,16 +1305,27 @@ function Dashboard({
       ? Promise.resolve({ isOk: true, output: '' })
       : capture('herdr', args);
 
-  const startRow = async (row: Row): Promise<string | null> => {
+  const startRow = async (
+    row: Row,
+    withRoutines: boolean
+  ): Promise<string | null> => {
     if (isDryRun) return null;
     const init = await runSelf(
-      ['herdr', 'init', row.label!, '--all'],
+      [
+        'herdr',
+        'init',
+        row.label!,
+        '--all',
+        // The dashboard never moves the person to another workspace
+        '--no-focus',
+        ...(withRoutines ? ['--start'] : []),
+      ],
       row.project!.path
     );
     return init.isOk ? null : lastLine(init.output);
   };
 
-  const perform = async (action: Action) => {
+  const perform = async (action: Action, withRoutines = false) => {
     if (isBusy.current) return;
     isBusy.current = true;
     setMessage('');
@@ -943,23 +1333,12 @@ function Dashboard({
     const failures: string[] = [];
 
     try {
-      if (action.kind === 'open' || action.kind === 'start') {
+      if (action.kind === 'open') {
         for (const row of action.rows) {
           if (row.workspace) continue;
           setBusy(`opening ${row.name}...`);
-          const failure = await startRow(row);
+          const failure = await startRow(row, withRoutines);
           if (failure) failures.push(`${row.name}: ${failure}`);
-        }
-      }
-
-      if (action.kind === 'open' && failures.length === 0) {
-        const row = action.rows[0];
-        const { workspaces } = await readHerdrState();
-        const workspace = workspaces.find((ws) => ws.label === row.label);
-        if (workspace) {
-          await herdrDo(['workspace', 'focus', workspace.workspace_id]);
-        } else if (!isDryRun) {
-          failures.push(`${row.name} did not come up in herdr`);
         }
       }
 
@@ -979,16 +1358,12 @@ function Dashboard({
         }
       }
 
-      const verb =
-        action.kind === 'open'
-          ? 'opened'
-          : action.kind === 'start'
-            ? 'opened in the background'
-            : 'closed';
+      const verb = action.kind === 'open' ? 'opened' : 'closed';
+      const started = withRoutines ? ' and started their routines' : '';
       setMessage(
         failures.length > 0
           ? `failed: ${failures.join('; ')}`
-          : `${prefix}${verb} ${names(action.rows)}`
+          : `${prefix}${verb} ${names(action.rows)}${started}`
       );
     } catch (error) {
       setMessage(String(error));
@@ -1006,20 +1381,117 @@ function Dashboard({
       : (current?.name ?? 'nothing selected')
   }  `;
 
+  // The routines an open would start: those of the closed projects it opens
+  const routinesToStart = (action: Action): string[] =>
+    action.kind === 'open'
+      ? action.rows
+          .filter((row) => !row.workspace)
+          .flatMap((row) =>
+            (row.project?.routines ?? []).map(
+              ({ pane, routine }) => `${row.name}  ${pane}: ${routine}`
+            )
+          )
+      : [];
+
+  const showPanes = (row: Row) => {
+    setPanes([]);
+    setPaneSelected(0);
+    setTabOpen(null);
+    setIsFlat(readSettings().panes === 'flat');
+    setViewing(row);
+    setMessage('');
+    refreshPanes(row);
+  };
+
+  // Types a pane's routine into it. Only an idle shell is typed into.
+  const startPanes = async (wanted: PaneState[]) => {
+    const ready = wanted.filter((pane) => pane.routine && pane.isIdle);
+    const busy = wanted.filter((pane) => pane.routine && !pane.isIdle);
+
+    if (ready.length === 0) {
+      setMessage(
+        busy.length > 0
+          ? `${busy.map((pane) => pane.name).join(', ')} already running something`
+          : wanted.length === 1
+            ? `${wanted[0].name} names no routine`
+            : 'no pane names a routine'
+      );
+      return;
+    }
+
+    for (const pane of ready) {
+      const { routine, path } = pane.routine!;
+      // A pane that has wandered to another folder still runs its own routine
+      const command =
+        pane.cwd === path
+          ? `run routine ${routine}`
+          : `run -p ${path} routine ${routine}`;
+      if (!isDryRun) await capture('herdr', ['pane', 'run', pane.paneId, command]);
+    }
+
+    setMessage(
+      `${isDryRun ? 'dry run: ' : ''}started ${ready
+        .map((pane) => `${pane.name}: ${pane.routine!.routine}`)
+        .join(', ')}${busy.length > 0 ? ` (${busy.length} busy, skipped)` : ''}`
+    );
+    await refreshPanes();
+  };
+
+  // Types one routine of the pane's own meta.json into it
+  const runInPane = async (pane: PaneState, routine: string) => {
+    if (!pane.isIdle) {
+      setMessage(`${pane.name} is already running something`);
+      return;
+    }
+    const path = pane.source?.path ?? pane.cwd;
+    const command =
+      pane.cwd === path
+        ? `run routine ${routine}`
+        : `run -p ${path} routine ${routine}`;
+    if (!isDryRun) await capture('herdr', ['pane', 'run', pane.paneId, command]);
+    setMessage(`${isDryRun ? 'dry run: ' : ''}started ${pane.name}: ${routine}`);
+    await refreshPanes();
+  };
+
+  // Offers the routines of the pane's meta.json, its own one first
+  const chooseRoutine = (pane: PaneState) => {
+    const offered = pane.source?.routines ?? [];
+    if (offered.length === 0) {
+      setMessage(`${pane.name}: its folder defines no routine`);
+      return;
+    }
+    setChoosing(pane);
+    setRoutineIndex(Math.max(offered.indexOf(pane.routine?.routine ?? ''), 0));
+    setMode('routine');
+  };
+
   const press = (index: number) => {
     setButton(index);
     if (targets.length === 0) return;
     const { kind, label } = BUTTONS[index];
     const action = actions.find((candidate) => candidate.kind === kind);
+    // Open on one project that is already open shows its panes
+    if (!action && kind === 'open' && targets.length === 1 && targets[0].workspace) {
+      showPanes(targets[0]);
+      return;
+    }
     if (!action) {
       setMessage(
-        kind !== 'open' && targets.every(isOwn)
-          ? 'this dashboard runs in that workspace, so it stays'
-          : `${label} does not apply to ${names(targets)}`
+        kind === 'open'
+          ? targets.some((row) => row.workspace)
+            ? `${names(targets)} already open: p shows its panes`
+            : `${names(targets)} defines no herdr workspace`
+          : targets.every(isOwn)
+            ? 'this dashboard runs in that workspace, so it stays'
+            : `${label} does not apply to ${names(targets)}`
       );
     } else if (action.isDestructive) {
       setPending(action);
       setMode('confirm');
+    } else if (routinesToStart(action).length > 0) {
+      // Opening builds the panes; whether their routines run is asked
+      setPending(action);
+      setMode('ask');
     } else {
       perform(action);
     }
@@ -1053,14 +1525,116 @@ function Dashboard({
   useInput((input, key) => {
     const mouse = input.match(/\[<(\d+);(\d+);(\d+)([Mm])/);
     if (mouse) {
-      if (mouse[4] === 'M' && mode === 'browse') {
+      if (mouse[4] === 'M' && mode === 'browse' && !viewing) {
         onMouse(Number(mouse[1]), Number(mouse[2]), Number(mouse[3]));
+      }
+      return;
+    }
+
+    // Settings open from every screen: `,` for the screen in view (its
+    // columns), shift+`,` for the whole dashboard
+    if (
+      (input === ',' || input === '<') &&
+      (mode === 'browse' || mode === 'settings')
+    ) {
+      setSettingsKind(input === '<' ? 'global' : 'columns');
+      setSettingIndex(0);
+      setMode('settings');
+      return;
+    }
+
+    if (mode === 'settings') {
+      if (key.downArrow || input === 'j') {
+        setSettingIndex((index) =>
+          Math.min(index + 1, settingItems.length - 1)
+        );
+      } else if (key.upArrow || input === 'k') {
+        setSettingIndex((index) => Math.max(index - 1, 0));
+      } else if (key.return || input === ' ') {
+        settingItems[settingIndex]?.run();
+        // Some lines read the saved file: draw again
+        setRevision((count) => count + 1);
+      } else {
+        setMode('browse');
+      }
+      return;
+    }
+
+    if (mode === 'routine' && choosing) {
+      const offered = choosing.source?.routines ?? [];
+      if (key.downArrow || input === 'j') {
+        setRoutineIndex((index) => Math.min(index + 1, offered.length - 1));
+      } else if (key.upArrow || input === 'k') {
+        setRoutineIndex((index) => Math.max(index - 1, 0));
+      } else {
+        if (key.return && offered[routineIndex]) {
+          runInPane(choosing, offered[routineIndex]);
+        }
+        setChoosing(null);
+        setMode('browse');
+      }
+      return;
+    }
+
+    if (viewing) {
+      const last = Math.max(paneItems.length - 1, 0);
+      const at = Math.min(paneSelected, last);
+      const tabNames = [...new Set(panes.map((pane) => pane.tab))];
+      if (
+        tabOpen !== null &&
+        (key.escape || key.backspace || key.leftArrow || input === 'h')
+      ) {
+        // Back from a tab's panes to the tabs, on that tab's line
+        setPaneSelected(Math.max(tabNames.indexOf(tabOpen), 0));
+        setTabOpen(null);
+      } else if (key.escape || input === 'q' || input === 'p' || key.backspace) {
+        setViewing(null);
+        setMessage('');
+      } else if (key.downArrow || input === 'j') {
+        setPaneSelected(Math.min(at + 1, last));
+      } else if (key.upArrow || input === 'k') {
+        setPaneSelected(Math.max(at - 1, 0));
+      } else if (input === 'f') {
+        // Every pane at once, or back to the tabs
+        setIsFlat(!isFlat);
+        saveSettings({ panes: isFlat ? 'tabs' : 'flat' });
+        setTabOpen(null);
+        setPaneSelected(0);
+      } else if (
+        paneItems[at] &&
+        !paneItems[at].pane &&
+        (key.return || key.rightArrow || input === 'l')
+      ) {
+        // Into a tab: its panes
+        setTabOpen(paneItems[at].tab);
+        setPaneSelected(0);
+      } else if (
+        paneItems[at]?.pane &&
+        (key.return || (input === 's' && !paneItems[at].pane!.routine))
+      ) {
+        // enter always offers the folder's routines; s does when the pane
+        // names none
+        chooseRoutine(paneItems[at].pane!);
+      } else if (input === 's' && paneItems[at]) {
+        startPanes(paneItems[at].members);
+      } else if (input === 'S') {
+        startPanes(panes);
       }
       return;
     }
 
     if (mode === 'confirm') {
       if (input === 'y' && pending) perform(pending);
+      setPending(null);
+      setMode('browse');
+      return;
+    }
+
+    if (mode === 'ask') {
+      // y starts the routines, n opens without them, anything else cancels
+      if (pending && (input === 'y' || input === 'n')) {
+        perform(pending, input === 'y');
+      }
       setPending(null);
       setMode('browse');
       return;
@@ -1077,6 +1651,40 @@ function Dashboard({
         setScope(choices[pickIndex]?.scope ?? null);
         setSelected(0);
         setMode('browse');
+      } else if (input === 'o') {
+        // Open every closed project of the picked group or tag in one go
+        const picked = choices[pickIndex]?.scope ?? null;
+        const members = allRows.filter(
+          (row) =>
+            row.project &&
+            (!picked ||
+              (picked.kind === 'tag' ? row.tags : row.groups).includes(
+                picked.value
+              ))
+        );
+        const closed = members.filter((row) => !row.workspace && row.label);
+        const what = picked ? `${picked.kind} ${picked.value}` : 'all projects';
+
+        setScope(picked);
+        setSelected(0);
+        setMode('browse');
+
+        if (closed.length === 0) {
+          setMessage(`${what}: nothing to open, all ${members.length} are open`);
+        } else {
+          const action: Action = {
+            kind: 'open',
+            title: `Open ${what}`,
+            rows: closed,
+            isDestructive: false,
+          };
+          if (routinesToStart(action).length > 0) {
+            setPending(action);
+            setMode('ask');
+          } else {
+            perform(action);
+          }
+        }
       }
       return;
     }
@@ -1118,13 +1726,24 @@ function Dashboard({
           : [...keys, current.key]
       );
       setSelected(Math.min(cursor + 1, rows.length - 1));
+    } else if (input === 'p' && current) {
+      if (current.workspace) {
+        showPanes(current);
+      } else {
+        setMessage(`${current.name} is closed: it has no panes yet`);
+      }
+    } else if (input === 'R') {
+      // Leave, then start again from the code on disk
+      isRestartRequested = true;
+      exit();
+    } else if (input === 'A') {
+      // Mark every row in view, or clear the marks when they all are
+      const inView = rows.map((row) => row.key);
+      setMarked((keys) =>
+        inView.every((key) => keys.includes(key)) ? [] : inView
+      );
     } else if (input === 'T') {
-      const all = Object.keys(THEMES);
-      const next = all[(all.indexOf(themeName) + 1) % all.length];
-      paintBackground(THEMES[next]);
-      setThemeName(next);
-      saveTheme(next);
-      setMessage(`theme: ${next}`);
+      setMessage(`theme: ${cycleTheme()}`);
     } else if (input === 't') {
       setPickIndex(0);
       setMode('pick');
@@ -1136,7 +1755,7 @@ function Dashboard({
       rescan().then(() => setMessage('rescanned'));
     } else if (key.return) {
       press(button);
-    } else if (/^[1-4]$/.test(input)) {
+    } else if (/^[1-3]$/.test(input)) {
       press(Number(input) - 1);
     } else if (key.tab || key.rightArrow || input === 'l') {
       const step = key.tab && key.shift ? BUTTONS.length - 1 : 1;
@@ -1153,9 +1772,16 @@ function Dashboard({
   const width = size.columns;
   const inner = width - 2;
   const bodyRows = Math.max(size.rows - 12, 1);
+  // The list on screen is the projects, or one project's panes
+  const paneCursor = Math.min(
+    paneSelected,
+    Math.max(paneItems.length - 1, 0)
+  );
+  const listCursor = viewing ? paneCursor : cursor;
+  const listLength = viewing ? paneItems.length : rows.length;
   const first = Math.min(
-    Math.max(cursor - Math.floor(bodyRows / 2), 0),
-    Math.max(rows.length - bodyRows, 0)
+    Math.max(listCursor - Math.floor(bodyRows / 2), 0),
+    Math.max(listLength - bodyRows, 0)
   );
   const live = allRows.filter((row) => row.workspace && row.project).length;
   const strays = allRows.filter(
@@ -1199,9 +1825,17 @@ function Dashboard({
   ]
     .filter(Boolean)
     .join(' ');
-  const title = ` projects(${view})[${rows.length}]${
-    marked.length > 0 ? ` ${marked.length} marked` : ''
-  }${isDryRun ? ' DRY RUN' : ''} `;
+  const title = viewing
+    ? ` ${viewing.name}${
+        isFlat
+          ? ` panes[${panes.length}]`
+          : tabOpen !== null
+            ? ` › ${tabOpen} panes[${paneItems.length}]`
+            : ` tabs[${paneItems.length}]`
+      }${isDryRun ? ' DRY RUN' : ''} `
+    : ` projects(${view})[${rows.length}]${
+        marked.length > 0 ? ` ${marked.length} marked` : ''
+      }${isDryRun ? ' DRY RUN' : ''} `;
   const dashes = Math.max(inner - title.length, 0);
   screen.push([
     { text: '┌' + '─'.repeat(Math.floor(dashes / 2)), color: theme.accent },
@@ -1211,11 +1845,14 @@ function Dashboard({
   screen.push([
     { text: '│', color: theme.accent },
     {
-      text: line(
-        COLUMNS.map((column) => column.title),
-        'TAGS',
-        inner
-      ),
+      text: viewing
+        ? paneLine(screenNow as 'tabs', null, inner, hiddenHere)
+        : line(
+            columns.map((column) => column.title),
+            hiddenHere.includes('TAGS') ? '' : 'TAGS',
+            inner,
+            columns
+          ),
       color: theme.text,
       bold: true,
     },
@@ -1224,7 +1861,26 @@ function Dashboard({
 
   // Dialog laid over the middle of the table
   const dialog: Segment[] = [];
-  if (mode === 'confirm' && pending) {
+  if (mode === 'ask' && pending) {
+    const routines = routinesToStart(pending);
+    dialog.push({
+      text: ` Start the routines too? (${routines.length})`,
+      color: theme.label,
+      bold: true,
+    });
+    dialog.push({ text: '' });
+    for (const routine of routines.slice(0, 10)) {
+      dialog.push({ text: ` ${routine}`, color: theme.dialogText });
+    }
+    if (routines.length > 10) {
+      dialog.push({ text: ` +${routines.length - 10} more`, color: theme.dim });
+    }
+    dialog.push({ text: '' });
+    dialog.push({
+      text: ' y start them · n just open · esc cancel',
+      color: theme.dim,
+    });
+  } else if (mode === 'confirm' && pending) {
     dialog.push({
       text: ` Close ${pending.rows.length} workspace${
         pending.rows.length > 1 ? 's' : ''
@@ -1247,6 +1903,59 @@ function Dashboard({
     }
     dialog.push({ text: '' });
     dialog.push({ text: ' y close them · any other key cancels', color: theme.dim });
+  } else if (mode === 'settings') {
+    const room = Math.max(bodyRows - 6, 1);
+    const top = Math.min(
+      Math.max(settingIndex - Math.floor(room / 2), 0),
+      Math.max(settingItems.length - room, 0)
+    );
+    dialog.push({
+      text:
+        settingsKind === 'global'
+          ? ' Settings'
+          : ` Columns of ${
+              { projects: 'the projects', tabs: 'the tabs', panes: "a tab's panes", flat: 'all panes' }[
+                screenNow
+              ]
+            }`,
+      color: theme.label,
+      bold: true,
+    });
+    dialog.push({ text: '' });
+    settingItems.slice(top, top + room).forEach((item, index) => {
+      const isPicked = top + index === settingIndex;
+      dialog.push({
+        text: ` ${item.text}`,
+        color: isPicked ? theme.selectionText : theme.dialogText,
+        background: isPicked ? theme.accent : undefined,
+      });
+    });
+    dialog.push({ text: '' });
+    dialog.push({ text: ' enter change · esc close', color: theme.dim });
+  } else if (mode === 'routine' && choosing) {
+    const offered = choosing.source?.routines ?? [];
+    const room = Math.max(bodyRows - 6, 1);
+    const top = Math.min(
+      Math.max(routineIndex - Math.floor(room / 2), 0),
+      Math.max(offered.length - room, 0)
+    );
+    dialog.push({
+      text: ` Run in ${choosing.name}`,
+      color: theme.label,
+      bold: true,
+    });
+    dialog.push({ text: '' });
+    offered.slice(top, top + room).forEach((name, index) => {
+      const isPicked = top + index === routineIndex;
+      const isDefault = name === choosing.routine?.routine;
+      dialog.push({
+        text: ` ${name}${isDefault ? '  (default)' : ''}`,
+        color: isPicked ? theme.selectionText : theme.dialogText,
+        background: isPicked ? theme.accent : undefined,
+      });
+    });
+    dialog.push({ text: '' });
+    dialog.push({ text: ' enter run · esc cancel', color: theme.dim });
   } else if (mode === 'pick') {
     const room = Math.max(bodyRows - 6, 1);
     const top = Math.min(
@@ -1268,22 +1977,58 @@ function Dashboard({
       });
     });
     dialog.push({ text: '' });
-    dialog.push({ text: ' enter show · esc cancel', color: theme.dim });
+    dialog.push({
+      text: ' enter show · o open them all · esc cancel',
+      color: theme.dim,
+    });
   }
   const dialogWidth = Math.min(44, inner - 4);
   const dialogTop = Math.max(Math.floor((bodyRows - dialog.length - 2) / 2), 0);
   const dialogLeft = Math.floor((inner - dialogWidth) / 2);
 
   for (let index = 0; index < bodyRows; index++) {
-    const row: Row | undefined = rows[first + index];
-    const isSelected = !!row && first + index === cursor;
+    const row: Row | undefined = viewing ? undefined : rows[first + index];
+    const item = viewing ? paneItems[first + index] : undefined;
+    const pane = item?.pane ?? undefined;
+    const isSelected = (!!row || !!item) && first + index === listCursor;
     const isMarked = !!row && marked.includes(row.key);
     let text = ' '.repeat(inner);
+    if (item && !pane) {
+      // A tab: its size, how many panes name a routine, how many are busy
+      const busy = item.members.filter((member) => member.running).length;
+      const named = item.members.filter((member) => member.routine).length;
+      text = paneLine(
+        'tabs',
+        {
+          TAB: item.tab,
+          PANES: String(item.members.length),
+          ROUTINES: named > 0 ? String(named) : '-',
+          RUNNING: busy > 0 ? `${busy} of ${item.members.length}` : '-',
+        },
+        inner,
+        hiddenHere
+      );
+    }
+    if (pane) {
+      text = paneLine(
+        isFlat ? 'flat' : 'panes',
+        {
+          TAB: pane.tab,
+          PANE: pane.name,
+          ROUTINE: pane.routine?.routine ?? '-',
+          STATE: pane.isAgent ? 'agent' : pane.running ? 'running' : 'idle',
+          RUNNING: pane.running,
+        },
+        inner,
+        hiddenHere
+      );
+    }
     if (row) {
       text = line(
-        COLUMNS.map((column) => column.cell(row)),
-        row.tags.join(' '),
-        inner
+        columns.map((column) => column.cell(row)),
+        hiddenHere.includes('TAGS') ? '' : row.tags.join(' '),
+        inner,
+        columns
       );
       if (isMarked) text = '●' + text.slice(1);
     }
@@ -1293,9 +2038,17 @@ function Dashboard({
         ? theme.selectionText
         : isMarked
           ? theme.marked
-          : row && colorOf(row, theme),
+          : item && !pane
+            ? theme.label
+            : pane
+              ? pane.running
+                ? theme.open
+                : pane.routine
+                  ? theme.text
+                  : theme.dim
+              : row && colorOf(row, theme),
       background: isSelected ? theme.accent : undefined,
-      bold: isMarked,
+      bold: isMarked || (!!item && !pane),
     };
 
     const at = index - dialogTop;
@@ -1352,7 +2105,35 @@ function Dashboard({
     bar.push({ text: '  ' });
   });
   screen.push([]);
-  screen.push(bar);
+  screen.push(
+    viewing
+      ? [
+          { text: ` ${viewing.name}  `, color: theme.label, bold: true },
+          { text: '<enter> ', color: theme.key, bold: true },
+          {
+            text:
+              tabOpen === null && !isFlat ? 'Its panes   ' : 'Choose routine   ',
+            color: theme.dim,
+          },
+          { text: '<s> ', color: theme.key, bold: true },
+          {
+            text:
+              tabOpen === null && !isFlat
+                ? 'Start tab   '
+                : 'Start default   ',
+            color: theme.dim,
+          },
+          { text: '<S> ', color: theme.key, bold: true },
+          { text: 'Start all   ', color: theme.dim },
+          { text: '<f> ', color: theme.key, bold: true },
+          { text: isFlat ? 'By tab   ' : 'All panes   ', color: theme.dim },
+          { text: '<,> ', color: theme.key, bold: true },
+          { text: 'Columns   ', color: theme.dim },
+          { text: '<esc> ', color: theme.key, bold: true },
+          { text: 'Back', color: theme.dim },
+        ]
+      : bar
+  );
 
   // Footer
   if (mode === 'filter') {
@@ -1433,7 +2214,7 @@ export default async function projects(program: any) {
         Deno.stdout.writeSync(
           encoder.encode('\x1b[?1049h\x1b[H\x1b[?1000h\x1b[?1006h')
         );
-        const wanted = options.theme ?? readSavedTheme() ?? DEFAULT_THEME;
+        const wanted = options.theme ?? readSettings().theme ?? DEFAULT_THEME;
         const themeName = wanted in THEMES ? wanted : DEFAULT_THEME;
         paintBackground(THEMES[themeName]);
 
@@ -1451,6 +2232,19 @@ export default async function projects(program: any) {
           Deno.stdout.writeSync(
             encoder.encode('\x1b[?1006l\x1b[?1000l\x1b[?1049l')
           );
+        }
+
+        // A restart runs the command again in a child, so code edited since
+        // this process started is picked up. This process only waits for it.
+        if (isRestartRequested) {
+          const entry = new URL('../bin/cmd.ts', import.meta.url).href;
+          const child = new Deno.Command(Deno.execPath(), {
+            args: ['run', '-A', entry, ...Deno.args],
+            stdin: 'inherit',
+            stdout: 'inherit',
+            stderr: 'inherit',
+          }).spawn();
+          Deno.exit((await child.status).code);
         }
       }
     );

@@ -23,6 +23,23 @@ Deno.test('discoverProjects lists project roots and counts their apps', async ()
       id: 'b',
       name: 'ui',
       type: 'app',
+      herdr: {
+        workspaces: [
+          {
+            label: 'music',
+            tabs: [
+              {
+                label: 'ui',
+                layout: 'compact',
+                compact: {
+                  type: 'vertical',
+                  panes: [{ name: 'server', routine: 'dev' }, 'shell'],
+                },
+              },
+            ],
+          },
+        ],
+      },
     });
     await writeMeta(join(root, 'labo', 'notes'), {
       id: 'c',
@@ -40,13 +57,15 @@ Deno.test('discoverProjects lists project roots and counts their apps', async ()
     const projects = await discoverProjects(root);
 
     assertEquals(
-      projects.map(({ name, folder, label, apps, tags, groups }) => ({
+      projects.map(({ name, folder, label, apps, tags, groups, routines, tabs }) => ({
         name,
         folder,
         label,
         apps,
         tags,
         groups,
+        routines,
+        tabs: tabs.map(({ tab }) => tab),
       })),
       [
         {
@@ -56,6 +75,8 @@ Deno.test('discoverProjects lists project roots and counts their apps', async ()
           apps: [],
           tags: [],
           groups: [],
+          routines: [],
+          tabs: [],
         },
         {
           name: 'music',
@@ -64,6 +85,15 @@ Deno.test('discoverProjects lists project roots and counts their apps', async ()
           apps: ['ui'],
           tags: ['audio'],
           groups: ['band'],
+          routines: [
+            {
+              tab: 'ui-ui',
+              pane: 'server',
+              routine: 'dev',
+              path: join(root, 'studio', 'music', 'ui'),
+            },
+          ],
+          tabs: ['ui-ui'],
         },
       ]
     );

@@ -10,8 +10,10 @@
  * multiple meta.json files (each contributing tabs to the same workspace
  * label) and assembled with --all.
  *
- * Panes define the arrangement only — no startup commands. Each pane carries
- * a description documenting how the team (or an AI agent) should use it.
+ * A pane defines where it sits and carries a description documenting how the
+ * team (or an AI agent) should use it. A pane may also name the routine it
+ * usually runs: `run herdr init <workspace> --start` types `run routine <name>`
+ * into it. Without --start every pane is an empty shell.
  *
  * Example meta.json configuration:
  * {
@@ -24,7 +26,7 @@
  *         "compact": {
  *           "type": "main-side",
  *           "panes": [
- *             { "name": "server", "description": "long-running dev server, do not interrupt" },
+ *             { "name": "server", "routine": "dev", "description": "long-running dev server, do not interrupt" },
  *             "logs",
  *             { "name": "execution-shell", "description": "run ad-hoc commands here" }
  *           ]
@@ -52,6 +54,8 @@ import chalk from 'npm:chalk@5.3.0';
 interface HerdrPane {
   name: string;
   description?: string;
+  /** Routine this pane usually runs; typed into the pane by `init --start` */
+  routine?: string;
   size?: string;
   path?: string;
   env?: Record<string, string>;
@@ -155,6 +159,26 @@ async function ensureServerRunning(): Promise<void> {
 
   throw new Error(`herdr server did not become ready in time`);
 }
+
+/**
+ * The id of the workspace on screen, or null when the server is down
+ */
+async function focusedWorkspaceId(): Promise<string | null> {
+  try {
+    const list = await herdrJson(['workspace', 'list']);
+    return (
+      (list?.workspaces ?? []).find((ws: any) => ws.focused)?.workspace_id ??
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
+// A workspace's own `focus: true` is the only thing that may move the person
+// to another workspace, and `init --no-focus` switches even that off.
+let isFocusAllowed = true;
+let isFocusedOnPurpose = false;
 
 /**
  * Find running workspaces matching a label
@@ -540,7 +564,8 @@ async function createTab(
   tabLabel: string,
   tab: HerdrTab,
   basePath: string,
-  isAppendMode: boolean
+  isAppendMode: boolean,
+  start: boolean
 ): Promise<void> {
   const tabPath = resolvePath(tab.path, basePath);
 
@@ -666,6 +691,20 @@ async function createTab(
     }
   }
 
+  // Start each pane's routine when asked. The command is typed into the
+  // pane's own shell, so it shows there, stops with ctrl+c and is in its
+  // history. Only tabs created by this run reach here, so nothing is typed
+  // into a pane that is already busy.
+  if (start) {
+    for (const [paneName, paneId] of paneMap.entries()) {
+      const routine = findPaneInSection(sectionToProcess, paneName)?.routine;
+      if (!routine) continue;
+
+      await herdrJson(['pane', 'run', paneId, `run routine ${routine}`]);
+      console.log(chalk.gray(`      ▶️  ${paneName}: run routine ${routine}`));
+    }
+  }
+
   // Focus the tab itself when requested
   if (tab.focus) {
     await herdrJson(['tab', 'focus', tabId]);
@@ -684,7 +723,8 @@ async function initHerdrWorkspace(
   workspaceName: string,
   reset: boolean,
   currentPath: string,
-  isAppendMode: boolean = false
+  isAppendMode: boolean = false,
+  start: boolean = false
 ): Promise<void> {
   $.verbose = false;
 
@@ -798,7 +838,14 @@ async function initHerdrWorkspace(
         continue;
       }
 
-      await createTab(workspaceId, tabLabel, tab, basePath, isAppendMode);
+      await createTab(
+        workspaceId,
+        tabLabel,
+        tab,
+        basePath,
+        isAppendMode,
+        start
+      );
       createdTabs++;
     }
 
@@ -809,7 +856,8 @@ async function initHerdrWorkspace(
     }
 
     // Focus the workspace when requested (init never steals focus otherwise)
-    if (workspaceConfig.focus) {
+    if (workspaceConfig.focus && isFocusAllowed) {
+      isFocusedOnPurpose = true;
       await herdrJson(['workspace', 'focus', workspaceId]);
       if (!isAppendMode) {
         console.log(chalk.gray(`  🎯 Focused workspace: ${workspaceName}`));
@@ -831,7 +879,8 @@ async function initHerdrWorkspace(
  */
 async function initAllHerdrWorkspaces(
   workspaceName: string,
-  reset: boolean
+  reset: boolean,
+  start: boolean = false
 ): Promise<void> {
   $.verbose = false;
 
@@ -891,7 +940,7 @@ async function initAllHerdrWorkspaces(
     console.log(
       chalk.gray(`📁 Processing: ${config.meta.name} (${config.path})`)
     );
-    await initHerdrWorkspace(workspaceName, false, config.path, true);
+    await initHerdrWorkspace(workspaceName, false, config.path, true, start);
   }
 
   console.log(
@@ -956,26 +1005,49 @@ export default async function herdr(program: any) {
     .argument('<workspace>', 'workspace label to create/append to')
     .option('--all', 'process all herdr configurations found in the project')
     .option('--reset', 'close and rebuild the workspace if it exists')
+    .option('--start', 'run each new pane\'s routine once it is built')
+    .option('--no-focus', 'stay on the current workspace whatever the config says')
     .action(
       async (
         workspaceName: string,
         options: {
           all?: boolean;
           reset?: boolean;
+          start?: boolean;
+          focus?: boolean;
         }
       ) => {
         try {
-          const { all, reset } = options;
+          const { all, reset, start } = options;
+
+          // Focusing a pane or a tab of the new workspace makes herdr switch
+          // to that workspace. That is a side effect, not a request: note
+          // where the person is, and bring them back afterwards.
+          isFocusAllowed = options.focus !== false;
+          isFocusedOnPurpose = false;
+          const focusedBefore = await focusedWorkspaceId();
 
           if (all) {
-            await initAllHerdrWorkspaces(workspaceName, reset ?? false);
+            await initAllHerdrWorkspaces(
+              workspaceName,
+              reset ?? false,
+              start ?? false
+            );
           } else {
             await initHerdrWorkspace(
               workspaceName,
               reset ?? false,
               Deno.cwd(),
-              false
+              false,
+              start ?? false
             );
+          }
+
+          if (focusedBefore && !isFocusedOnPurpose) {
+            const focusedAfter = await focusedWorkspaceId();
+            if (focusedAfter !== focusedBefore) {
+              await herdrJson(['workspace', 'focus', focusedBefore]);
+            }
           }
         } catch (error) {
           console.error(
