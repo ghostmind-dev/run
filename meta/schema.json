@@ -171,7 +171,7 @@
   "$defs": {
     "herdrPane": {
       "type": "object",
-      "description": "A herdr pane defining arrangement only — no startup command. The description documents how the team (or an AI agent) should use the pane.",
+      "description": "A herdr pane: where it sits, what it is for, and optionally the routine it usually runs.",
       "properties": {
         "name": {
           "type": "string",
@@ -179,7 +179,11 @@
         },
         "description": {
           "type": "string",
-          "description": "How to use this pane (documentation, not an executed command)"
+          "description": "How to use this pane (documentation; `routine` is what gets executed)"
+        },
+        "routine": {
+          "type": "string",
+          "description": "Name of the routine this pane usually runs, from the `routines` of the same meta.json. `run herdr init --start` types `run routine <name>` into the pane; without --start the pane stays an empty shell. One routine per pane: anything else is typed by hand."
         },
         "size": {
           "type": "string",

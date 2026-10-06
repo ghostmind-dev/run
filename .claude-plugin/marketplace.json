@@ -1,0 +1,13 @@
+{
+  "name": "ghostmind-run",
+  "owner": {
+    "name": "ghostmind-dev"
+  },
+  "plugins": [
+    {
+      "name": "run",
+      "source": "./plugin",
+      "description": "How to use the run CLI: the projects dashboard, herdr workspaces, routines and meta.json"
+    }
+  ]
+}
