@@ -1,0 +1,27 @@
+name: Check module installation
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Check out repository'
+        uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: 'Install run'
+        run: |
+          deno install --allow-all --force --global --name run ./run/bin/cmd.ts
+          echo "$HOME/.deno/bin" >> "$GITHUB_PATH"
+      - name: 'Run the installed command'
+        run: |
+          run --version
+          run projects --list --root .
+      - name: 'Type-check'
+        run: deno check run/bin/cmd.ts run/main.ts
+      - name: 'Test'
+        run: deno test --allow-all run/test/units.ts

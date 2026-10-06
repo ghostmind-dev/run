@@ -2,9 +2,8 @@
  * @fileoverview Herdr workspace management module for @ghostmind/run
  *
  * This module provides commands for managing predefined herdr workspaces
- * (tabs and panes) for development workflows. The mapping mirrors the tmux
- * module: a project maps to ONE herdr workspace, tmux windows map to herdr
- * tabs. Everything lives in herdr's default session, so the sidebar shows one
+ * (tabs and panes) for development workflows. A project maps to ONE herdr
+ * workspace. Everything lives in herdr's default session, so the sidebar shows one
  * workspace per project.
  *
  * A workspace can be fully defined in a single meta.json or spread across
@@ -79,8 +78,7 @@ interface HerdrCompact {
 interface HerdrTab {
   label: string;
   /**
-   * Prefix the tab label with the app name (the default, mirroring tmux window
-   * naming). Set to false when the label already identifies the app, so a
+   * Prefix the tab label with the app name (the default). Set to false when the label already identifies the app, so a
    * workspace with many apps keeps its tab row readable.
    */
   prefix?: boolean;
@@ -789,7 +787,7 @@ async function initHerdrWorkspace(
 
     let createdTabs = 0;
     for (const tab of workspaceConfig.tabs ?? []) {
-      // Prefix tab labels with the app name, mirroring tmux window naming.
+      // Prefix tab labels with the app name.
       // A tab opts out with "prefix": false when its label already says which
       // app it belongs to.
       const tabLabel =

@@ -1,6 +1,6 @@
 # @ghostmind/run
 
-A comprehensive DevOps automation toolkit for managing Docker containers, GitHub Actions, Terraform infrastructure, HashiCorp Vault, and more.
+A CLI toolkit for Ghostmind projects: a projects dashboard, herdr workspaces, routines, and more.
 
 ## Installation
 
@@ -27,20 +27,15 @@ deno install --allow-all -n run jsr:@ghostmind/run/cmd
 Usage: run [options] [command]
 
 Options:
+  -v, --version                            show version information
   -c, --cible <env context>                target environment context
   -p, --path <path>                        run the script from a specific path
   -h, --help                               display help for command
 
 Commands:
-  version                                  show version information
-  action                                   run a github action
-  custom [options] [script] [argument...]  run custom script
-  docker                                   docker commands
-  meta                                     manage meta.json files
-  misc                                     miscellaneous commands
+  herdr                                    herdr workspace management commands
+  projects [options]                       dashboard over every project and its herdr workspace
   routine [script...]                      run npm style scripts
-  terraform                                infrastructure definition
-  vault                                    manage project secrets
   help [command]                           display help for command
 ```
 

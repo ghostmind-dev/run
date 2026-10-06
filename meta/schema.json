@@ -26,93 +26,7 @@
         "project",
         "template"
       ],
-      "description": "The type of the configuration."
-    },
-    "global": {
-      "deprecated": true,
-      "type": "boolean",
-      "description": "Deprecated: flag to indicate if the configuration is global; see the system skill."
-    },
-    "compose": {
-      "deprecated": true,
-      "description": "Deprecated: 'run docker compose' will be removed; call docker compose from scripts/*.sh instead. See the system skill.",
-      "type": "object",
-      "patternProperties": {
-        ".*": {
-          "type": "object",
-          "properties": {
-            "root": {
-              "type": "string",
-              "description": "Root directory for the container."
-            },
-            "filename": {
-              "type": "string",
-              "description": "Custom docker-compose filename."
-            },
-            "use_project_env": {
-              "type": "boolean",
-              "description": "Use PROJECT environment variable as project name for docker compose commands. Defaults to true.",
-              "default": true
-            },
-            "down": {
-              "type": "boolean",
-              "description": "Run docker compose down before up. Defaults to true.",
-              "default": true
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    "custom": {
-      "deprecated": true,
-      "description": "Deprecated: 'run custom' is replaced by plain scripts/*.sh; see the system skill.",
-      "type": "object",
-      "properties": {
-        "root": {
-          "type": "string",
-          "description": "path to the scripts folder"
-        }
-      },
-      "additionalProperties": false
-    },
-    "docker": {
-      "deprecated": true,
-      "description": "Deprecated: 'run docker' will be removed; see the system skill.",
-      "type": "object",
-      "patternProperties": {
-        ".*": {
-          "type": "object",
-          "properties": {
-            "root": {
-              "type": "string",
-              "description": "Root directory for the container."
-            },
-            "image": {
-              "type": "string",
-              "description": "Docker image url to be used. (example: docker.io/library/nginx:latest)"
-            },
-            "env_based": {
-              "type": "boolean",
-              "description": "Flag to indicate if context Dockerfile is used."
-            },
-            "context_dir": {
-              "type": "string",
-              "description": "Context where the app is located."
-            },
-            "tag_modifiers": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "List of tag modifiers for the Docker image."
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
+      "description": "What the folder is. 'project' marks the root of a project: the one meta.json 'run projects' lists. 'app' is a service or sub-app below a project and never gets a row of its own. 'template' is a scaffold."
     },
     "port": {
       "type": "number",
@@ -144,139 +58,24 @@
       },
       "additionalProperties": false
     },
-    "terraform": {
-      "deprecated": true,
-      "description": "Deprecated: 'run terraform' will be removed; see the system skill.",
-      "type": "object",
-      "patternProperties": {
-        ".*": {
-          "type": "object",
-          "properties": {
-            "path": {
-              "type": "string",
-              "description": "Path for the terraform configuration."
-            },
-            "global": {
-              "type": "boolean",
-              "description": "Flag to indicate if the configuration is global."
-            },
-            "containers": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "List of containers to be used."
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
     "tags": {
       "type": "array",
       "items": {
         "type": "string"
-      }
-    },
-    "template": {
-      "deprecated": true,
-      "description": "Deprecated: templates will be removed; see the system skill.",
-      "type": "object",
-      "patternProperties": {
-        ".*": {
-          "type": "object",
-          "properties": {
-            "ignoreFolders": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "List of folders to ignore in the template."
-            },
-            "ignoreFiles": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "List of files to ignore in the template."
-            },
-            "init": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "List of initialization commands to run for the template."
-            }
-          },
-          "additionalProperties": false
-        }
       },
-      "additionalProperties": false
+      "description": "Free-form words describing what the project is about. For which projects are worked on together, use 'groups'."
     },
-    "tmux": {
-      "type": "object",
-      "deprecated": true,
-      "description": "Deprecated: tmux sessions are replaced by herdr; see the system skill.",
-      "properties": {
-        "sessions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "Session name"
-              },
-              "root": {
-                "type": "string",
-                "description": "Root directory for the session (relative to meta.json location)"
-              },
-              "windows": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "name": {
-                      "type": "string",
-                      "description": "Window name"
-                    },
-                    "path": {
-                      "type": "string",
-                      "description": "Starting directory for all panes in this window. If starts with '/', treated as absolute path. Otherwise, relative to session root. Pane-level paths override this."
-                    },
-                    "layout": {
-                      "type": "string",
-                      "enum": ["sections", "grid", "compact"],
-                      "description": "Layout mode: 'sections' for hierarchical layouts, 'grid' for predefined arrangements, 'compact' for minimal object-based configuration"
-                    },
-                    "section": {
-                      "$ref": "#/$defs/tmuxSection"
-                    },
-                    "grid": {
-                      "$ref": "#/$defs/tmuxGrid"
-                    },
-                    "compact": {
-                      "$ref": "#/$defs/tmuxCompact"
-                    }
-                  },
-                  "required": [
-                    "name"
-                  ]
-                }
-              }
-            },
-            "required": [
-              "name",
-              "windows"
-            ]
-          }
-        }
-      }
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "description": "Names of the groups this project belongs to: sets of projects worked on together, wherever their folders are. Set on a 'project' meta.json only."
     },
     "herdr": {
       "type": "object",
-      "description": "Herdr workspace configuration. A project maps to one herdr workspace; tmux windows map to herdr tabs. Multiple meta.json files can contribute tabs to the same workspace label (assembled with --all).",
+      "description": "Herdr workspace configuration. A project maps to one herdr workspace. Multiple meta.json files can contribute tabs to the same workspace label (assembled with --all).",
       "properties": {
         "workspaces": {
           "type": "array",
@@ -309,7 +108,7 @@
                   "properties": {
                     "label": {
                       "type": "string",
-                      "description": "Tab label (prefixed with the app name at init, mirroring tmux window naming, unless prefix is false)"
+                      "description": "Tab label (prefixed with the app name at init, unless prefix is false)"
                     },
                     "prefix": {
                       "type": "boolean",
@@ -333,7 +132,11 @@
                     },
                     "layout": {
                       "type": "string",
-                      "enum": ["sections", "grid", "compact"],
+                      "enum": [
+                        "sections",
+                        "grid",
+                        "compact"
+                      ],
                       "description": "Layout mode: 'sections' for hierarchical layouts, 'grid' for predefined arrangements, 'compact' for minimal configuration"
                     },
                     "section": {
@@ -366,112 +169,6 @@
     "name"
   ],
   "$defs": {
-    "tmuxSection": {
-      "type": "object",
-      "description": "A section defines how to split space - either containing panes or other sections",
-      "properties": {
-        "split": {
-          "type": "string",
-          "enum": ["horizontal", "vertical"],
-          "description": "Split direction: horizontal = split top/bottom, vertical = split left/right"
-        },
-        "size": {
-          "type": "string",
-          "pattern": "^[0-9]+%?$",
-          "description": "Size of this section (e.g., '50%', '30'). Only applies when this section is an item in another section."
-        },
-        "items": {
-          "type": "array",
-          "description": "Items within this section - can be panes or other sections",
-          "minItems": 1,
-          "items": {
-            "oneOf": [
-              {
-                "$ref": "#/$defs/tmuxSection",
-                "description": "Nested section"
-              },
-              {
-                "$ref": "#/$defs/tmuxPane",
-                "description": "Terminal pane"
-              }
-            ]
-          }
-        }
-      },
-      "required": ["split", "items"],
-      "additionalProperties": false
-    },
-    "tmuxPane": {
-      "type": "object",
-      "description": "A terminal pane with optional commands and configuration",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Unique identifier for this pane"
-        },
-        "path": {
-          "type": "string",
-          "description": "Starting directory for this pane. If starts with '/', treated as absolute path. Otherwise, relative to window path (or session root if window has no path). Overrides window-level path."
-        },
-        "command": {
-          "type": "string",
-          "description": "Default command to execute in this pane"
-        },
-        "sshTarget": {
-          "type": "string",
-          "description": "SSH target for remote command execution (e.g., 'user@host')"
-        },
-        "size": {
-          "type": "string",
-          "pattern": "^[0-9]+%?$",
-          "description": "Size of this pane (e.g., '50%', '30'). Only applies when this pane is an item in a section."
-        }
-      },
-      "required": ["name"],
-      "additionalProperties": false
-    },
-    "tmuxGrid": {
-      "type": "object",
-      "description": "Predefined grid layout with auto-fill support for missing panes",
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["single", "vertical", "horizontal", "two-by-two", "main-side"],
-          "description": "Grid type: single (1 pane), vertical (2 panes left/right), horizontal (2 panes top/bottom), two-by-two (4 panes in 2x2 grid), main-side (1 large left + 2 stacked right)"
-        },
-        "panes": {
-          "type": "array",
-          "description": "Pane definitions. Missing panes will be auto-generated with default names.",
-          "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/tmuxPane"
-          }
-        }
-      },
-      "required": ["type", "panes"],
-      "additionalProperties": false
-    },
-    "tmuxCompact": {
-      "type": "object",
-      "description": "Compact grid layout with minimal object-based configuration. Panes are defined as key-value pairs where the key is the pane name and the value is the command.",
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["single", "vertical", "horizontal", "two-by-two", "main-side"],
-          "description": "Grid type: single (1 pane), vertical (2 panes left/right), horizontal (2 panes top/bottom), two-by-two (4 panes in 2x2 grid), main-side (1 large left + 2 stacked right)"
-        },
-        "panes": {
-          "type": "object",
-          "description": "Pane definitions as key-value pairs. Key is the pane name (also used as title), value is the command to execute. Panes are ordered top-left to bottom-right.",
-          "additionalProperties": {
-            "type": "string"
-          },
-          "minProperties": 1
-        }
-      },
-      "required": ["type", "panes"],
-      "additionalProperties": false
-    },
     "herdrPane": {
       "type": "object",
       "description": "A herdr pane defining arrangement only — no startup command. The description documents how the team (or an AI agent) should use the pane.",
@@ -509,7 +206,9 @@
           "description": "Zoom (fullscreen) this pane after the workspace is built; zooming also focuses it"
         }
       },
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "additionalProperties": false
     },
     "herdrSection": {
@@ -518,7 +217,10 @@
       "properties": {
         "split": {
           "type": "string",
-          "enum": ["horizontal", "vertical"],
+          "enum": [
+            "horizontal",
+            "vertical"
+          ],
           "description": "Split direction: horizontal = split top/bottom, vertical = split left/right"
         },
         "size": {
@@ -544,7 +246,10 @@
           }
         }
       },
-      "required": ["split", "items"],
+      "required": [
+        "split",
+        "items"
+      ],
       "additionalProperties": false
     },
     "herdrGrid": {
@@ -553,7 +258,13 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["single", "vertical", "horizontal", "two-by-two", "main-side"],
+          "enum": [
+            "single",
+            "vertical",
+            "horizontal",
+            "two-by-two",
+            "main-side"
+          ],
           "description": "Grid type: single (1 pane), vertical (2 panes left/right), horizontal (2 panes top/bottom), two-by-two (4 panes in 2x2 grid), main-side (1 large left + 2 stacked right)"
         },
         "panes": {
@@ -565,7 +276,10 @@
           }
         }
       },
-      "required": ["type", "panes"],
+      "required": [
+        "type",
+        "panes"
+      ],
       "additionalProperties": false
     },
     "herdrCompact": {
@@ -574,7 +288,13 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["single", "vertical", "horizontal", "two-by-two", "main-side"],
+          "enum": [
+            "single",
+            "vertical",
+            "horizontal",
+            "two-by-two",
+            "main-side"
+          ],
           "description": "Grid type: single (1 pane), vertical (2 panes left/right), horizontal (2 panes top/bottom), two-by-two (4 panes in 2x2 grid), main-side (1 large left + 2 stacked right)"
         },
         "panes": {
@@ -594,7 +314,10 @@
           }
         }
       },
-      "required": ["type", "panes"],
+      "required": [
+        "type",
+        "panes"
+      ],
       "additionalProperties": false
     }
   }

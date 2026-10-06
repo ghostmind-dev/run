@@ -14,7 +14,6 @@ import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
 } from '../utils/divers.ts';
-import { cmd } from './custom.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUTE BY DEFAULT
@@ -269,8 +268,7 @@ export default async function routine(program: any) {
           cd(directory);
           return;
         } else {
-          const isCustomCommand = cmd`${command}`;
-          await $`${isCustomCommand}`;
+          await $`${command.split(' ')}`;
         }
       }
 

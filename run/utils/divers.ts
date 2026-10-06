@@ -11,10 +11,7 @@ import { $, chalk } from 'npm:zx@8.1.0';
 import { config, parse } from 'npm:dotenv@16.4.5';
 import { expand } from 'npm:dotenv-expand@11.0.6';
 import fs from 'npm:fs-extra@11.2.0';
-import { nanoid } from 'npm:nanoid@5.0.7';
 import { readFileSync } from 'node:fs';
-import crypto from 'node:crypto';
-import { Buffer } from 'node:buffer';
 import { parse as parseJsonWithComments } from 'npm:comment-json@4.2.3';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -42,28 +39,6 @@ export interface MetaJson extends MetaJsonBase {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// CREATE A SHORT UUID
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * Generate a short UUID using nanoid
- *
- * @param length - The length of the UUID to generate (default: 12)
- * @returns A promise that resolves to a random UUID string
- *
- * @example
- * ```typescript
- * const shortId = await createUUID(8);
- * console.log(shortId); // e.g., "V1StGXR8"
- * ```
- */
-export async function createUUID(length: number = 12): Promise<string> {
-  const id = nanoid(length);
-
-  return id;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // SET SRC
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -77,58 +52,6 @@ export async function getSrc(): Promise<string> {
   return cwd;
 }
 
-export async function getLocalhostSrc(): Promise<string> {
-  return Deno.env.get('LOCALHOST_SRC') || (await getSrc());
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// GET APP NAME
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * Get the application name from the meta.json configuration
- *
- * @returns A promise that resolves to the application name
- *
- * @example
- * ```typescript
- * const appName = await getAppName();
- * console.log(appName); // e.g., "my-awesome-app"
- * ```
- */
-export async function getAppName(): Promise<string> {
-  const currentPath = Deno.cwd();
-  const { name }: any = await verifyIfMetaJsonExists(
-    Deno.env.get(currentPath) || currentPath,
-  );
-
-  return name;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// GET PROJECT NAME
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * Get the project name from the meta.json configuration
- *
- * This function retrieves the project name from the meta.json file located
- * in the SRC environment variable path or current working directory.
- *
- * @returns A promise that resolves to the project name
- *
- * @example
- * ```typescript
- * const projectName = await getProjectName();
- * console.log(projectName); // e.g., "my-awesome-project"
- * ```
- */
-export async function getProjectName(): Promise<string> {
-  const { name }: any = await verifyIfMetaJsonExists(await getSrc());
-
-  return name;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // SET ENVIRONMENT .ENV VARIABLES
 ////////////////////////////////////////////////////////////////////////////////
@@ -137,7 +60,7 @@ export async function getProjectName(): Promise<string> {
  * Load and set environment variables from .env files
  *
  * This function loads environment variables from target-specific .env files,
- * merges them with base configurations, and sets up Terraform variables.
+ * merges them with base configurations, and sets up TF_VAR_ variables.
  *
  * @param target - The target environment (e.g., 'local', 'dev', 'prod')
  *
@@ -221,7 +144,9 @@ export async function setSecretsOnLocal(
     if (srcMetaConfig) {
       name = srcMetaConfig.name;
     }
-    const PROJECT = await getProjectName();
+    const { name: PROJECT }: any = await verifyIfMetaJsonExists(
+      await getSrc()
+    );
     Deno.env.set('PROJECT', PROJECT);
     prefixedVars += `\nTF_VAR_PROJECT=${name}`;
   }
@@ -231,7 +156,7 @@ export async function setSecretsOnLocal(
     if (appMetaConfig) {
       name = appMetaConfig.name;
     }
-    const APP = await getAppName();
+    const { name: APP }: any = await verifyIfMetaJsonExists(currentPath);
     Deno.env.set('APP', APP);
     prefixedVars += `\nTF_VAR_APP=${name}`;
   }
@@ -265,66 +190,6 @@ export async function setSecretsOnLocal(
   }
 
   return;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// GET FILES IN A DIRECTORY
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * Get all files in a directory with filtering
- *
- * This function returns a list of files in the specified directory,
- * excluding common files like .DS_Store, .env files, and directories.
- *
- * @param path - The directory path to scan
- * @returns A promise that resolves to an array of file names
- *
- * @example
- * ```typescript
- * const files = await getFilesInDirectory('./src');
- * console.log(files); // ['index.ts', 'utils.ts', 'config.json']
- * ```
- */
-export async function getFilesInDirectory(path: string): Promise<string[]> {
-  const filesInFolder: any = await fs.readdir(path, {
-    withFileTypes: true,
-  });
-
-  let files = [];
-
-  const defaultFilesToIgnore = [
-    '.DS_Store',
-    '.terraform.lock.hcl',
-    '.env',
-    '.env.local',
-    '.env.development',
-    '.env.test',
-    '.env.production',
-    '.env.backup',
-    '.git',
-    '.terraform',
-  ];
-
-  const defaultExtensionsToIgnore = ['DS_Store'];
-
-  for (const file of filesInFolder) {
-    if (file.isDirectory()) {
-      continue;
-    }
-
-    if (defaultFilesToIgnore.includes(file.name)) {
-      continue;
-    }
-
-    if (defaultExtensionsToIgnore.includes(file.name.split('.').pop())) {
-      continue;
-    }
-
-    files.push(file.name);
-  }
-
-  return files;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -558,174 +423,6 @@ export async function verifyIfMetaJsonExists(
   } catch (error) {
     return undefined;
   }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// RETURN ALL FOLDER PATH THAT MATCHES THE META.JSON FILE CONDITION
-// document this function
-// @param {string} property - the property to match
-// @param {string} value - the value to match (optional)
-// return {array} - an array of path that matches the condition
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * Find directories with meta.json files matching specific criteria
- *
- * This function searches for directories containing meta.json files that
- * match the specified property and optional value criteria.
- *
- * @param options - Search criteria options
- * @param options.property - The property to match (supports dot notation)
- * @param options.value - The value to match (optional, matches existence if undefined)
- * @param options.path - The root path to search (defaults to SRC environment variable)
- * @returns A promise that resolves to an array of matching directory paths
- *
- * @example
- * ```typescript
- * // Find all directories with docker configuration
- * const dockerDirs = await withMetaMatching({ property: 'docker' });
- *
- * // Find directories with specific type
- * const appDirs = await withMetaMatching({
- *   property: 'type',
- *   value: 'application'
- * });
- *
- * // Find directories with nested property
- * const tunnelDirs = await withMetaMatching({
- *   property: 'tunnel.default.hostname'
- * });
- * ```
- */
-export async function withMetaMatching({
-  property,
-  value,
-  path,
-}: any): Promise<any[]> {
-  let directoryEntryPath = path || (await getSrc());
-
-  const allDirectories =
-    await recursiveDirectoriesDiscovery(directoryEntryPath);
-
-  let directories = [];
-
-  allDirectories.push(directoryEntryPath);
-
-  for (let directory of allDirectories) {
-    const metaConfig = await verifyIfMetaJsonExists(directory);
-
-    if (metaConfig) {
-      let metaConfigProperty;
-
-      if (property.includes('.')) {
-        const propertyArray = property.split('.');
-        metaConfigProperty = metaConfig;
-        for (let propertyComponent of propertyArray) {
-          metaConfigProperty = metaConfigProperty[propertyComponent];
-          if (metaConfigProperty === undefined) {
-            break;
-          }
-        }
-      } else {
-        metaConfigProperty = metaConfig[property];
-      }
-
-      if (value === undefined && metaConfigProperty) {
-        directories.push(directory);
-      } else if (metaConfigProperty === value && metaConfigProperty) {
-        directories.push(directory);
-      }
-    }
-  }
-
-  return directories;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// ENCRYPT A STRING
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * Encrypt a string using AES encryption
- *
- * This function encrypts a text string using AES-256-CBC encryption
- * with a provided crypto key and returns the encrypted result.
- *
- * @param text - The text to encrypt
- * @param cryptoKey - The encryption key
- * @param algorithm - The encryption algorithm (defaults to 'aes-256-cbc')
- * @returns The encrypted string in hex format with IV prepended
- *
- * @example
- * ```typescript
- * const encrypted = encrypt('sensitive data', 'my-secret-key');
- * console.log(encrypted); // 'a1b2c3d4...:e5f6g7h8...'
- * ```
- */
-export function encrypt(
-  text: string,
-  cryptoKey: string,
-  algorithm?: string,
-): string {
-  const ALGORITHM = algorithm || 'aes-256-cbc';
-  const IV_LENGTH = 16;
-  const iv = crypto.randomBytes(IV_LENGTH);
-
-  // Generate a 32-byte key from the cryptoKey
-  const key = crypto.createHash('sha256').update(cryptoKey).digest();
-
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  let encrypted = cipher.update(text, 'utf8');
-  encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return iv.toString('hex') + ':' + encrypted.toString('hex');
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-// DECRYPT A STRING
-// /////////////////////////////////////////////////////////////////////////////
-
-/**
- * Decrypt an encrypted string using AES decryption
- *
- * This function decrypts a previously encrypted string using AES-256-CBC
- * decryption with the provided crypto key.
- *
- * @param encryptedKey - The encrypted string to decrypt (IV:encrypted format)
- * @param cryptoKey - The decryption key (must match encryption key)
- * @param algorithm - The decryption algorithm (defaults to 'aes-256-cbc')
- * @returns The decrypted plain text string
- * @throws Error if the input format is invalid or decryption fails
- *
- * @example
- * ```typescript
- * const decrypted = decrypt('a1b2c3d4...:e5f6g7h8...', 'my-secret-key');
- * console.log(decrypted); // 'sensitive data'
- * ```
- */
-export function decrypt(
-  encryptedKey: string,
-  cryptoKey: string,
-  algorithm?: string,
-): string {
-  const ALGORITHM = algorithm || 'aes-256-cbc';
-  const textParts = encryptedKey.split(':');
-  const ivHex = textParts.shift();
-
-  if (!ivHex) {
-    throw new Error('Invalid input: Initialization vector (IV) is missing.');
-  }
-
-  const iv = Buffer.from(ivHex, 'hex');
-  const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-
-  // Generate the same 32-byte key from the cryptoKey
-  const key = crypto.createHash('sha256').update(cryptoKey).digest();
-
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  let decrypted = decipher.update(encryptedText);
-  decrypted = Buffer.concat([decrypted, decipher.final()]);
-
-  return decrypted.toString('utf8');
 }
 
 ////////////////////////////////////////////////////////////////////////////////

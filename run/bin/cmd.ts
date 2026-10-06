@@ -4,21 +4,18 @@
  * @fileoverview CLI entry point for @ghostmind/run
  *
  * This module provides the command-line interface for the @ghostmind/run toolkit,
- * allowing users to execute DevOps operations from the terminal.
+ * allowing users to run routines and manage herdr workspaces from the terminal.
  *
  * @example
  * ```bash
- * # Build Docker containers
- * run docker build --component my-app
+ * # Open the herdr workspace defined in meta.json
+ * run herdr init
  *
- * # Run Docker Compose services
- * run docker up --component web --build --detach
- *
- * # Execute GitHub Actions locally
- * run action local test-workflow
+ * # Run a routine from meta.json
+ * run routine test
  *
  * # Show version
- * run version
+ * run --version
  * ```
  *
  * @module
@@ -45,7 +42,7 @@ $.verbose = false;
 const program = new Command();
 
 ////////////////////////////////////////////////////////////////////////////////
-// VERSION COMMAND
+// VERSION FLAG
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -74,28 +71,19 @@ async function getVersion(): Promise<string> {
   }
 }
 
-program
-  .command('version')
-  .description('show version information')
-  .action(async () => {
-    const version = await getVersion();
-    console.log(`@ghostmind/run v${version}`);
-  });
+program.version(
+  `@ghostmind/run v${await getVersion()}`,
+  '-v, --version',
+  'show version information'
+);
 
 ////////////////////////////////////////////////////////////////////////////////
 // COMMAND
 ////////////////////////////////////////////////////////////////////////////////
 
-import commandAction from '../lib/action.ts';
-import commandCustom from '../lib/custom.ts';
-import commandDocker from '../lib/docker.ts';
 import commandHerdr from '../lib/herdr.ts';
-import commandMeta from '../lib/meta.ts';
-import commandMisc from '../lib/misc.ts';
+import commandProjects from '../lib/projects.tsx';
 import commandRoutine from '../lib/routine.ts';
-import commandTerraform from '../lib/terraform.ts';
-import commandTmux from '../lib/tmux.ts';
-import commmandVault from '../lib/vault.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
@@ -111,14 +99,12 @@ program
   .option('-c, --cible <env context>', 'target environment context')
   .option('-e, --env <env path>', 'path to load env variables from')
   .option('-p, --path <path>', 'run the script from a specific path')
-  .hook('preAction', async (thisCommand: any, actionCommand: any) => {
+  .hook('preAction', async (thisCommand: any) => {
     const { path, cible, env: envPath } = thisCommand.opts();
 
     if (path) {
       Deno.chdir(path);
     }
-
-    warnIfDeprecated(actionCommand);
 
     if (cible || envPath) {
       deprecationWarning("'-c/--cible' and '-e/--env' env injection");
@@ -142,41 +128,20 @@ program
 // DEPRECATIONS
 ////////////////////////////////////////////////////////////////////////////////
 
-// Everything but herdr and routine is on its way out. Warnings go to stderr
-// only, so stdout and exit codes are unchanged for scripts that parse them.
-const KEPT_COMMANDS = ['herdr', 'routine', 'version'];
-const KEPT_MISC = ['uuid', 'token', 'wait', 'stop'];
-
+// The .env loading behind -c/--cible and -e/--env is the last legacy piece:
+// apps on varlock (.env.schema) never use it. The warning goes to stderr only.
 function deprecationWarning(what: string) {
   if (Deno.env.get('RUN_NO_DEPRECATION') === '1') return;
   console.error(`[run] DEPRECATED: ${what} will be removed; see system skill`);
 }
 
-function warnIfDeprecated(actionCommand: any) {
-  const names: string[] = [];
-  for (let cmd = actionCommand; cmd && cmd.parent; cmd = cmd.parent) {
-    names.unshift(cmd.name());
-  }
-  const [top, sub] = names;
-  if (!top || KEPT_COMMANDS.includes(top)) return;
-  if (top === 'misc' && KEPT_MISC.includes(sub)) return;
-  deprecationWarning(`'run ${names.join(' ')}'`);
-}
-
 ////////////////////////////////////////////////////////////////////////////////
-// GIT COMMAND
+// COMMANDS
 ////////////////////////////////////////////////////////////////////////////////
 
-await commandAction(program);
-await commandCustom(program);
-await commandDocker(program);
 await commandHerdr(program);
-await commandMeta(program);
-await commandMisc(program);
+await commandProjects(program);
 await commandRoutine(program);
-await commandTerraform(program);
-await commandTmux(program);
-await commmandVault(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // PROGRAM EXIT
@@ -201,7 +166,12 @@ try {
   }
 
   await program.parseAsync(argv);
-} catch (err) {
+} catch (err: any) {
+  // commander has already printed its own output (--version, --help, a usage
+  // error) and only reports the exit code here
+  if (typeof err?.code === 'string' && err.code.startsWith('commander.')) {
+    Deno.exit(err.exitCode ?? 1);
+  }
   console.error(err);
   Deno.exit(1);
 }
