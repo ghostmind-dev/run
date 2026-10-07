@@ -55,9 +55,10 @@ directory inside a pane changes nothing.
 | `tab`, left/right | Choose a button. `enter` presses it; `1`-`3` press directly; click works |
 | `space` | Mark a row. `A` marks every row in view. Marked rows are the target |
 | `a` | Only open projects |
-| `v` | The saved views, each with its rules. `enter` applies one, `d` deletes it, `e` opens the settings file to add or change one. `[` and `]` step to the previous and next view |
+| `v` | The saved views, each with its rules. `enter` applies one, `d` deletes it, `e` opens the settings file to add or change one. `[` and `]` step to the previous and next view; `0` goes back to all projects. A view stays applied until changed: `/`, `a` and `t` narrow inside it and `esc` does not remove it |
 | `t` | Pick a tag or a group: `enter` narrows the table to it, `o` opens all its closed projects |
 | `/` | Filter by name, folder, tag or group |
+| `o` | Sort by the next column, then by none; `O` reverses the direction. A click on a column title does the same. Works on every screen, each with its own order, and is remembered |
 | `esc` | Clear the filter, the scope and the marks |
 | `p` | Show the panes of an open project (see below) |
 | `r` | Rescan the folders (picks up `meta.json` edits) |
@@ -99,9 +100,31 @@ projects.
 `run projects --dry-run` shows what each action would do without doing it.
 `run projects --list` prints the table once.
 
+## Asking what is there, as an agent
+
+Do not read the screen or walk the folders: ask `run` for JSON.
+
+| Command | Answers |
+|---|---|
+| `run projects --json` | Every project: `name`, `status`, `path`, `folder`, `branch`, `changes`, `tags`, `groups`, `apps`, the `routines` its panes name, the `tabs` of its workspace with the routines each could run, and its open `workspace` (id, size, agents) or `null`. Also the `root`, whether herdr runs, and the saved `views` |
+| `run projects --json --view <name>` | The same, for the projects of one view |
+| `run projects --json --panes` | Adds `panes` to each open project: every pane's `paneId`, `tab`, `name`, `cwd`, `routine`, whether it is idle or holds an agent, and what is `running` |
+
+Typical questions and where the answer is:
+
+- *Which projects have work to commit or push?* `changes` is neither `clean` nor `null`.
+- *What is running right now?* `--panes`, then the panes whose `isIdle` is false.
+- *Where is project X and what can it run?* its `path`, and `tabs[].routines`.
+- *Which projects are open, and which have an agent working?* `workspace` is not `null`; `workspace.agents[].status`.
+
+`status` is one of `open`, `focused`, `here`, `closed`, `no herdr`, `stray`.
+The output reflects the moment it is asked; nothing is cached.
+
 ## Views: saved filters
 
-A view is a named rule for which projects the table lists. Views are created
+A view is a named rule for which projects the table lists. The header always
+names the view in force; `all`, every project, is the default and cannot be
+deleted. Views are created
 by editing the settings file, `~/.config/run/projects.json`; the dashboard
 applies and deletes them but does not create them.
 
@@ -111,7 +134,9 @@ applies and deletes them but does not create them.
     "music": { "tags": ["music"] },
     "ensemble": { "groups": ["ensemble", "agents"] },
     "learning": { "folders": ["library"] },
-    "work": { "folders": ["ghostmind"], "openOnly": true }
+    "work": { "folders": ["ghostmind"], "openOnly": true },
+    "todo": { "changes": "pending" },
+    "closed": { "status": ["closed"] }
   },
   "startView": "work"
 }
@@ -123,6 +148,8 @@ applies and deletes them but does not create them.
 | `groups` | it belongs to at least one of these groups |
 | `folders` | it sits in one of these top-level folders (the FOLDER column) |
 | `openOnly` | it has a workspace open in herdr |
+| `changes` | `"pending"`: it has uncommitted files or commits to push or pull. `"clean"`: it has none. A folder with no repository passes neither |
+| `status` | its STATUS is one of these: `open` (which also takes `focused` and `here`), `closed`, `no herdr`, `stray` |
 
 A project is listed when it passes every rule the view gives; a rule left out
 lets everything through. `startView` names the view the dashboard opens in;
@@ -167,7 +194,7 @@ projects' `meta.json` instead of widening the view.
 the current folder. With no name it asks which one.
 
 - **There is no shell.** The command is split on spaces. Anything with `cd`, `&&`, pipes, quotes or redirects goes in `scripts/<name>.sh`, and the routine is `bash scripts/<name>.sh`.
-- `"all": "parallel a b"` and `"all": "sequence a b"` run other routines of the same file.
+- `run routine a b` runs several routines at once. A routine cannot call other routines by name.
 
 ## Herdr workspaces
 

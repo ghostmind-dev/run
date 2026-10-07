@@ -2,7 +2,7 @@
  * @fileoverview Routine execution module for @ghostmind/run
  *
  * This module provides functionality for executing npm-style scripts with
- * support for parallel and sequential execution, dependency resolution,
+ * support for commands chained with `&&` (in order) or `&` (at once),
  * and cross-project routine execution.
  *
  * @module
@@ -48,8 +48,8 @@ cd(currentPath);
  * ```typescript
  * const routines = {
  *   build: 'npm run build',
- *   test: 'parallel build lint',
- *   deploy: 'sequence build test'
+ *   check: 'lint && test',
+ *   watch: 'lint & test'
  * };
  * const tree = await generateTreeCommands(['test'], routines);
  * ```
@@ -69,34 +69,6 @@ export async function generateTreeCommands(
 
     if (!command) {
       return task;
-    }
-
-    if (command.startsWith('parallel ')) {
-      const parallelTasks = command
-        .slice(9)
-        .split(' ')
-        .map((task: string) => task.trim());
-      return {
-        tasks: await Promise.all(
-          parallelTasks.map((task: string) => {
-            return resolveRoutine(task, routines);
-          })
-        ),
-        mode: 'parallel',
-      };
-    }
-
-    if (command.startsWith('sequence ')) {
-      const sequenceTasks = command
-        .slice(9)
-        .split(' ')
-        .map((task: string) => task.trim());
-      return {
-        tasks: await Promise.all(
-          sequenceTasks.map((task: string) => resolveRoutine(task, routines))
-        ),
-        mode: 'sequence',
-      };
     }
 
     if (command.startsWith('every ')) {
