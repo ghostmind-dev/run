@@ -683,18 +683,93 @@ const PANE_COLUMNS: Record<Exclude<Screen, 'projects'>, [string, number][]> = {
 };
 
 /**
+ * The order a screen is sorted in: by one column, upwards or downwards
+ */
+interface SortOrder {
+  column: string;
+  isDescending: boolean;
+}
+
+/**
+ * Compares two cells: numbers by value, text by alphabet, empty cells last
+ */
+function compareCells(a: string, b: string): number {
+  const isEmpty = (cell: string) => cell === '' || cell === '-';
+  if (isEmpty(a) || isEmpty(b)) return Number(isEmpty(a)) - Number(isEmpty(b));
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+}
+
+/**
+ * Sorts a list by one column's cell, keeping the given order when unsorted
+ */
+function sortBy<T>(
+  items: T[],
+  order: SortOrder | undefined,
+  cell: (item: T, column: string) => string
+): T[] {
+  if (!order) return items;
+  const sorted = [...items].sort((a, b) =>
+    compareCells(cell(a, order.column), cell(b, order.column))
+  );
+  return order.isDescending ? sorted.reverse() : sorted;
+}
+
+/** The arrow shown beside the title of the column a screen is sorted by */
+function sortMark(order: SortOrder | undefined, title: string): string {
+  return order?.column === title ? (order.isDescending ? '▼' : '▲') : '';
+}
+
+/**
+ * The cells of one line of the pane view, by column title
+ */
+function paneCells(item: {
+  tab: string;
+  pane: PaneState | null;
+  members: PaneState[];
+}): Record<string, string> {
+  const { pane } = item;
+  if (pane) {
+    return {
+      TAB: pane.tab,
+      PANE: pane.name,
+      ROUTINE: pane.routine?.routine ?? '-',
+      STATE: pane.isAgent ? 'agent' : pane.running ? 'running' : 'idle',
+      RUNNING: pane.running,
+    };
+  }
+  // A tab: its size, how many panes name a routine, how many are busy
+  const busy = item.members.filter((member) => member.running).length;
+  const named = item.members.filter((member) => member.routine).length;
+  return {
+    TAB: item.tab,
+    PANES: String(item.members.length),
+    ROUTINES: named > 0 ? String(named) : '-',
+    RUNNING: busy > 0 ? `${busy} of ${item.members.length}` : '-',
+  };
+}
+
+/** A project row's cell under a column title, TAGS included */
+function rowCell(row: Row, title: string): string {
+  if (title === 'TAGS') return row.tags.join(' ');
+  return COLUMNS.find((column) => column.title === title)?.cell(row) ?? '';
+}
+
+/**
  * One line of a pane view listing; a missing value prints the column's title
  */
 function paneLine(
   screen: Exclude<Screen, 'projects'>,
   values: Record<string, string> | null,
   width: number,
-  hidden: string[]
+  hidden: string[],
+  order?: SortOrder
 ): string {
   const text = PANE_COLUMNS[screen]
     .filter(([title]) => !hidden.includes(title))
     .map(([title, size]) => {
-      const cell = values ? (values[title] ?? '') : title;
+      const cell = values
+        ? (values[title] ?? '')
+        : title + sortMark(order, title);
       return size > 0 ? cell.slice(0, size - 1).padEnd(size) : cell;
     })
     .join('');
@@ -892,6 +967,16 @@ export interface ProjectView {
   folders?: string[];
   /** Has a workspace open in herdr */
   openOnly?: boolean;
+  /**
+   * Its STATUS is one of these. `open` also takes `focused` and `here`, which
+   * are open workspaces too.
+   */
+  status?: string[];
+  /**
+   * Its git state: `pending` when it has uncommitted files or commits to push
+   * or pull, `clean` when it has none. A folder with no repository is neither.
+   */
+  changes?: 'pending' | 'clean';
 }
 
 interface Settings {
@@ -902,6 +987,8 @@ interface Settings {
   startView?: string;
   /** Titles of the columns left out, for each screen */
   hidden?: Record<string, string[]>;
+  /** The column each screen is sorted by */
+  sort?: Record<string, SortOrder>;
   /** How the pane view opens: by tab, or every pane at once */
   panes?: 'tabs' | 'flat';
 }
@@ -916,7 +1003,15 @@ function isInView(row: Row, view: ProjectView): boolean {
     any(view.tags, row.tags) &&
     any(view.groups, row.groups) &&
     any(view.folders, [row.folder]) &&
-    (!view.openOnly || !!row.workspace)
+    any(view.status, [
+      statusOf(row),
+      ...(row.workspace && row.project ? ['open'] : []),
+    ]) &&
+    (!view.openOnly || !!row.workspace) &&
+    (!view.changes ||
+      (view.changes === 'clean'
+        ? row.changes === 'clean'
+        : !['clean', '-', ''].includes(row.changes)))
   );
 }
 
@@ -928,6 +1023,8 @@ function describeView(view: ProjectView): string {
     view.tags?.length ? `tags ${view.tags.join(', ')}` : '',
     view.groups?.length ? `groups ${view.groups.join(', ')}` : '',
     view.folders?.length ? `folders ${view.folders.join(', ')}` : '',
+    view.status?.length ? `status ${view.status.join(', ')}` : '',
+    view.changes ? `changes ${view.changes}` : '',
     view.openOnly ? 'open only' : '',
   ].filter(Boolean);
   return parts.length > 0 ? parts.join(' · ') : 'everything';
@@ -976,9 +1073,11 @@ const KEYS: [string, string][] = [
   ['<t>', 'Tag/group'],
   ['<a>', 'Open only'],
   ['</>', 'Filter'],
+  ['<o>', 'Sort'],
   ['<,>', 'Columns'],
   ['<shift+,>', 'Settings'],
   ['<[ ]>', 'Next view'],
+  ['<0>', 'All projects'],
   ['<A>', 'Mark all'],
   ['<T>', 'Theme'],
   ['<r>', 'Rescan'],
@@ -996,6 +1095,7 @@ const PANE_KEYS: [string, string][] = [
   ['<s>', 'Start the tab or the pane default routine'],
   ['<S>', 'Start every idle pane that names a routine'],
   ['<f>', 'All panes, or back to tabs'],
+  ['<o>', 'Sort by the next column; O reverses'],
   ['<esc>', 'Back'],
 ];
 
@@ -1171,6 +1271,10 @@ function Dashboard({
   const [viewing, setViewing] = useState<Row | null>(null);
   const [panes, setPanes] = useState<PaneState[]>([]);
   const [paneSelected, setPaneSelected] = useState(0);
+  // The column each screen is sorted by; a screen left out keeps its own order
+  const [sort, setSort] = useState<Record<string, SortOrder>>(
+    () => readSettings().sort ?? {}
+  );
   // The tab whose panes are listed; null lists the tabs themselves
   const [tabOpen, setTabOpen] = useState<string | null>(null);
   // The pane a routine is being chosen for, and the highlighted choice
@@ -1219,6 +1323,49 @@ function Dashboard({
       ? [...COLUMNS.slice(1).map((column) => column.title), 'TAGS']
       : PANE_COLUMNS[screenNow].slice(1).map(([title]) => title);
 
+  // The columns the screen in view shows, in order: what sorting steps through
+  const sortable = (
+    screenNow === 'projects'
+      ? [...COLUMNS.map((column) => column.title), 'TAGS']
+      : PANE_COLUMNS[screenNow].map(([title]) => title)
+  ).filter((title) => !hiddenHere.includes(title));
+
+  const applySort = (order: SortOrder | undefined) => {
+    const next = { ...sort };
+    if (order) next[screenNow] = order;
+    else delete next[screenNow];
+    setSort(next);
+    saveSettings({ sort: next });
+    setMessage(
+      order
+        ? `sorted by ${order.column}${order.isDescending ? ', descending' : ''}`
+        : 'sort removed'
+    );
+  };
+
+  // Next column, then no sort at all
+  const stepSort = () => {
+    const title = sortable[sortable.indexOf(sort[screenNow]?.column ?? '') + 1];
+    applySort(title ? { column: title, isDescending: false } : undefined);
+  };
+
+  const flipSort = () => {
+    const current = sort[screenNow];
+    if (current) applySort({ ...current, isDescending: !current.isDescending });
+  };
+
+  // A click on a column title: ascending, then descending, then unsorted
+  const clickSort = (title: string) => {
+    const current = sort[screenNow];
+    if (current?.column !== title) {
+      applySort({ column: title, isDescending: false });
+    } else if (!current.isDescending) {
+      applySort({ column: title, isDescending: true });
+    } else {
+      applySort(undefined);
+    }
+  };
+
   const settingItems =
     settingsKind === 'global'
       ? [
@@ -1254,16 +1401,21 @@ function Dashboard({
       pane: pane as PaneState | null,
       members: [pane],
     });
-    if (isFlat) return panes.map(ofPane);
-    if (tabOpen !== null) {
-      return panes.filter((pane) => pane.tab === tabOpen).map(ofPane);
-    }
-    return [...new Set(panes.map((pane) => pane.tab))].map((tab) => ({
-      tab,
-      pane: null as PaneState | null,
-      members: panes.filter((pane) => pane.tab === tab),
-    }));
-  }, [panes, tabOpen, isFlat]);
+    const items = isFlat
+      ? panes.map(ofPane)
+      : tabOpen !== null
+        ? panes.filter((pane) => pane.tab === tabOpen).map(ofPane)
+        : [...new Set(panes.map((pane) => pane.tab))].map((tab) => ({
+            tab,
+            pane: null as PaneState | null,
+            members: panes.filter((pane) => pane.tab === tab),
+          }));
+    return sortBy(
+      items,
+      sort[isFlat ? 'flat' : tabOpen !== null ? 'panes' : 'tabs'],
+      (item, column) => paneCells(item)[column] ?? ''
+    );
+  }, [panes, tabOpen, isFlat, sort]);
   const viewingRef = useRef<Row | null>(null);
   viewingRef.current = viewing;
   const [pickIndex, setPickIndex] = useState(0);
@@ -1331,7 +1483,7 @@ function Dashboard({
 
   const rows = useMemo(() => {
     const needle = filter.toLowerCase();
-    return allRows.filter(
+    const listed = allRows.filter(
       (row) =>
         (!isLiveOnly || row.workspace) &&
         (!activeView || isInView(row, activeView)) &&
@@ -1345,7 +1497,8 @@ function Dashboard({
             .toLowerCase()
             .includes(needle))
     );
-  }, [allRows, filter, isLiveOnly, scope, activeView]);
+    return sortBy(listed, sort.projects, rowCell);
+  }, [allRows, filter, isLiveOnly, scope, activeView, sort]);
 
   // What the picker offers: everything, then each group, then each tag
   const choices = useMemo(() => {
@@ -1585,6 +1738,18 @@ function Dashboard({
     }
     if (code !== 0) return;
 
+    // The column titles: sort by the one under the pointer
+    if (lineAt === TABLE_TOP) {
+      let edge = 2;
+      const hit = columns.find((entry) => {
+        edge += entry.width;
+        return column <= edge;
+      });
+      const title = hit?.title ?? (hiddenHere.includes('TAGS') ? null : 'TAGS');
+      if (title) clickSort(title);
+      return;
+    }
+
     const rowAt = first + lineAt - TABLE_TOP - 1;
     if (lineAt > TABLE_TOP && lineAt <= TABLE_TOP + bodyRows) {
       if (rowAt < rows.length) setSelected(rowAt);
@@ -1630,8 +1795,9 @@ function Dashboard({
         setViewName(picked);
         setSelected(0);
         setMode('browse');
-      } else if ((input === 'd' || input === 'x') && picked) {
-        setIsDeletingView(true);
+      } else if (input === 'd' || input === 'x') {
+        if (picked) setIsDeletingView(true);
+        else setMessage('the all view cannot be deleted');
       } else if (input === 'e') {
         // Views are written in the settings file: hand it to the system's
         // editor for that kind of file
@@ -1731,6 +1897,10 @@ function Dashboard({
         setPaneSelected(Math.min(at + 1, last));
       } else if (key.upArrow || input === 'k') {
         setPaneSelected(Math.max(at - 1, 0));
+      } else if (input === 'o') {
+        stepSort();
+      } else if (input === 'O') {
+        flipSort();
       } else if (input === 'f') {
         // Every pane at once, or back to the tabs
         setIsFlat(!isFlat);
@@ -1873,6 +2043,10 @@ function Dashboard({
       // Leave, then start again from the code on disk
       isRestartRequested = true;
       exit();
+    } else if (input === 'o') {
+      stepSort();
+    } else if (input === 'O') {
+      flipSort();
     } else if (input === 'A') {
       // Mark every row in view, or clear the marks when they all are
       const inView = rows.map((row) => row.key);
@@ -1890,6 +2064,11 @@ function Dashboard({
       );
       setIsDeletingView(false);
       setMode('view');
+    } else if (input === '0') {
+      // Straight back to every project
+      setViewName(null);
+      setSelected(0);
+      setMessage('view: all');
     } else if ((input === '[' || input === ']') && viewNames.length > 0) {
       // Step through: all, then each saved view
       const order: (string | null)[] = [null, ...viewNames];
@@ -1946,9 +2125,20 @@ function Dashboard({
 
   const info: [string, string][] = [
     ['Root', root],
-    ['Herdr', herdr.isRunning ? 'running' : 'not running'],
-    ['Workspaces', String(herdr.workspaces.length)],
+    [
+      'Herdr',
+      herdr.isRunning
+        ? `running, ${herdr.workspaces.length} workspace${
+            herdr.workspaces.length === 1 ? '' : 's'
+          }`
+        : 'not running',
+    ],
     ['Projects', `${projects.length} (${live} open, ${strays} stray)`],
+    // The view in force is always named: `all` is the one that is always there
+    [
+      'View',
+      activeView ? `${viewName} (${describeView(activeView)})` : 'all',
+    ],
   ];
 
   // One empty line first, so the header does not touch the pane's top edge
@@ -1962,7 +2152,12 @@ function Dashboard({
       { text: ' ' + (name + ':').padEnd(12), color: theme.label },
       {
         text: fit(value, infoWidth - 13),
-        color: name === 'Herdr' && !herdr.isRunning ? theme.danger : theme.text,
+        color:
+          name === 'Herdr' && !herdr.isRunning
+            ? theme.danger
+            : name === 'View' && activeView
+              ? theme.marked
+              : theme.text,
         bold: true,
       },
     ];
@@ -1988,13 +2183,13 @@ function Dashboard({
 
   // Table
   const view = [
-    activeView ? viewName! : '',
-    isLiveOnly ? 'open' : scope || activeView ? '' : 'all',
+    activeView ? viewName! : 'all',
+    isLiveOnly ? 'open' : '',
     scope ? `${scope.kind}:${scope.value}` : '',
     filter ? '/' + filter : '',
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(' · ');
   const title = viewing
     ? ` ${viewing.name}${
         isFlat
@@ -2016,10 +2211,14 @@ function Dashboard({
     { text: '│', color: theme.accent },
     {
       text: viewing
-        ? paneLine(screenNow as 'tabs', null, inner, hiddenHere)
+        ? paneLine(screenNow as 'tabs', null, inner, hiddenHere, sort[screenNow])
         : line(
-            columns.map((column) => column.title),
-            hiddenHere.includes('TAGS') ? '' : 'TAGS',
+            columns.map(
+              (column) => column.title + sortMark(sort.projects, column.title)
+            ),
+            hiddenHere.includes('TAGS')
+              ? ''
+              : 'TAGS' + sortMark(sort.projects, 'TAGS'),
             inner,
             columns
           ),
@@ -2075,7 +2274,11 @@ function Dashboard({
     dialog.push({ text: ' y close them · any other key cancels', color: theme.dim });
   } else if (mode === 'view') {
     const lines = [
-      { name: null as string | null, text: 'all', detail: 'every project' },
+      {
+        name: null as string | null,
+        text: 'all',
+        detail: 'every project (always there)',
+      },
       ...viewNames.map((name) => ({
         name: name as string | null,
         text: name,
@@ -2234,32 +2437,10 @@ function Dashboard({
     const isSelected = (!!row || !!item) && first + index === listCursor;
     const isMarked = !!row && marked.includes(row.key);
     let text = ' '.repeat(inner);
-    if (item && !pane) {
-      // A tab: its size, how many panes name a routine, how many are busy
-      const busy = item.members.filter((member) => member.running).length;
-      const named = item.members.filter((member) => member.routine).length;
+    if (item) {
       text = paneLine(
-        'tabs',
-        {
-          TAB: item.tab,
-          PANES: String(item.members.length),
-          ROUTINES: named > 0 ? String(named) : '-',
-          RUNNING: busy > 0 ? `${busy} of ${item.members.length}` : '-',
-        },
-        inner,
-        hiddenHere
-      );
-    }
-    if (pane) {
-      text = paneLine(
-        isFlat ? 'flat' : 'panes',
-        {
-          TAB: pane.tab,
-          PANE: pane.name,
-          ROUTINE: pane.routine?.routine ?? '-',
-          STATE: pane.isAgent ? 'agent' : pane.running ? 'running' : 'idle',
-          RUNNING: pane.running,
-        },
+        pane ? (isFlat ? 'flat' : 'panes') : 'tabs',
+        paneCells(item),
         inner,
         hiddenHere
       );
@@ -2368,6 +2549,8 @@ function Dashboard({
           { text: 'Start all   ', color: theme.dim },
           { text: '<f> ', color: theme.key, bold: true },
           { text: isFlat ? 'By tab   ' : 'All panes   ', color: theme.dim },
+          { text: '<o> ', color: theme.key, bold: true },
+          { text: 'Sort   ', color: theme.dim },
           { text: '<,> ', color: theme.key, bold: true },
           { text: 'Columns   ', color: theme.dim },
           { text: '<esc> ', color: theme.key, bold: true },
@@ -2426,6 +2609,11 @@ export default async function projects(program: any) {
       'folder holding the projects (default: $RUN_PROJECT, else the current folder)'
     )
     .option('--list', 'print the table once instead of opening the dashboard')
+    .option(
+      '--json',
+      'print everything the dashboard knows as JSON, for scripts and agents'
+    )
+    .option('--panes', 'with --json: add what each pane of the open projects runs')
     .option('--dry-run', 'show what each action would do without doing it')
     .option(
       '--theme <name>',
@@ -2442,10 +2630,12 @@ export default async function projects(program: any) {
         dryRun?: boolean;
         theme?: string;
         view?: string;
+        json?: boolean;
+        panes?: boolean;
       }) => {
         const root = options.root ?? Deno.env.get('RUN_PROJECT') ?? Deno.cwd();
 
-        if (options.list || !Deno.stdin.isTerminal()) {
+        if (options.list || options.json || !Deno.stdin.isTerminal()) {
           const [found, herdr] = await Promise.all([
             discoverProjects(root),
             readHerdrState(),
@@ -2459,13 +2649,63 @@ export default async function projects(program: any) {
             );
             Deno.exit(1);
           }
-          printPlain(
-            root,
-            buildRows(found, herdr).filter(
-              (row) => !view || isInView(row, view)
-            ),
-            herdr
+          const listed = buildRows(found, herdr).filter(
+            (row) => !view || isInView(row, view)
           );
+
+          if (options.json) {
+            // One object per line of the table, with what the table has no
+            // room for: the path, the apps, the routines and the tabs
+            const projects = await Promise.all(
+              listed.map(async (row) => ({
+                name: row.name,
+                status: statusOf(row),
+                path: row.path || null,
+                folder: row.project ? row.folder : null,
+                branch: row.branch || null,
+                changes: row.changes || null,
+                tags: row.tags,
+                groups: row.groups,
+                apps: row.project?.apps ?? [],
+                routines: row.project?.routines ?? [],
+                tabs: row.project?.tabs ?? [],
+                workspace: row.workspace
+                  ? {
+                      id: row.workspace.workspace_id,
+                      label: row.workspace.label,
+                      tabs: row.workspace.tab_count,
+                      panes: row.workspace.pane_count,
+                      agents: row.workspace.agents,
+                    }
+                  : null,
+                ...(options.panes && row.workspace
+                  ? {
+                      panes: await readPanes(
+                        row.workspace.workspace_id,
+                        row.project?.routines ?? [],
+                        row.project?.tabs ?? []
+                      ),
+                    }
+                  : {}),
+              }))
+            );
+            console.log(
+              JSON.stringify(
+                {
+                  root,
+                  herdr: { isRunning: herdr.isRunning },
+                  view: view ? name : 'all',
+                  views: saved.views ?? {},
+                  projects,
+                },
+                null,
+                2
+              )
+            );
+            return;
+          }
+
+          printPlain(root, listed, herdr);
           return;
         }
 
