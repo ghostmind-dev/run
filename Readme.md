@@ -85,6 +85,7 @@ A **project** is a folder whose `meta.json` has `"type": "project"`. Folders wit
 |---|---|
 | NAME | The `name` of the project's `meta.json` |
 | FOLDER | The top-level folder it sits in |
+| ORG | The GitHub organization or user its repository is pushed to, from the `origin` remote. `none`: no repository, or no remote yet |
 | BRANCH | The checked-out git branch. `no git`: not a repository. `<name> (local)`: no remote. `<sha> detached`: no branch |
 | CHANGES | A number: uncommitted files. `↑n`: commits not pushed. `↓n`: commits not pulled, as of the last fetch. `clean`: nothing pending. `-`: no repository |
 | STATUS | See below |
@@ -170,6 +171,8 @@ Views are written in the settings file, `~/.config/run/projects.json`. The dashb
     "learning": { "folders": ["library"] },
     "work": { "folders": ["ghostmind"], "openOnly": true },
     "todo": { "changes": "pending" },
+    "apps": { "orgs": ["ghostmind-app"] },
+    "unpublished": { "orgs": ["none"] },
     "closed": { "status": ["closed"] }
   },
   "startView": "work"
@@ -181,6 +184,7 @@ Views are written in the settings file, `~/.config/run/projects.json`. The dashb
 | `tags` | It has at least one of these tags |
 | `groups` | It belongs to at least one of these groups |
 | `folders` | It sits in one of these top-level folders |
+| `orgs` | Its repository is pushed to one of these organizations or users. `none` takes the projects with no remote |
 | `openOnly` | It has a workspace open in herdr |
 | `changes` | `"pending"`: it has uncommitted files or commits to push or pull. `"clean"`: it has none. A folder with no repository passes neither |
 | `status` | Its STATUS is one of these: `open` (which also takes `focused` and `here`), `closed`, `no herdr`, `stray` |
@@ -195,7 +199,7 @@ A project is listed when it passes every rule the view gives. A rule left out le
 
 ## For scripts and agents
 
-`run projects --json` prints everything the dashboard knows, as JSON: each project's name, status, path, folder, branch, changes, tags, groups, apps, routines, workspace tabs and open workspace. Add `--view <name>` to limit it to a saved view, and `--panes` to include what every pane of the open projects is running.
+`run projects --json` prints everything the dashboard knows, as JSON: each project's name, status, path, folder, organization and repository, branch, changes, tags, groups, apps, routines, workspace tabs and open workspace. Add `--view <name>` to limit it to a saved view, and `--panes` to include what every pane of the open projects is running.
 
 ```bash
 # projects with something to commit or push
