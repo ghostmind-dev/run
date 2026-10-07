@@ -55,6 +55,7 @@ directory inside a pane changes nothing.
 | `tab`, left/right | Choose a button. `enter` presses it; `1`-`3` press directly; click works |
 | `space` | Mark a row. `A` marks every row in view. Marked rows are the target |
 | `a` | Only open projects |
+| `v` | The saved views, each with its rules. `enter` applies one, `d` deletes it, `e` opens the settings file to add or change one. `[` and `]` step to the previous and next view |
 | `t` | Pick a tag or a group: `enter` narrows the table to it, `o` opens all its closed projects |
 | `/` | Filter by name, folder, tag or group |
 | `esc` | Clear the filter, the scope and the marks |
@@ -64,6 +65,7 @@ directory inside a pane changes nothing.
 | `T` | Next colour theme |
 | `,` | This screen's settings: which of its columns show. Works on the projects, the tabs, a tab's panes and all panes, each with its own choice |
 | shift+`,` | The dashboard's settings: theme and how the pane view opens. Both are saved in `~/.config/run/projects.json` |
+| `?` | List every key. The header only shows the ones that fit the width |
 | `q` | Quit |
 
 ### Buttons
@@ -96,6 +98,46 @@ projects.
 
 `run projects --dry-run` shows what each action would do without doing it.
 `run projects --list` prints the table once.
+
+## Views: saved filters
+
+A view is a named rule for which projects the table lists. Views are created
+by editing the settings file, `~/.config/run/projects.json`; the dashboard
+applies and deletes them but does not create them.
+
+```json
+{
+  "views": {
+    "music": { "tags": ["music"] },
+    "ensemble": { "groups": ["ensemble", "agents"] },
+    "learning": { "folders": ["library"] },
+    "work": { "folders": ["ghostmind"], "openOnly": true }
+  },
+  "startView": "work"
+}
+```
+
+| Rule | A project passes when |
+|---|---|
+| `tags` | it has at least one of these tags |
+| `groups` | it belongs to at least one of these groups |
+| `folders` | it sits in one of these top-level folders (the FOLDER column) |
+| `openOnly` | it has a workspace open in herdr |
+
+A project is listed when it passes every rule the view gives; a rule left out
+lets everything through. `startView` names the view the dashboard opens in;
+`run projects --view <name>` overrides it, and works with `--list`.
+
+**To add or change a view as an agent:**
+
+1. Read `~/.config/run/projects.json` (create it as `{}` when missing).
+2. Add or replace the entry under `views`, keeping every other key of the file as it is (`theme`, `panes`, `hidden` belong to the dashboard).
+3. Use only tags, groups and folders that exist: `run projects --list` prints each project's FOLDER and GROUPS, and each `meta.json` holds its `tags`.
+4. Check it: `run projects --list --view <name>` prints exactly the projects the view lists, and fails with a message when the name is not found.
+
+A dashboard that is already open picks the change up on `v` or `r`; no restart
+is needed. To make a view match more projects, add the tag or group to those
+projects' `meta.json` instead of widening the view.
 
 ## meta.json
 
@@ -175,4 +217,5 @@ From the command line, in the project's folder:
 - **A workspace shows as `stray`**: its label matches no project's first workspace label.
 - **A routine prints nothing or fails on `&&`**: it needs a shell; move it to a script.
 - **Routines did not start**: they start only when a workspace is built with `--start` or with `y` in the dashboard, and only in panes created by that build. An open workspace is never typed into.
+- **A view lists nothing**: its rules are combined with *and*; a project must pass all of them. Check the spelling against `run projects --list`, and that the tag or group is in the project's own `meta.json`, not an app's.
 - **`-c/--cible` and `-e/--env`** load legacy `.env` files and are on their way out; apps with a `.env.schema` never use them.

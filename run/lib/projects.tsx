@@ -19,6 +19,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'npm:react@18.3.1';
 import { Box, render, Text, useApp, useInput, useStdout } from 'npm:ink@5.2.1';
 import { dirname, join, relative } from 'node:path';
+import process from 'node:process';
 
 ////////////////////////////////////////////////////////////////////////////////
 // TYPE DEFINITIONS
@@ -878,12 +879,58 @@ function settingsPath(): string {
 /**
  * What the dashboard remembers between runs
  */
+/**
+ * A saved answer to "which projects do I want to see": a project is listed
+ * when it passes every rule the view gives. A rule left out lets all through.
+ */
+export interface ProjectView {
+  /** Has at least one of these tags */
+  tags?: string[];
+  /** Belongs to at least one of these groups */
+  groups?: string[];
+  /** Sits in one of these top-level folders */
+  folders?: string[];
+  /** Has a workspace open in herdr */
+  openOnly?: boolean;
+}
+
 interface Settings {
   theme?: string;
+  /** Saved views, by name. Written by hand or by an agent, not by the dashboard */
+  views?: Record<string, ProjectView>;
+  /** The view the dashboard starts in */
+  startView?: string;
   /** Titles of the columns left out, for each screen */
   hidden?: Record<string, string[]>;
   /** How the pane view opens: by tab, or every pane at once */
   panes?: 'tabs' | 'flat';
+}
+
+/**
+ * Whether a row is listed under a view
+ */
+function isInView(row: Row, view: ProjectView): boolean {
+  const any = (wanted: string[] | undefined, have: string[]) =>
+    !wanted?.length || wanted.some((value) => have.includes(value));
+  return (
+    any(view.tags, row.tags) &&
+    any(view.groups, row.groups) &&
+    any(view.folders, [row.folder]) &&
+    (!view.openOnly || !!row.workspace)
+  );
+}
+
+/**
+ * One line saying what a view lets through
+ */
+function describeView(view: ProjectView): string {
+  const parts = [
+    view.tags?.length ? `tags ${view.tags.join(', ')}` : '',
+    view.groups?.length ? `groups ${view.groups.join(', ')}` : '',
+    view.folders?.length ? `folders ${view.folders.join(', ')}` : '',
+    view.openOnly ? 'open only' : '',
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : 'everything';
 }
 
 function readSettings(): Settings {
@@ -907,7 +954,7 @@ function saveSettings(changes: Settings) {
 }
 
 /** Screen line of the column titles, counted from 1; the rows start below it */
-const TABLE_TOP = 7;
+const TABLE_TOP = 8;
 
 /**
  * The button bar under the table, in order. A button is lit when its action
@@ -919,34 +966,53 @@ const BUTTONS: { kind: ActionKind; label: string }[] = [
   { kind: 'only', label: 'Close others' },
 ];
 
+// Every key, most used first: the header shows as many as fit, `?` lists them
 const KEYS: [string, string][] = [
+  ['<?>', 'All keys'],
   ['<enter>', 'Press'],
   ['<space>', 'Mark'],
-  ['<A>', 'Mark all'],
-  ['<a>', 'Open only'],
-  ['<t>', 'Tag/group'],
   ['<p>', 'Panes'],
-  ['<T>', 'Theme'],
-  ['<,>', 'Columns'],
-  ['<⇧,>', 'Settings'],
+  ['<v>', 'Views'],
+  ['<t>', 'Tag/group'],
+  ['<a>', 'Open only'],
   ['</>', 'Filter'],
+  ['<,>', 'Columns'],
+  ['<shift+,>', 'Settings'],
+  ['<[ ]>', 'Next view'],
+  ['<A>', 'Mark all'],
+  ['<T>', 'Theme'],
   ['<r>', 'Rescan'],
   ['<R>', 'Restart'],
   ['<tab>', 'Button'],
-  ['<click>', 'Select'],
   ['<1-3>', 'Button'],
+  ['<click>', 'Select'],
   ['<esc>', 'Clear'],
   ['<q>', 'Quit'],
 ];
 
+// The keys of the pane view, listed by `?` after the ones above
+const PANE_KEYS: [string, string][] = [
+  ['<enter>', 'Into a tab, or choose a routine for a pane'],
+  ['<s>', 'Start the tab or the pane default routine'],
+  ['<S>', 'Start every idle pane that names a routine'],
+  ['<f>', 'All panes, or back to tabs'],
+  ['<esc>', 'Back'],
+];
+
+/** Width of one key hint in the header: the key, then what it does */
+const KEY_WIDTH = 11;
+const HINT_WIDTH = KEY_WIDTH + 12;
+
 type Mode =
   | 'browse'
+  | 'view'
   | 'filter'
   | 'confirm'
   | 'pick'
   | 'ask'
   | 'routine'
-  | 'settings';
+  | 'settings'
+  | 'help';
 
 /**
  * A tag or a group the table is narrowed to
@@ -1064,10 +1130,12 @@ function Dashboard({
   root,
   isDryRun,
   initialTheme,
+  initialView,
 }: {
   root: string;
   isDryRun: boolean;
   initialTheme: string;
+  initialView: string | null;
 }) {
   const { exit } = useApp();
   const { stdout } = useStdout();
@@ -1090,6 +1158,15 @@ function Dashboard({
   const [themeName, setThemeName] = useState(initialTheme);
   const theme = THEMES[themeName];
   const [scope, setScope] = useState<Scope | null>(null);
+  // Saved views come from the settings file; the one applied, null for all
+  const [views, setViews] = useState<Record<string, ProjectView>>(
+    () => readSettings().views ?? {}
+  );
+  const [viewName, setViewName] = useState<string | null>(initialView);
+  const [viewIndex, setViewIndex] = useState(0);
+  const [isDeletingView, setIsDeletingView] = useState(false);
+  const viewNames = Object.keys(views);
+  const activeView = viewName !== null ? (views[viewName] ?? null) : null;
   // The open project whose panes are on screen, when the pane view is up
   const [viewing, setViewing] = useState<Row | null>(null);
   const [panes, setPanes] = useState<PaneState[]>([]);
@@ -1108,6 +1185,7 @@ function Dashboard({
     return Array.isArray(saved) ? { projects: saved } : (saved ?? {});
   });
   const [settingIndex, setSettingIndex] = useState(0);
+  const [helpTop, setHelpTop] = useState(0);
   // Which list is up: the whole dashboard's, or the current screen's columns
   const [settingsKind, setSettingsKind] = useState<'global' | 'columns'>(
     'global'
@@ -1256,6 +1334,7 @@ function Dashboard({
     return allRows.filter(
       (row) =>
         (!isLiveOnly || row.workspace) &&
+        (!activeView || isInView(row, activeView)) &&
         (!scope ||
           (scope.kind === 'tag' ? row.tags : row.groups).includes(
             scope.value
@@ -1266,7 +1345,7 @@ function Dashboard({
             .toLowerCase()
             .includes(needle))
     );
-  }, [allRows, filter, isLiveOnly, scope]);
+  }, [allRows, filter, isLiveOnly, scope, activeView]);
 
   // What the picker offers: everything, then each group, then each tag
   const choices = useMemo(() => {
@@ -1531,6 +1610,64 @@ function Dashboard({
       return;
     }
 
+    if (mode === 'view') {
+      const picked = viewIndex === 0 ? null : viewNames[viewIndex - 1];
+      if (isDeletingView) {
+        if (input === 'y' && picked) {
+          const { [picked]: _removed, ...kept } = views;
+          setViews(kept);
+          saveSettings({ views: kept });
+          if (viewName === picked) setViewName(null);
+          setViewIndex(0);
+          setMessage(`deleted view ${picked}`);
+        }
+        setIsDeletingView(false);
+      } else if (key.downArrow || input === 'j') {
+        setViewIndex((index) => Math.min(index + 1, viewNames.length));
+      } else if (key.upArrow || input === 'k') {
+        setViewIndex((index) => Math.max(index - 1, 0));
+      } else if (key.return) {
+        setViewName(picked);
+        setSelected(0);
+        setMode('browse');
+      } else if ((input === 'd' || input === 'x') && picked) {
+        setIsDeletingView(true);
+      } else if (input === 'e') {
+        // Views are written in the settings file: hand it to the system's
+        // editor for that kind of file
+        saveSettings({});
+        capture('open', [settingsPath()]).then(({ isOk, output }) =>
+          setMessage(
+            isOk
+              ? `opened ${settingsPath()} - press v or r here once it is saved`
+              : `could not open ${settingsPath()}: ${lastLine(output)}`
+          )
+        );
+        setMode('browse');
+      } else {
+        setMode('browse');
+      }
+      return;
+    }
+
+    if (mode === 'help') {
+      const total = KEYS.length + PANE_KEYS.length + 2;
+      if (key.downArrow || input === 'j') {
+        setHelpTop((top) => Math.min(top + 1, Math.max(total - 4, 0)));
+      } else if (key.upArrow || input === 'k') {
+        setHelpTop((top) => Math.max(top - 1, 0));
+      } else {
+        setMode('browse');
+      }
+      return;
+    }
+
+    if (input === '?' && mode === 'browse') {
+      setHelpTop(0);
+      setMode('help');
+      return;
+    }
+
     // Settings open from every screen: `,` for the screen in view (its
     // columns), shift+`,` for the whole dashboard
     if (
@@ -1744,6 +1881,24 @@ function Dashboard({
       );
     } else if (input === 'T') {
       setMessage(`theme: ${cycleTheme()}`);
+    } else if (input === 'v') {
+      // The file may have been edited since: read the views again
+      const saved = readSettings().views ?? {};
+      setViews(saved);
+      setViewIndex(
+        Math.max(viewName ? Object.keys(saved).indexOf(viewName) + 1 : 0, 0)
+      );
+      setIsDeletingView(false);
+      setMode('view');
+    } else if ((input === '[' || input === ']') && viewNames.length > 0) {
+      // Step through: all, then each saved view
+      const order: (string | null)[] = [null, ...viewNames];
+      const at = order.indexOf(activeView ? viewName : null);
+      const next =
+        order[(at + (input === ']' ? 1 : order.length - 1)) % order.length];
+      setViewName(next);
+      setSelected(0);
+      setMessage(`view: ${next ?? 'all'}`);
     } else if (input === 't') {
       setPickIndex(0);
       setMode('pick');
@@ -1752,6 +1907,7 @@ function Dashboard({
       setMarked([]);
       setScope(null);
     } else if (input === 'r') {
+      setViews(readSettings().views ?? {});
       rescan().then(() => setMessage('rescanned'));
     } else if (key.return) {
       press(button);
@@ -1765,13 +1921,13 @@ function Dashboard({
     }
   });
 
-  // Layout: 5 header lines, the frame's top, the column titles, the rows, the
+  // Layout: an empty line, 5 header lines, the frame's top, the column titles, the rows, the
   // frame's bottom, a blank line, the button bar, one footer line. The terminal's last line is left alone:
   // a tree as tall as the terminal makes Ink clear and repaint the whole
   // screen on every refresh, which flickers.
   const width = size.columns;
   const inner = width - 2;
-  const bodyRows = Math.max(size.rows - 12, 1);
+  const bodyRows = Math.max(size.rows - 13, 1);
   // The list on screen is the projects, or one project's panes
   const paneCursor = Math.min(
     paneSelected,
@@ -1795,7 +1951,8 @@ function Dashboard({
     ['Projects', `${projects.length} (${live} open, ${strays} stray)`],
   ];
 
-  const screen: Segment[][] = [];
+  // One empty line first, so the header does not touch the pane's top edge
+  const screen: Segment[][] = [[]];
 
   // Header
   const infoWidth = Math.min(54, Math.max(width - 44, 20));
@@ -1809,9 +1966,21 @@ function Dashboard({
         bold: true,
       },
     ];
-    for (const [key, what] of KEYS.filter((_, at) => at % 4 === index)) {
-      segments.push({ text: '  ' + key.padEnd(8), color: theme.key, bold: true });
-      segments.push({ text: what.padEnd(10), color: theme.dim });
+    // Four lines of hints, in as many columns as the width leaves room for;
+    // the rest are a `?` away
+    const hintColumns = Math.max(
+      Math.floor((width - infoWidth - 1) / HINT_WIDTH),
+      1
+    );
+    for (const [key, what] of KEYS.slice(0, hintColumns * 4).filter(
+      (_, at) => at % 4 === index
+    )) {
+      segments.push({
+        text: '  ' + key.padEnd(KEY_WIDTH - 2),
+        color: theme.key,
+        bold: true,
+      });
+      segments.push({ text: what.padEnd(12), color: theme.dim });
     }
     screen.push(segments);
   }
@@ -1819,7 +1988,8 @@ function Dashboard({
 
   // Table
   const view = [
-    isLiveOnly ? 'open' : scope ? '' : 'all',
+    activeView ? viewName! : '',
+    isLiveOnly ? 'open' : scope || activeView ? '' : 'all',
     scope ? `${scope.kind}:${scope.value}` : '',
     filter ? '/' + filter : '',
   ]
@@ -1903,6 +2073,74 @@ function Dashboard({
     }
     dialog.push({ text: '' });
     dialog.push({ text: ' y close them · any other key cancels', color: theme.dim });
+  } else if (mode === 'view') {
+    const lines = [
+      { name: null as string | null, text: 'all', detail: 'every project' },
+      ...viewNames.map((name) => ({
+        name: name as string | null,
+        text: name,
+        detail: describeView(views[name]),
+      })),
+    ];
+    dialog.push({ text: ' Views', color: theme.label, bold: true });
+    dialog.push({
+      text: ` read from ${settingsPath().replace(Deno.env.get('HOME') ?? '', '~')}`,
+      color: theme.dim,
+    });
+    dialog.push({ text: '' });
+    lines.forEach((line, index) => {
+      const isPicked = index === viewIndex;
+      const count =
+        line.name === null
+          ? allRows.filter((row) => row.project).length
+          : allRows.filter((row) => isInView(row, views[line.name!])).length;
+      dialog.push({
+        text: ` ${line.text.padEnd(14)} ${String(count).padStart(3)}  ${line.detail}`,
+        color: isPicked ? theme.selectionText : theme.dialogText,
+        background: isPicked ? theme.accent : undefined,
+      });
+    });
+    dialog.push({ text: '' });
+    dialog.push(
+      isDeletingView
+        ? {
+            text: ` Delete view ${viewNames[viewIndex - 1]}? y deletes`,
+            color: theme.danger,
+            bold: true,
+          }
+        : {
+            text:
+              viewNames.length > 0
+                ? ' enter apply · d delete · e edit the file · esc close'
+                : ' no saved view yet · e opens the settings file',
+            color: theme.dim,
+          }
+    );
+  } else if (mode === 'help') {
+    const lines: Segment[] = [
+      ...KEYS.map(([key, what]) => ({
+        text: ` ${key.padEnd(KEY_WIDTH)}${what}`,
+        color: theme.dialogText,
+      })),
+      { text: '' },
+      { text: ' In the pane view', color: theme.label, bold: true },
+      ...PANE_KEYS.map(([key, what]) => ({
+        text: ` ${key.padEnd(KEY_WIDTH)}${what}`,
+        color: theme.dialogText,
+      })),
+    ];
+    const room = Math.max(bodyRows - 6, 1);
+    dialog.push({ text: ' Keys', color: theme.label, bold: true });
+    dialog.push({ text: '' });
+    dialog.push(...lines.slice(helpTop, helpTop + room));
+    dialog.push({ text: '' });
+    dialog.push({
+      text:
+        lines.length > room
+          ? ' up/down scroll · any other key closes'
+          : ' any key closes',
+      color: theme.dim,
+    });
   } else if (mode === 'settings') {
     const room = Math.max(bodyRows - 6, 1);
     const top = Math.min(
@@ -1982,7 +2220,10 @@ function Dashboard({
       color: theme.dim,
     });
   }
-  const dialogWidth = Math.min(44, inner - 4);
+  const dialogWidth = Math.min(
+    mode === 'help' || mode === 'view' ? 64 : 44,
+    inner - 4
+  );
   const dialogTop = Math.max(Math.floor((bodyRows - dialog.length - 2) / 2), 0);
   const dialogLeft = Math.floor((inner - dialogWidth) / 2);
 
@@ -2190,12 +2431,17 @@ export default async function projects(program: any) {
       '--theme <name>',
       `colours: ${Object.keys(THEMES).join(', ')} (default: the last one chosen)`
     )
+    .option(
+      '--view <name>',
+      'start in a saved view (default: startView in the settings file)'
+    )
     .action(
       async (options: {
         root?: string;
         list?: boolean;
         dryRun?: boolean;
         theme?: string;
+        view?: string;
       }) => {
         const root = options.root ?? Deno.env.get('RUN_PROJECT') ?? Deno.cwd();
 
@@ -2204,7 +2450,22 @@ export default async function projects(program: any) {
             discoverProjects(root),
             readHerdrState(),
           ]);
-          printPlain(root, buildRows(found, herdr), herdr);
+          const saved = readSettings();
+          const name = options.view ?? saved.startView;
+          const view = name ? saved.views?.[name] : undefined;
+          if (options.view && !view) {
+            console.error(
+              `no view named '${options.view}' in ${settingsPath()}`
+            );
+            Deno.exit(1);
+          }
+          printPlain(
+            root,
+            buildRows(found, herdr).filter(
+              (row) => !view || isInView(row, view)
+            ),
+            herdr
+          );
           return;
         }
 
@@ -2218,17 +2479,39 @@ export default async function projects(program: any) {
         const themeName = wanted in THEMES ? wanted : DEFAULT_THEME;
         paintBackground(THEMES[themeName]);
 
+        const settings = readSettings();
+        const wantedView = options.view ?? settings.startView ?? null;
+        const startView =
+          wantedView && settings.views?.[wantedView] ? wantedView : null;
+
+        // Ink redraws by erasing every line and writing the frame again, and
+        // a terminal that paints between the two shows a blank flash. Every
+        // line here is as wide as the screen, so the frame can simply be
+        // written over the previous one: the erasing is taken out. The frame
+        // is also marked as one synchronized update for terminals that
+        // support it.
+        const write = process.stdout.write.bind(process.stdout);
+        process.stdout.write = ((chunk: any, ...rest: any[]) =>
+          write(
+            typeof chunk === 'string'
+              ? `\x1b[?2026h${chunk.replaceAll('\x1b[2K', '')}\x1b[?2026l`
+              : chunk,
+            ...rest
+          )) as typeof process.stdout.write;
+
         try {
           const app = render(
             <Dashboard
               root={root}
               isDryRun={options.dryRun ?? false}
               initialTheme={themeName}
+              initialView={startView}
             />,
             { exitOnCtrlC: false }
           );
           await app.waitUntilExit();
         } finally {
+          process.stdout.write = write;
           Deno.stdout.writeSync(
             encoder.encode('\x1b[?1006l\x1b[?1000l\x1b[?1049l')
           );
