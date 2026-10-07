@@ -49,6 +49,10 @@ export interface Project {
   groups: string[];
   /** Checked-out git branch; see readBranch for the other values */
   branch: string;
+  /** The organization or user its repository is pushed to; empty when none */
+  org: string;
+  /** The name of that repository; empty when none */
+  repo: string;
   /** Uncommitted files and unpushed commits; see readChanges */
   changes: string;
 }
@@ -135,6 +139,8 @@ interface Row {
   tags: string[];
   groups: string[];
   branch: string;
+  /** `none` for a project with no remote, empty for a stray */
+  org: string;
   changes: string;
   project: Project | null;
   workspace: HerdrWorkspaceState | null;
@@ -233,12 +239,17 @@ export async function discoverProjects(root: string): Promise<Project[]> {
       tags: Array.isArray(meta.tags) ? meta.tags : [],
       groups: Array.isArray(meta.groups) ? meta.groups : [],
       branch: '',
+      org: '',
+      repo: '',
       changes: '',
     }));
 
   await Promise.all(
     projects.map(async (project) => {
       project.branch = await readBranch(project.path);
+      const remote = await readRemote(project.path);
+      project.org = remote?.owner ?? '';
+      project.repo = remote?.repo ?? '';
       project.changes = await readChanges(project.path);
     })
   );
@@ -289,6 +300,62 @@ export async function discoverProjects(root: string): Promise<Project[]> {
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
+ * Find the .git folder a path belongs to, looking upwards: the repository may
+ * start above the project's folder
+ */
+async function findGitDir(path: string): Promise<string | null> {
+  let folder = path;
+  while (true) {
+    try {
+      const dotGit = join(folder, '.git');
+      const info = await Deno.stat(dotGit);
+      // A worktree or submodule has a .git file pointing at the real folder
+      return info.isDirectory
+        ? dotGit
+        : join(
+            folder,
+            (await Deno.readTextFile(dotGit)).replace('gitdir:', '').trim()
+          );
+    } catch {
+      const parent = dirname(folder);
+      if (parent === folder) return null;
+      folder = parent;
+    }
+  }
+}
+
+/**
+ * Read who a folder's repository is pushed to: the organization or user, and
+ * the repository's name, from its `origin` remote
+ *
+ * @param path - A project's folder
+ * @returns The owner and the repository, or null when the folder is not in a
+ *          repository or the repository has no `origin`
+ *
+ * @example
+ * ```typescript
+ * const remote = await readRemote('/Volumes/Projects/system/run');
+ * console.log(remote); // { owner: "ghostmind-dev", repo: "run" }
+ * ```
+ */
+export async function readRemote(
+  path: string
+): Promise<{ owner: string; repo: string } | null> {
+  const gitDir = await findGitDir(path);
+  if (!gitDir) return null;
+
+  const config = await Deno.readTextFile(join(gitDir, 'config')).catch(() => '');
+  const origin = config.split(/^\[/m).find((section) =>
+    section.startsWith('remote "origin"]')
+  );
+  // https://host/owner/repo(.git), git@host:owner/repo.git, ssh://git@host/owner/repo
+  const found = origin?.match(
+    /^\s*url\s*=\s*\S*?[:/]([^/:\s]+)\/([^/\s]+?)(?:\.git)?\s*$/m
+  );
+  return found ? { owner: found[1], repo: found[2] } : null;
+}
+
+/**
  * Read which git branch a folder is on, straight from its .git folder (no
  * git process, so it is cheap enough to repeat on every refresh)
  *
@@ -304,26 +371,8 @@ export async function discoverProjects(root: string): Promise<Project[]> {
  * ```
  */
 export async function readBranch(path: string): Promise<string> {
-  // The repository may start above the project's folder
-  let folder = path;
-  let gitDir = '';
-  while (!gitDir) {
-    try {
-      const dotGit = join(folder, '.git');
-      const info = await Deno.stat(dotGit);
-      // A worktree or submodule has a .git file pointing at the real folder
-      gitDir = info.isDirectory
-        ? dotGit
-        : join(
-            folder,
-            (await Deno.readTextFile(dotGit)).replace('gitdir:', '').trim()
-          );
-    } catch {
-      const parent = dirname(folder);
-      if (parent === folder) return 'no git';
-      folder = parent;
-    }
-  }
+  const gitDir = await findGitDir(path);
+  if (!gitDir) return 'no git';
 
   try {
     const head = (await Deno.readTextFile(join(gitDir, 'HEAD'))).trim();
@@ -552,6 +601,7 @@ function buildRows(projects: Project[], herdr: HerdrState): Row[] {
     tags: project.tags,
     groups: project.groups,
     branch: project.branch,
+    org: project.org || 'none',
     changes: project.changes,
     project,
     workspace:
@@ -574,6 +624,7 @@ function buildRows(projects: Project[], herdr: HerdrState): Row[] {
         tags: [],
         groups: [],
         branch: '',
+        org: '',
         changes: '',
         project: null,
         workspace,
@@ -611,6 +662,7 @@ const COLUMNS: { title: string; width: number; cell: (row: Row) => string }[] =
   [
     { title: 'NAME', width: 16, cell: (row) => row.name },
     { title: 'FOLDER', width: 12, cell: (row) => row.folder },
+    { title: 'ORG', width: 17, cell: (row) => row.org || '-' },
     { title: 'BRANCH', width: 14, cell: (row) => row.branch || '-' },
     { title: 'CHANGES', width: 10, cell: (row) => row.changes || '-' },
     { title: 'STATUS', width: 10, cell: statusOf },
@@ -965,6 +1017,11 @@ export interface ProjectView {
   groups?: string[];
   /** Sits in one of these top-level folders */
   folders?: string[];
+  /**
+   * Its repository is pushed to one of these organizations or users; `none`
+   * takes the projects with no remote
+   */
+  orgs?: string[];
   /** Has a workspace open in herdr */
   openOnly?: boolean;
   /**
@@ -1003,6 +1060,7 @@ function isInView(row: Row, view: ProjectView): boolean {
     any(view.tags, row.tags) &&
     any(view.groups, row.groups) &&
     any(view.folders, [row.folder]) &&
+    any(view.orgs, [row.org]) &&
     any(view.status, [
       statusOf(row),
       ...(row.workspace && row.project ? ['open'] : []),
@@ -1023,6 +1081,7 @@ function describeView(view: ProjectView): string {
     view.tags?.length ? `tags ${view.tags.join(', ')}` : '',
     view.groups?.length ? `groups ${view.groups.join(', ')}` : '',
     view.folders?.length ? `folders ${view.folders.join(', ')}` : '',
+    view.orgs?.length ? `orgs ${view.orgs.join(', ')}` : '',
     view.status?.length ? `status ${view.status.join(', ')}` : '',
     view.changes ? `changes ${view.changes}` : '',
     view.openOnly ? 'open only' : '',
@@ -2662,6 +2721,8 @@ export default async function projects(program: any) {
                 status: statusOf(row),
                 path: row.path || null,
                 folder: row.project ? row.folder : null,
+                org: row.project?.org || null,
+                repo: row.project?.repo || null,
                 branch: row.branch || null,
                 changes: row.changes || null,
                 tags: row.tags,

@@ -30,6 +30,7 @@ never get a row. A folder with no `type`, or no `meta.json`, is not listed.
 
 | Column | Meaning |
 |---|---|
+| ORG | The GitHub organization or user the repository is pushed to (its `origin` remote). `none`: no repository, or no remote yet |
 | BRANCH | Checked-out branch. `no git`: not a repository. `<name> (local)`: no remote. `<sha> detached`: no branch |
 | CHANGES | A number: uncommitted files. `↑n`: commits not pushed. `↓n`: commits not pulled (as of the last fetch). `clean`: nothing pending. `-`: no repository |
 | STATUS | See below |
@@ -106,7 +107,7 @@ Do not read the screen or walk the folders: ask `run` for JSON.
 
 | Command | Answers |
 |---|---|
-| `run projects --json` | Every project: `name`, `status`, `path`, `folder`, `branch`, `changes`, `tags`, `groups`, `apps`, the `routines` its panes name, the `tabs` of its workspace with the routines each could run, and its open `workspace` (id, size, agents) or `null`. Also the `root`, whether herdr runs, and the saved `views` |
+| `run projects --json` | Every project: `name`, `status`, `path`, `folder`, `org` and `repo` (where it is pushed, `null` when nowhere), `branch`, `changes`, `tags`, `groups`, `apps`, the `routines` its panes name, the `tabs` of its workspace with the routines each could run, and its open `workspace` (id, size, agents) or `null`. Also the `root`, whether herdr runs, and the saved `views` |
 | `run projects --json --view <name>` | The same, for the projects of one view |
 | `run projects --json --panes` | Adds `panes` to each open project: every pane's `paneId`, `tab`, `name`, `cwd`, `routine`, whether it is idle or holds an agent, and what is `running` |
 
@@ -136,6 +137,8 @@ applies and deletes them but does not create them.
     "learning": { "folders": ["library"] },
     "work": { "folders": ["ghostmind"], "openOnly": true },
     "todo": { "changes": "pending" },
+    "apps": { "orgs": ["ghostmind-app"] },
+    "unpublished": { "orgs": ["none"] },
     "closed": { "status": ["closed"] }
   },
   "startView": "work"
@@ -147,6 +150,7 @@ applies and deletes them but does not create them.
 | `tags` | it has at least one of these tags |
 | `groups` | it belongs to at least one of these groups |
 | `folders` | it sits in one of these top-level folders (the FOLDER column) |
+| `orgs` | its repository is pushed to one of these organizations or users (the ORG column); `none` takes the projects with no remote |
 | `openOnly` | it has a workspace open in herdr |
 | `changes` | `"pending"`: it has uncommitted files or commits to push or pull. `"clean"`: it has none. A folder with no repository passes neither |
 | `status` | its STATUS is one of these: `open` (which also takes `focused` and `here`), `closed`, `no herdr`, `stray` |
@@ -159,7 +163,7 @@ lets everything through. `startView` names the view the dashboard opens in;
 
 1. Read `~/.config/run/projects.json` (create it as `{}` when missing).
 2. Add or replace the entry under `views`, keeping every other key of the file as it is (`theme`, `panes`, `hidden` belong to the dashboard).
-3. Use only tags, groups and folders that exist: `run projects --list` prints each project's FOLDER and GROUPS, and each `meta.json` holds its `tags`.
+3. Use only tags, groups, folders and organizations that exist: `run projects --json` gives each project's `folder`, `org`, `groups` and `tags`.
 4. Check it: `run projects --list --view <name>` prints exactly the projects the view lists, and fails with a message when the name is not found.
 
 A dashboard that is already open picks the change up on `v` or `r`; no restart
