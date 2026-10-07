@@ -92,7 +92,7 @@ A **project** is a folder whose `meta.json` has `"type": "project"`. Folders wit
 | TABS, PANES | The size of the open workspace |
 | AGENTS | How many coding agents in the workspace are working, out of how many it holds (`1 of 2`). `-`: none |
 | APPS | How many apps the project has |
-| GROUPS, TAGS | From the project's `meta.json` |
+| GROUPS, TAGS | From the project's `meta.json`. TAGS lists the tags in `meta.json` order, as many whole ones as fit, then `+n`: click the tags or press `i` to see them all |
 
 ### Status
 

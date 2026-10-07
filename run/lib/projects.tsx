@@ -690,7 +690,7 @@ const COLUMNS: { title: string; width: number; cell: (row: Row) => string }[] =
       },
     },
     { title: 'APPS', width: 6, cell: (row) => String(row.apps || '-') },
-    { title: 'GROUPS', width: 18, cell: (row) => row.groups.join(',') || '-' },
+    { title: 'GROUPS', width: 18, cell: (row) => row.groups.join(', ') || '-' },
   ];
 
 function line(
@@ -798,6 +798,37 @@ function paneCells(item: {
     ROUTINES: named > 0 ? String(named) : '-',
     RUNNING: busy > 0 ? `${busy} of ${item.members.length}` : '-',
   };
+}
+
+/** Columns kept empty between the last tag and the table's right border */
+const TAGS_MARGIN = 2;
+
+/**
+ * As many whole tags as a width holds, comma-separated and in the order
+ * meta.json gives them, then `+n` for the ones left out
+ */
+function fitTags(tags: string[], width: number): { text: string; hidden: number } {
+  for (let shown = tags.length; shown >= 0; shown--) {
+    const hidden = tags.length - shown;
+    const text =
+      tags.slice(0, shown).join(', ') +
+      (hidden > 0 ? `${shown > 0 ? ', ' : ''}+${hidden}` : '');
+    if (text.length <= width) return { text, hidden };
+  }
+  return { text: '', hidden: tags.length };
+}
+
+/** The part of a line of segments between two columns */
+function cut(segments: Segment[], from: number, to: number): Segment[] {
+  const out: Segment[] = [];
+  let at = 0;
+  for (const segment of segments) {
+    const start = Math.max(from - at, 0);
+    const end = Math.min(to - at, segment.text.length);
+    if (end > start) out.push({ ...segment, text: segment.text.slice(start, end) });
+    at += segment.text.length;
+  }
+  return out;
 }
 
 /** A project row's cell under a column title, TAGS included */
@@ -1132,6 +1163,7 @@ const KEYS: [string, string][] = [
   ['<t>', 'Tag/group'],
   ['<a>', 'Open only'],
   ['</>', 'Filter'],
+  ['<i>', 'All tags'],
   ['<o>', 'Sort'],
   ['<,>', 'Columns'],
   ['<shift+,>', 'Settings'],
@@ -1171,6 +1203,7 @@ type Mode =
   | 'ask'
   | 'routine'
   | 'settings'
+  | 'info'
   | 'help';
 
 /**
@@ -1349,6 +1382,8 @@ function Dashboard({
   });
   const [settingIndex, setSettingIndex] = useState(0);
   const [helpTop, setHelpTop] = useState(0);
+  // The project whose tags and groups are shown in full
+  const [informing, setInforming] = useState<Row | null>(null);
   // Which list is up: the whole dashboard's, or the current screen's columns
   const [settingsKind, setSettingsKind] = useState<'global' | 'columns'>(
     'global'
@@ -1788,6 +1823,9 @@ function Dashboard({
     }
   };
 
+  // Where the TAGS column starts inside the table, after the fixed columns
+  const tagsAt = 1 + columns.reduce((sum, entry) => sum + entry.width, 0);
+
   // A click or a wheel turn, as the terminal reports it: 1-based column and line
   const onMouse = (code: number, column: number, lineAt: number) => {
     if (code === 64 || code === 65) {
@@ -1811,7 +1849,19 @@ function Dashboard({
 
     const rowAt = first + lineAt - TABLE_TOP - 1;
     if (lineAt > TABLE_TOP && lineAt <= TABLE_TOP + bodyRows) {
-      if (rowAt < rows.length) setSelected(rowAt);
+      if (rowAt < rows.length) {
+        setSelected(rowAt);
+        // A click on the tags of a project that hides some: show them all
+        const clicked = rows[rowAt];
+        const inTags = column - 2 >= tagsAt && !hiddenHere.includes('TAGS');
+        if (
+          inTags &&
+          fitTags(clicked.tags, inner - tagsAt - TAGS_MARGIN).hidden > 0
+        ) {
+          setInforming(clicked);
+          setMode('info');
+        }
+      }
       return;
     }
 
@@ -1872,6 +1922,12 @@ function Dashboard({
       } else {
         setMode('browse');
       }
+      return;
+    }
+
+    if (mode === 'info') {
+      setInforming(null);
+      setMode('browse');
       return;
     }
 
@@ -2102,6 +2158,9 @@ function Dashboard({
       // Leave, then start again from the code on disk
       isRestartRequested = true;
       exit();
+    } else if (input === 'i' && current) {
+      setInforming(current);
+      setMode('info');
     } else if (input === 'o') {
       stepSort();
     } else if (input === 'O') {
@@ -2378,6 +2437,21 @@ function Dashboard({
             color: theme.dim,
           }
     );
+  } else if (mode === 'info' && informing) {
+    const list = (title: string, values: string[]) => {
+      dialog.push({ text: ` ${title}`, color: theme.label, bold: true });
+      if (values.length === 0) dialog.push({ text: '   none', color: theme.dim });
+      for (const value of values) {
+        dialog.push({ text: `   ${value}`, color: theme.dialogText });
+      }
+    };
+    dialog.push({ text: ` ${informing.name}`, color: theme.title, bold: true });
+    dialog.push({ text: '' });
+    list('Tags', informing.tags);
+    dialog.push({ text: '' });
+    list('Groups', informing.groups);
+    dialog.push({ text: '' });
+    dialog.push({ text: ' any key closes', color: theme.dim });
   } else if (mode === 'help') {
     const lines: Segment[] = [
       ...KEYS.map(([key, what]) => ({
@@ -2507,7 +2581,9 @@ function Dashboard({
     if (row) {
       text = line(
         columns.map((column) => column.cell(row)),
-        hiddenHere.includes('TAGS') ? '' : row.tags.join(' '),
+        hiddenHere.includes('TAGS')
+          ? ''
+          : fitTags(row.tags, inner - tagsAt - TAGS_MARGIN).text,
         inner,
         columns
       );
@@ -2532,28 +2608,30 @@ function Dashboard({
       bold: isMarked || (!!item && !pane),
     };
 
+    const content: Segment[] = [style];
+
     const at = index - dialogTop;
     const hasDialog = dialog.length > 0 && at >= 0 && at < dialog.length + 2;
     if (!hasDialog) {
       screen.push([
         { text: '│', color: theme.accent },
-        style,
+        ...content,
         { text: '│', color: theme.accent },
       ]);
       continue;
     }
 
-    const content = dialog[at - 1];
+    const shownLine = dialog[at - 1];
     screen.push([
       { text: '│', color: theme.accent },
-      { ...style, text: text.slice(0, dialogLeft) },
+      ...cut(content, 0, dialogLeft),
       {
-        text: fit(content?.text ?? '', dialogWidth),
-        color: content?.color ?? theme.dialogText,
-        bold: content?.bold,
-        background: content?.background ?? theme.dialogBackground,
+        text: fit(shownLine?.text ?? '', dialogWidth),
+        color: shownLine?.color ?? theme.dialogText,
+        bold: shownLine?.bold,
+        background: shownLine?.background ?? theme.dialogBackground,
       },
-      { ...style, text: text.slice(dialogLeft + dialogWidth) },
+      ...cut(content, dialogLeft + dialogWidth, inner),
       { text: '│', color: theme.accent },
     ]);
   }

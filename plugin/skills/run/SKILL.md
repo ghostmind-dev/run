@@ -36,7 +36,7 @@ never get a row. A folder with no `type`, or no `meta.json`, is not listed.
 | STATUS | See below |
 | TABS, PANES | The open workspace's size, from herdr |
 | AGENTS | How many of the workspace's coding agents are working, out of how many it holds (`1 of 2`). `-`: it holds none. The pane view shows each one |
-| GROUPS, TAGS | The project's `groups` and `tags` |
+| GROUPS, TAGS | The project's `groups` and `tags`. TAGS lists the tags in `meta.json` order, as many whole ones as fit, then `+n`: click the tags or press `i` to see them all |
 
 **Status** only describes herdr:
 
