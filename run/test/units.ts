@@ -90,6 +90,7 @@ Deno.test('discoverProjects lists project roots and counts their apps', async ()
               tab: 'ui-ui',
               pane: 'server',
               routine: 'dev',
+              profiles: [],
               path: join(root, 'studio', 'music', 'ui'),
             },
           ],
