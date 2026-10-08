@@ -138,7 +138,7 @@ When an Open builds a workspace whose panes name a routine, the dashboard lists 
 | `t` | Pick a tag or a group: `enter` narrows the table to it, `o` opens all its closed projects |
 | `a` | Only open projects |
 | `/` | Search by name, folder, tag or group |
-| `o` | Sort by the next column, then by none; `O` reverses the direction. A click on a column title does the same |
+| `o` | Sort by the next column, then by none; `O` reverses the direction. A click on a column title does the same, in the table and in the pane view |
 | `esc` | Clear the search, the tag or group, and the marks. The view stays |
 | `,` | Choose the columns of the screen in view |
 | shift+`,` | Theme and other settings of the whole dashboard |
