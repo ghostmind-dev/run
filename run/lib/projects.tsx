@@ -2136,11 +2136,46 @@ function Dashboard({
     }
   };
 
+  // The pane view answers the mouse like the table: the wheel moves the
+  // cursor, a click on a column title sorts by it, a click on a line selects it
+  const onPaneMouse = (code: number, column: number, lineAt: number) => {
+    const last = Math.max(paneItems.length - 1, 0);
+    const at = Math.min(paneSelected, last);
+    if (code === 64 || code === 65) {
+      setPaneSelected(Math.min(Math.max(at + (code === 64 ? -1 : 1), 0), last));
+      return;
+    }
+    if (code !== 0) return;
+
+    if (lineAt === TABLE_TOP && screenNow !== 'projects') {
+      let edge = 2;
+      const shown = PANE_COLUMNS[screenNow].filter(
+        ([title]) => !hiddenHere.includes(title)
+      );
+      // A width of 0 takes what is left of the line
+      const hit = shown.find(([, size]) => {
+        edge += size;
+        return size === 0 || column <= edge;
+      });
+      if (hit) clickSort(hit[0]);
+      return;
+    }
+
+    const itemAt = first + lineAt - TABLE_TOP - 1;
+    if (lineAt > TABLE_TOP && lineAt <= TABLE_TOP + bodyRows && itemAt <= last) {
+      setPaneSelected(itemAt);
+    }
+  };
+
   useInput((input, key) => {
     const mouse = input.match(/\[<(\d+);(\d+);(\d+)([Mm])/);
     if (mouse) {
-      if (mouse[4] === 'M' && mode === 'browse' && !viewing) {
-        onMouse(Number(mouse[1]), Number(mouse[2]), Number(mouse[3]));
+      if (mouse[4] === 'M' && mode === 'browse') {
+        (viewing ? onPaneMouse : onMouse)(
+          Number(mouse[1]),
+          Number(mouse[2]),
+          Number(mouse[3])
+        );
       }
       return;
     }
@@ -2583,7 +2618,23 @@ function Dashboard({
       Math.floor((width - infoWidth - 1) / HINT_WIDTH),
       1
     );
-    for (const [key, what] of KEYS.slice(0, hintColumns * 4).filter(
+    // The pane view has keys of its own: the header shows those instead
+    const hints: [string, string][] = viewing
+      ? [
+          ['<?>', 'All keys'],
+          ['<enter>', tabOpen === null && !isFlat ? 'Its panes' : 'Routine'],
+          ['<f>', isFlat ? 'By tab' : 'All panes'],
+          ['<esc>', 'Back'],
+          ['<s>', 'Start'],
+          ['<S>', 'Start all'],
+          ['<o>', 'Sort'],
+          ['<,>', 'Columns'],
+          ['<p>', 'Projects'],
+          ['<click>', 'Sort/select'],
+          ['<shift+,>', 'Settings'],
+        ]
+      : KEYS;
+    for (const [key, what] of hints.slice(0, hintColumns * 4).filter(
       (_, at) => at % 4 === index
     )) {
       segments.push({

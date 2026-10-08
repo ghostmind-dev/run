@@ -61,7 +61,7 @@ directory inside a pane changes nothing.
 | `v` | The saved views, each with its rules. `enter` applies one, `d` deletes it, `e` opens the settings file to add or change one. `[` and `]` step to the previous and next view; `0` goes back to all projects. A view stays applied until changed: `/`, `a` and `t` narrow inside it and `esc` does not remove it |
 | `t` | Pick a tag or a group: `enter` narrows the table to it, `o` opens all its closed projects |
 | `/` | Filter by name, folder, tag or group |
-| `o` | Sort by the next column, then by none; `O` reverses the direction. A click on a column title does the same. Works on every screen, each with its own order, and is remembered |
+| `o` | Sort by the next column, then by none; `O` reverses the direction. A click on a column title does the same, in the table and in the pane view. Works on every screen, each with its own order, and is remembered |
 | `esc` | Clear the filter, the scope and the marks |
 | `p` | Show the panes of an open project (see below) |
 | `r` | Rescan the folders (picks up `meta.json` edits) |
