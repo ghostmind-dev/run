@@ -70,7 +70,7 @@ Without it, `run projects` uses the folder it is started from.
    ```
 
 2. Run `run projects` in a herdr pane. The project is listed as `closed`.
-3. Press `enter` on it (the Open button). Answer `y` to start its routines.
+3. Press `enter` on it (the Open button). Untick the routines you do not want with `space`, then `enter` to start the rest.
 
 The workspace is built in the background with two panes, and `npm run dev` is running in the first.
 
@@ -124,7 +124,7 @@ Move between buttons with `tab` or the left and right arrows, press with `enter`
 
 The **target** is the row under the cursor, or every marked row when some are marked.
 
-When an Open builds a workspace whose panes name a routine, the dashboard lists them and asks: `y` starts them, `n` opens the panes empty.
+When an Open builds a workspace whose panes name a routine, the dashboard lists them, all ticked, and asks which to start: `space` ticks or unticks the one under the cursor, `a` ticks or unticks them all, `enter` (or `y`) opens and starts the ticked ones, `n` opens the panes empty.
 
 ### Keys
 
@@ -357,6 +357,7 @@ run herdr init <label> [options]    build the workspace; tabs that exist are ski
 
   --all        build from every meta.json of the project
   --start      type each new pane's routine into it
+  --only <panes>  with --start: only these panes, as tab/pane, comma-separated
   --reset      close the workspace first
   --no-focus   stay on the current workspace whatever the config says
 
