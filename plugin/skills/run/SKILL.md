@@ -30,6 +30,7 @@ never get a row. A folder with no `type`, or no `meta.json`, is not listed.
 
 | Column | Meaning |
 |---|---|
+| MACHINE | `local`, or the label of the saved herdr machine the project is on (see *Other machines*) |
 | ORG | The GitHub organization or user the repository is pushed to (its `origin` remote). `none`: no repository, or no remote yet |
 | BRANCH | Checked-out branch. `no git`: not a repository. `<name> (local)`: no remote. `<sha> detached`: no branch |
 | CHANGES | A number: uncommitted files. `↑n`: commits not pushed. `↓n`: commits not pulled (as of the last fetch). `clean`: nothing pending. `-`: no repository |
@@ -43,6 +44,7 @@ never get a row. A folder with no `type`, or no `meta.json`, is not listed.
 - `open`: the project has a workspace in herdr. `focused`: it is the one on screen.
 - `here`: the workspace the dashboard itself runs in. It is never closed from the dashboard.
 - `closed`: no workspace. `no herdr`: the project defines none.
+- `offline`: the project is on another machine that does not answer right now; it cannot be acted on.
 - `stray`: a herdr workspace whose label matches no project.
 
 A workspace belongs to a project by its **label**, not by any folder: changing
@@ -107,7 +109,7 @@ Do not read the screen or walk the folders: ask `run` for JSON.
 
 | Command | Answers |
 |---|---|
-| `run projects --json` | Every project: `name`, `status`, `path`, `folder`, `org` and `repo` (where it is pushed, `null` when nowhere), `branch`, `changes`, `tags`, `groups`, `apps`, the `routines` its panes name, the `tabs` of its workspace with the routines each could run, and its open `workspace` (id, size, agents) or `null`. Also the `root`, whether herdr runs, and the saved `views` |
+| `run projects --json` | Every project: `name`, `machine`, `status`, `label` (its workspace label), `path`, `folder`, `org` and `repo` (where it is pushed, `null` when nowhere), `branch`, `changes`, `tags`, `groups`, `apps`, the `routines` its panes name, the `tabs` of its workspace with the routines each could run, and its open `workspace` (id, size, agents) or `null`. Also the `root`, whether herdr runs, and the saved `views` |
 | `run projects --json --view <name>` | The same, for the projects of one view |
 | `run projects --json --panes` | Adds `panes` to each open project: every pane's `paneId`, `tab`, `name`, `cwd`, `routine`, whether it is idle or holds an agent, and what is `running` |
 
@@ -120,6 +122,20 @@ Typical questions and where the answer is:
 
 `status` is one of `open`, `focused`, `here`, `closed`, `no herdr`, `stray`.
 The output reflects the moment it is asked; nothing is cached.
+
+## Other machines
+
+The table also lists the projects of every machine saved in herdr
+(`herdr machine add <ssh-host>`), with that machine's label in MACHINE. Opening
+one builds its workspace **on that machine**: its panes and routines run there,
+and herdr shows the workspace in its sidebar under that machine.
+
+- **How it reads them:** this machine runs `run projects --json` on the other one over SSH, about every 10 seconds, and merges the answer. So the other machine needs `run` (0.12 or later), `herdr` and its projects.
+- **How it acts:** Open runs `run herdr init` there; Close runs `herdr workspace close` there. **Close others** only closes workspaces on the machines its targets are on.
+- **When a machine does not answer:** its rows stay, dimmed, with status `offline`, and nothing can be done to them. The header says which machines are online.
+- **The same project on two machines** is two rows: each has its own branch and changes.
+- **Not available for another machine yet:** the pane view (`p`). Switch to the workspace in herdr.
+- Setting `RUN_NO_MACHINES=1` lists this machine only.
 
 ## Views: saved filters
 
@@ -150,6 +166,7 @@ applies and deletes them but does not create them.
 | `tags` | it has at least one of these tags |
 | `groups` | it belongs to at least one of these groups |
 | `folders` | it sits in one of these top-level folders (the FOLDER column) |
+| `machines` | it is on one of these machines: `local`, or a saved machine's label (the MACHINE column) |
 | `orgs` | its repository is pushed to one of these organizations or users (the ORG column); `none` takes the projects with no remote |
 | `openOnly` | it has a workspace open in herdr |
 | `changes` | `"pending"`: it has uncommitted files or commits to push or pull. `"clean"`: it has none. A folder with no repository passes neither |
@@ -248,5 +265,6 @@ From the command line, in the project's folder:
 - **A workspace shows as `stray`**: its label matches no project's first workspace label.
 - **A routine prints nothing or fails on `&&`**: it needs a shell; move it to a script.
 - **Routines did not start**: they start only when a workspace is built with `--start` or with `y` in the dashboard, and only in panes created by that build. An open workspace is never typed into.
+- **Another machine shows as `offline`**: `ssh <target> run --version` must work without a password and print a version; the PATH of a command sent over SSH is not the PATH of a terminal there.
 - **A view lists nothing**: its rules are combined with *and*; a project must pass all of them. Check the spelling against `run projects --list`, and that the tag or group is in the project's own `meta.json`, not an app's.
 - **`-c/--cible` and `-e/--env`** load legacy `.env` files and are on their way out; apps with a `.env.schema` never use them.

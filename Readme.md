@@ -13,6 +13,7 @@ Everything `run` knows comes from a `meta.json` file in each project.
 - [Install](#install)
 - [Quick start](#quick-start)
 - [The dashboard](#the-dashboard)
+- [Other machines](#other-machines)
 - [Views](#views)
 - [For scripts and agents](#for-scripts-and-agents)
 - [Settings](#settings)
@@ -84,6 +85,7 @@ A **project** is a folder whose `meta.json` has `"type": "project"`. Folders wit
 | Column | Meaning |
 |---|---|
 | NAME | The `name` of the project's `meta.json` |
+| MACHINE | `local`, or the label of the saved herdr machine the project is on; see [Other machines](#other-machines) |
 | FOLDER | The top-level folder it sits in |
 | ORG | The GitHub organization or user its repository is pushed to, from the `origin` remote. `none`: no repository, or no remote yet |
 | BRANCH | The checked-out git branch. `no git`: not a repository. `<name> (local)`: no remote. `<sha> detached`: no branch |
@@ -104,6 +106,7 @@ Status only describes herdr.
 | `focused` | Open, and it is the workspace on screen |
 | `here` | Open, and it is the workspace the dashboard runs in. It is never closed from the dashboard |
 | `closed` | No workspace |
+| `offline` | The project is on another machine that does not answer right now |
 | `no herdr` | The project defines no workspace |
 | `stray` | A herdr workspace whose label matches no project |
 
@@ -157,6 +160,22 @@ When an Open builds a workspace whose panes name a routine, the dashboard lists 
 
 Only an idle shell is ever typed into. A pane that is already running something is skipped.
 
+## Other machines
+
+The dashboard also lists the projects of every machine saved in herdr, so local and remote work sit in one table.
+
+```bash
+herdr machine add workbox      # once: save the SSH machine in herdr
+```
+
+Each of its projects then appears with `workbox` in the MACHINE column. Opening one builds its workspace on that machine: the panes and routines run there, and herdr shows the workspace in its sidebar under that machine.
+
+- **What the other machine needs:** `run` 0.12 or later, `herdr`, and its projects under its own `RUN_PROJECT`. `ssh workbox run --version` must work without a password.
+- **How it works:** this machine runs `run projects --json` there over SSH about every 10 seconds, and sends Open and Close as commands to run there.
+- **When it does not answer:** its rows stay, dimmed, with status `offline`, and cannot be acted on. The header shows which machines are online.
+- **Close others** never closes a workspace on a machine its targets are not on.
+- The pane view (`p`) is not available for another machine yet.
+
 ## Views
 
 A view is a saved rule for which projects the table lists. Use views to keep a long list down to what you are working on. The header always names the view in force. `all`, every project, is the default one and cannot be deleted.
@@ -184,6 +203,7 @@ Views are written in the settings file, `~/.config/run/projects.json`. The dashb
 | `tags` | It has at least one of these tags |
 | `groups` | It belongs to at least one of these groups |
 | `folders` | It sits in one of these top-level folders |
+| `machines` | It is on one of these machines: `local`, or a saved machine's label |
 | `orgs` | Its repository is pushed to one of these organizations or users. `none` takes the projects with no remote |
 | `openOnly` | It has a workspace open in herdr |
 | `changes` | `"pending"`: it has uncommitted files or commits to push or pull. `"clean"`: it has none. A folder with no repository passes neither |

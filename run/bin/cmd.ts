@@ -26,6 +26,7 @@ import { Command } from 'npm:commander@12.1.0';
 import { setSecretsOnLocal } from '../utils/divers.ts';
 import { argv } from 'node:process';
 import { existsSync } from 'node:fs';
+import denoJson from '../../deno.json' with { type: 'json' };
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -45,34 +46,12 @@ const program = new Command();
 // VERSION FLAG
 ////////////////////////////////////////////////////////////////////////////////
 
-/**
- * Read version from deno.json file
- */
-async function getVersion(): Promise<string> {
-  try {
-    // Get the directory of the current script (cmd.ts is in run/bin/)
-    const scriptPath = import.meta.url;
-    const scriptDir = dirname(fileURLToPath(scriptPath));
-
-    // Go up two levels from run/bin/ to reach the root where deno.json is located
-    const rootDir = dirname(dirname(scriptDir));
-    const denoJsonPath = join(rootDir, 'deno.json');
-
-    const denoJsonContent = await Deno.readTextFile(denoJsonPath);
-    const denoJson = JSON.parse(denoJsonContent);
-
-    return denoJson.version || 'unknown';
-  } catch (error) {
-    console.error(
-      'Error reading version from deno.json:',
-      error instanceof Error ? error.message : String(error),
-    );
-    return 'unknown';
-  }
-}
+// The version is the package's own: imported, so it reads the same whether
+// run from a checkout or installed from JSR
+const getVersion = () => denoJson.version ?? 'unknown';
 
 program.version(
-  `@ghostmind/run v${await getVersion()}`,
+  `@ghostmind/run v${getVersion()}`,
   '-v, --version',
   'show version information'
 );
