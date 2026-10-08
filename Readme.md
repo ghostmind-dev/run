@@ -236,6 +236,7 @@ run projects --json | jq -r '.projects[] | select(.changes != "clean" and .chang
 | `panes` | `f` in the pane view, or shift+`,` | Whether the pane view opens by tab (`tabs`) or as one list (`flat`) |
 | `hidden` | `,` on each screen | The columns left out, per screen: `projects`, `tabs`, `panes`, `flat` |
 | `sort` | `o`, `O`, or a click on a column title | The column each screen is sorted by |
+| `colors` | `run herdr colors` | Whether projects show their colour in herdr's sidebar; on unless `false` |
 | `views`, `startView` | Editing the file | See [Views](#views) |
 
 ## Routines
@@ -285,6 +286,32 @@ One project is one herdr workspace, named by `label`. The project's `meta.json` 
 - **`routine`:** the routine the pane usually runs. One per pane. It only runs when asked: `--start` on the command line, or `y` in the dashboard.
 - **`prefix`:** `false` keeps the tab's label as written; otherwise it is prefixed with the app's name.
 - **`focus`:** on a pane or a tab, it chooses what is active inside the workspace and never moves you there. On the workspace itself, it takes you to it when built from the command line.
+- **`color`:** on the workspace, next to `label`: the project's colour, shown as a small `■` beside it in herdr's sidebar. One of `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple`, `pink`.
+
+### Project colours
+
+`run herdr colors on` and `run herdr colors off` show or hide the colour of every open workspace; with no argument it toggles. The choice is kept, and a workspace built later follows it.
+
+herdr only paints what its own config names, so `~/.config/herdr/config.toml` needs the eight tokens once (then `herdr server reload-config`):
+
+```toml
+[ui.sidebar.spaces]
+rows = [
+  [
+    "state_icon",
+    { token = "$color_red", fg = "#f7768e" },
+    { token = "$color_orange", fg = "#ff9e64" },
+    { token = "$color_yellow", fg = "#e0af68" },
+    { token = "$color_green", fg = "#9ece6a" },
+    { token = "$color_teal", fg = "#2ac3a2" },
+    { token = "$color_blue", fg = "#7aa2f7" },
+    { token = "$color_purple", fg = "#bb9af7" },
+    { token = "$color_pink", fg = "#ff79c6" },
+    "workspace",
+  ],
+  ["branch", "git_status"],
+]
+```
 
 The full schema, with the `sections` and `grid` layouts, is in [`meta/schema.json`](meta/schema.json).
 
@@ -336,6 +363,7 @@ run herdr init <label> [options]    build the workspace; tabs that exist are ski
 run herdr attach [label]            attach to herdr, focusing a workspace
 run herdr terminate <label>         close a workspace
 run herdr list                      list open workspaces
+run herdr colors [on|off]           show or hide each project's colour in herdr's sidebar (no argument: toggle)
 ```
 
 ```

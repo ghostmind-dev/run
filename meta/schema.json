@@ -90,6 +90,11 @@
                 "type": "string",
                 "description": "Working directory for the workspace. If starts with '/', treated as absolute path. Otherwise, relative to meta.json location."
               },
+              "color": {
+                "type": "string",
+                "enum": ["red", "orange", "yellow", "green", "teal", "blue", "purple", "pink"],
+                "description": "The project's colour: a mark beside the workspace in herdr's sidebar. Set on the project's own meta.json. Switched on and off for every workspace with 'run herdr colors'."
+              },
               "env": {
                 "type": "object",
                 "description": "Environment variables applied to the workspace as key-value pairs",

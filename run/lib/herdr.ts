@@ -46,6 +46,7 @@ import {
   getSrc,
 } from '../utils/divers.ts';
 import chalk from 'npm:chalk@5.3.0';
+import { discoverProjects, readSettings, saveSettings } from './projects.tsx';
 
 ////////////////////////////////////////////////////////////////////////////////
 // INTERFACES
@@ -100,6 +101,8 @@ interface HerdrWorkspace {
   cwd?: string;
   env?: Record<string, string>;
   focus?: boolean;
+  /** Its mark in herdr's sidebar; one of COLORS */
+  color?: string;
   tabs: HerdrTab[];
 }
 
@@ -186,6 +189,68 @@ let isFocusedOnPurpose = false;
 async function findWorkspacesByLabel(label: string): Promise<any[]> {
   const list = await herdrJson(['workspace', 'list']);
   return (list?.workspaces ?? []).filter((ws: any) => ws.label === label);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// WORKSPACE COLOURS
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * The colours a workspace can take. herdr's sidebar only styles a value it is
+ * told about in its own config, so each colour is a token of its own
+ * (`$color_red`...) that the config paints; a workspace holds at most one.
+ */
+export const COLORS = [
+  'red',
+  'orange',
+  'yellow',
+  'green',
+  'teal',
+  'blue',
+  'purple',
+  'pink',
+];
+
+/** What a coloured workspace shows in the sidebar, painted by herdr */
+const COLOR_MARK = '■';
+
+/**
+ * Give a workspace its colour mark in herdr's sidebar, or take it away
+ */
+async function reportColor(
+  workspaceId: string,
+  color: string | undefined
+): Promise<void> {
+  const args = ['workspace', 'report-metadata', workspaceId, '--source', 'run'];
+  for (const name of COLORS) {
+    if (name === color) {
+      args.push('--token', `color_${name}=${COLOR_MARK}`);
+    } else {
+      args.push('--clear-token', `color_${name}`);
+    }
+  }
+  await herdrJson(args);
+}
+
+/**
+ * Show or remove the colour of every open workspace whose project names one
+ */
+async function applyColors(isOn: boolean): Promise<number> {
+  const root = Deno.env.get('RUN_PROJECT') ?? Deno.cwd();
+  const projects = await discoverProjects(root);
+  const list = await herdrJson(['workspace', 'list']);
+  let count = 0;
+
+  for (const workspace of list?.workspaces ?? []) {
+    const color = projects.find(
+      (project) => project.label === workspace.label
+    )?.color;
+    const isKnown = !!color && COLORS.includes(color);
+    await reportColor(workspace.workspace_id, isOn && isKnown ? color : undefined);
+    if (isOn && isKnown) count++;
+  }
+
+  return count;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -814,6 +879,15 @@ async function initHerdrWorkspace(
       autoTabId = created.tab.tab_id;
     }
 
+    // Its colour mark in the sidebar, unless colours are switched off
+    if (
+      workspaceConfig.color &&
+      COLORS.includes(workspaceConfig.color) &&
+      readSettings().colors !== false
+    ) {
+      await reportColor(workspaceId, workspaceConfig.color);
+    }
+
     // Existing tab labels, to skip tabs that are already present
     const tabList = await herdrJson([
       'tab',
@@ -1117,6 +1191,32 @@ export default async function herdr(program: any) {
             error
           )
         );
+        Deno.exit(1);
+      }
+    });
+
+  ////////////////////////////////////////////////////////////////////////////
+  // COLORS COMMAND
+  ////////////////////////////////////////////////////////////////////////////
+
+  herdr
+    .command('colors')
+    .description("show or hide each project's colour in herdr's sidebar")
+    .argument('[state]', 'on, off or toggle (default: toggle)')
+    .action(async (state?: string) => {
+      try {
+        $.verbose = false;
+        const wasOn = readSettings().colors !== false;
+        const isOn = state === 'on' ? true : state === 'off' ? false : !wasOn;
+        saveSettings({ colors: isOn });
+        const count = await applyColors(isOn);
+        console.log(
+          isOn
+            ? chalk.green(`✅ Colours on: ${count} open workspace(s) marked`)
+            : chalk.green('✅ Colours off')
+        );
+      } catch (error) {
+        console.error(chalk.red('❌ Error setting workspace colours:', error));
         Deno.exit(1);
       }
     });

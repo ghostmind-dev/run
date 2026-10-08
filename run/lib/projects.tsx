@@ -37,6 +37,8 @@ export interface Project {
   folder: string;
   /** Herdr workspace label; null when the project defines no herdr workspace */
   label: string | null;
+  /** The `color` of its herdr workspace: its mark in herdr's sidebar */
+  color?: string;
   /** Names of the `type: "app"` folders below it */
   apps: string[];
   /** The routine each of its panes names, when it names one */
@@ -237,6 +239,7 @@ export async function discoverProjects(root: string): Promise<Project[]> {
       path,
       folder: relative(root, path).split('/')[0],
       label: meta.herdr?.workspaces?.[0]?.label ?? null,
+      color: meta.herdr?.workspaces?.[0]?.color,
       apps: [],
       routines: [],
       tabs: [],
@@ -1254,6 +1257,8 @@ interface Settings {
   sort?: Record<string, SortOrder>;
   /** How the pane view opens: by tab, or every pane at once */
   panes?: 'tabs' | 'flat';
+  /** Whether projects show their colour in herdr's sidebar; on unless false */
+  colors?: boolean;
 }
 
 /**
@@ -1297,7 +1302,7 @@ function describeView(view: ProjectView): string {
   return parts.length > 0 ? parts.join(' · ') : 'everything';
 }
 
-function readSettings(): Settings {
+export function readSettings(): Settings {
   try {
     return JSON.parse(Deno.readTextFileSync(settingsPath())) ?? {};
   } catch {
@@ -1305,7 +1310,7 @@ function readSettings(): Settings {
   }
 }
 
-function saveSettings(changes: Settings) {
+export function saveSettings(changes: Settings) {
   try {
     Deno.mkdirSync(dirname(settingsPath()), { recursive: true });
     Deno.writeTextFileSync(
