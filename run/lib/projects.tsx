@@ -132,6 +132,10 @@ export interface HerdrState {
 interface Row {
   key: string;
   name: string;
+  /** `local`, or the label of the saved herdr machine the project is on */
+  machine: string;
+  /** For a project on another machine: how to reach it, and whether it answers */
+  remote?: { target: string; isReachable: boolean };
   folder: string;
   label: string | null;
   path: string;
@@ -439,7 +443,7 @@ async function capture(
   command: string,
   args: string[],
   cwd?: string
-): Promise<{ isOk: boolean; output: string }> {
+): Promise<{ isOk: boolean; output: string; stdout: string }> {
   try {
     const { success, stdout, stderr } = await new Deno.Command(command, {
       args,
@@ -450,10 +454,11 @@ async function capture(
       env: { RUN_NO_DEPRECATION: '1', NO_COLOR: '1' },
     }).output();
     const decoder = new TextDecoder();
-    const output = (decoder.decode(stdout) + decoder.decode(stderr)).trim();
-    return { isOk: success, output };
+    const out = decoder.decode(stdout);
+    const output = (out + decoder.decode(stderr)).trim();
+    return { isOk: success, output, stdout: out };
   } catch (error) {
-    return { isOk: false, output: String(error) };
+    return { isOk: false, output: String(error), stdout: '' };
   }
 }
 
@@ -587,6 +592,171 @@ function lastLine(output: string): string {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// OTHER MACHINES
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * A machine saved in herdr (`herdr machine add`): its label and SSH target
+ */
+export interface Machine {
+  label: string;
+  target: string;
+}
+
+/**
+ * The saved herdr machines the dashboard also lists. None when herdr has
+ * none, or when RUN_NO_MACHINES is set (which is how a machine is asked for
+ * its own projects without asking further).
+ */
+export async function readMachines(): Promise<Machine[]> {
+  if (Deno.env.get('RUN_NO_MACHINES')) return [];
+  const { isOk, output } = await capture('herdr', ['machine', 'list', '--json']);
+  if (!isOk) return [];
+  try {
+    return (JSON.parse(output) as any[])
+      .filter((machine) => machine.enabled !== false && machine.target)
+      .map((machine) => ({ label: machine.label, target: machine.target }));
+  } catch {
+    return [];
+  }
+}
+
+// A command sent over SSH has a bare PATH: name where run, herdr and deno live
+const REMOTE_PATH =
+  'PATH="$HOME/.deno/bin:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"';
+
+/**
+ * Run a command on a saved machine, without ever asking for a password
+ */
+function onMachine(target: string, command: string) {
+  return capture('ssh', [
+    '-o',
+    'BatchMode=yes',
+    '-o',
+    'ConnectTimeout=6',
+    target,
+    `${REMOTE_PATH} RUN_NO_MACHINES=1 ${command}`,
+  ]);
+}
+
+/** A path or a name, quoted for the remote shell */
+function quoted(text: string): string {
+  return "'" + text.split("'").join("'\\''") + "'";
+}
+
+/**
+ * The projects of another machine, as rows: that machine runs
+ * `run projects --json` and this one reads the answer
+ *
+ * @returns The rows, or null when the machine does not answer
+ */
+async function readMachineRows(machine: Machine): Promise<Row[] | null> {
+  const { isOk, stdout } = await onMachine(machine.target, 'run projects --json');
+  if (!isOk) return null;
+
+  let listed: any[];
+  try {
+    // Only what the command printed as its answer: warnings go to stderr
+    listed = JSON.parse(stdout.slice(stdout.indexOf('{'))).projects ?? [];
+  } catch {
+    return null;
+  }
+
+  return listed.map((entry) => {
+    // A project without a herdr workspace of its own cannot be opened
+    const label: string | null =
+      entry.status === 'no herdr'
+        ? null
+        : (entry.label ?? entry.workspace?.label ?? entry.name);
+    const isProject = !!entry.path;
+    return {
+      key: `${machine.label}:${entry.path ?? entry.workspace?.id ?? entry.name}`,
+      name: entry.name,
+      machine: machine.label,
+      remote: { target: machine.target, isReachable: true },
+      folder: entry.folder ?? '-',
+      label,
+      path: entry.path ?? '',
+      apps: (entry.apps ?? []).length,
+      tags: entry.tags ?? [],
+      groups: entry.groups ?? [],
+      branch: entry.branch ?? '',
+      org: isProject ? entry.org || 'none' : '',
+      changes: entry.changes ?? '',
+      project: isProject
+        ? {
+            name: entry.name,
+            path: entry.path,
+            folder: entry.folder ?? '',
+            label,
+            apps: entry.apps ?? [],
+            routines: entry.routines ?? [],
+            tabs: entry.tabs ?? [],
+            tags: entry.tags ?? [],
+            groups: entry.groups ?? [],
+            branch: entry.branch ?? '',
+            org: entry.org ?? '',
+            repo: entry.repo ?? '',
+            changes: entry.changes ?? '',
+          }
+        : null,
+      workspace: entry.workspace
+        ? {
+            workspace_id: entry.workspace.id,
+            label: entry.workspace.label,
+            number: 0,
+            tab_count: entry.workspace.tabs,
+            pane_count: entry.workspace.panes,
+            agent_status: '',
+            focused: entry.status === 'focused',
+            agents: entry.workspace.agents ?? [],
+          }
+        : null,
+    };
+  });
+}
+
+/**
+ * The rows of every saved machine. A machine that does not answer keeps the
+ * rows it gave last time, marked as unreachable.
+ */
+async function readAllMachineRows(previous: Row[] = []): Promise<Row[]> {
+  const machines = await readMachines();
+  const perMachine = await Promise.all(
+    machines.map(async (machine) => {
+      const rows = await readMachineRows(machine);
+      if (rows) return rows;
+      const kept = previous.filter((row) => row.machine === machine.label);
+      return kept.length > 0
+        ? kept.map((row) => ({
+            ...row,
+            remote: { target: machine.target, isReachable: false },
+          }))
+        : [
+            {
+              key: `${machine.label}:unreachable`,
+              name: `(${machine.label})`,
+              machine: machine.label,
+              remote: { target: machine.target, isReachable: false },
+              folder: '-',
+              label: null,
+              path: '',
+              apps: 0,
+              tags: [],
+              groups: [],
+              branch: '',
+              org: '',
+              changes: '',
+              project: null,
+              workspace: null,
+            } as Row,
+          ];
+    })
+  );
+  return perMachine.flat();
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // ROWS
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -594,6 +764,7 @@ function buildRows(projects: Project[], herdr: HerdrState): Row[] {
   const rows: Row[] = projects.map((project) => ({
     key: project.path,
     name: project.name,
+    machine: 'local',
     folder: project.folder,
     label: project.label,
     path: project.path,
@@ -617,6 +788,7 @@ function buildRows(projects: Project[], herdr: HerdrState): Row[] {
       rows.push({
         key: workspace.workspace_id,
         name: workspace.label,
+        machine: 'local',
         folder: '-',
         label: workspace.label,
         path: '',
@@ -636,9 +808,8 @@ function buildRows(projects: Project[], herdr: HerdrState): Row[] {
 }
 
 function statusOf(row: Row): string {
-  if (row.workspace?.workspace_id === Deno.env.get('HERDR_WORKSPACE_ID')) {
-    return 'here';
-  }
+  if (row.remote && !row.remote.isReachable) return 'offline';
+  if (isOwn(row)) return 'here';
   if (row.workspace && !row.project) return 'stray';
   if (row.workspace) return row.workspace.focused ? 'focused' : 'open';
   if (!row.label) return 'no herdr';
@@ -647,6 +818,7 @@ function statusOf(row: Row): string {
 
 function colorOf(row: Row, theme: Theme): string | undefined {
   const status = statusOf(row);
+  if (status === 'offline') return theme.dim;
   if (status === 'here') return theme.here;
   if (status === 'focused') return theme.focused;
   if (status === 'open') return theme.open;
@@ -661,6 +833,7 @@ function colorOf(row: Row, theme: Theme): string | undefined {
 const COLUMNS: { title: string; width: number; cell: (row: Row) => string }[] =
   [
     { title: 'NAME', width: 16, cell: (row) => row.name },
+    { title: 'MACHINE', width: 9, cell: (row) => row.machine },
     { title: 'FOLDER', width: 12, cell: (row) => row.folder },
     { title: 'ORG', width: 17, cell: (row) => row.org || '-' },
     { title: 'BRANCH', width: 14, cell: (row) => row.branch || '-' },
@@ -1048,6 +1221,8 @@ export interface ProjectView {
   groups?: string[];
   /** Sits in one of these top-level folders */
   folders?: string[];
+  /** Is on one of these machines: `local`, or a saved machine's label */
+  machines?: string[];
   /**
    * Its repository is pushed to one of these organizations or users; `none`
    * takes the projects with no remote
@@ -1091,6 +1266,7 @@ function isInView(row: Row, view: ProjectView): boolean {
     any(view.tags, row.tags) &&
     any(view.groups, row.groups) &&
     any(view.folders, [row.folder]) &&
+    any(view.machines, [row.machine]) &&
     any(view.orgs, [row.org]) &&
     any(view.status, [
       statusOf(row),
@@ -1112,6 +1288,7 @@ function describeView(view: ProjectView): string {
     view.tags?.length ? `tags ${view.tags.join(', ')}` : '',
     view.groups?.length ? `groups ${view.groups.join(', ')}` : '',
     view.folders?.length ? `folders ${view.folders.join(', ')}` : '',
+    view.machines?.length ? `machines ${view.machines.join(', ')}` : '',
     view.orgs?.length ? `orgs ${view.orgs.join(', ')}` : '',
     view.status?.length ? `status ${view.status.join(', ')}` : '',
     view.changes ? `changes ${view.changes}` : '',
@@ -1261,7 +1438,12 @@ function paintBackground(theme: Theme) {
 }
 
 function isOwn(row: Row): boolean {
-  return !!OWN_WORKSPACE && row.workspace?.workspace_id === OWN_WORKSPACE;
+  // Workspace ids are per machine: another machine's `w1` is not this one
+  return (
+    row.machine === 'local' &&
+    !!OWN_WORKSPACE &&
+    row.workspace?.workspace_id === OWN_WORKSPACE
+  );
 }
 
 function fit(text: string, width: number): string {
@@ -1279,10 +1461,21 @@ function names(rows: Row[], max = 6): string {
  */
 function actionsFor(targets: Row[], allRows: Row[]): Action[] {
   const actions: Action[] = [];
-  const stopped = targets.filter((row) => !row.workspace && row.label);
-  const running = targets.filter((row) => row.workspace && !isOwn(row));
+  // A machine that does not answer cannot be acted on
+  const reachable = targets.filter((row) => !row.remote || row.remote.isReachable);
+  const stopped = reachable.filter(
+    (row) => !row.workspace && row.label && row.project
+  );
+  const running = reachable.filter((row) => row.workspace && !isOwn(row));
+  // "Others" never reaches a machine the targets are not on: closing
+  // everything else here must not close what runs somewhere else
+  const machines = targets.map((row) => row.machine);
   const others = allRows.filter(
-    (row) => row.workspace && !isOwn(row) && !targets.includes(row)
+    (row) =>
+      row.workspace &&
+      !isOwn(row) &&
+      !targets.includes(row) &&
+      machines.includes(row.machine)
   );
 
   // Open builds the workspace of each closed target and never moves the
@@ -1530,6 +1723,20 @@ function Dashboard({
   }, [stdout]);
 
   const projectsRef = useRef<Project[]>([]);
+  // The projects of the other saved machines, refreshed on a slower beat
+  const [remoteRows, setRemoteRows] = useState<Row[]>([]);
+  const remoteRef = useRef<Row[]>([]);
+  const isReadingRemote = useRef(false);
+  const refreshRemote = async () => {
+    if (isReadingRemote.current) return;
+    isReadingRemote.current = true;
+    try {
+      remoteRef.current = await readAllMachineRows(remoteRef.current);
+      setRemoteRows(remoteRef.current);
+    } finally {
+      isReadingRemote.current = false;
+    }
+  };
   const themeRef = useRef(initialTheme);
   const ticks = useRef(0);
   themeRef.current = themeName;
@@ -1546,6 +1753,9 @@ function Dashboard({
   };
   const refresh = async () => {
     ticks.current += 1;
+    // Another machine is asked over SSH: every fifth beat, and never awaited,
+    // so a slow or absent machine cannot hold the local table up
+    if (ticks.current % 5 === 1) refreshRemote();
     setHerdr(await readHerdrState());
     await refreshPanes();
     // Branches change under the dashboard, so they are re-read with herdr
@@ -1573,7 +1783,10 @@ function Dashboard({
 
   projectsRef.current = projects;
 
-  const allRows = useMemo(() => buildRows(projects, herdr), [projects, herdr]);
+  const allRows = useMemo(
+    () => [...buildRows(projects, herdr), ...remoteRows],
+    [projects, herdr, remoteRows]
+  );
 
   const rows = useMemo(() => {
     const needle = filter.toLowerCase();
@@ -1628,7 +1841,7 @@ function Dashboard({
 
   const herdrDo = (args: string[]) =>
     isDryRun
-      ? Promise.resolve({ isOk: true, output: '' })
+      ? Promise.resolve({ isOk: true, output: '', stdout: '' })
       : capture('herdr', args);
 
   const startRow = async (
@@ -1636,18 +1849,22 @@ function Dashboard({
     withRoutines: boolean
   ): Promise<string | null> => {
     if (isDryRun) return null;
-    const init = await runSelf(
-      [
-        'herdr',
-        'init',
-        row.label!,
-        '--all',
-        // The dashboard never moves the person to another workspace
-        '--no-focus',
-        ...(withRoutines ? ['--start'] : []),
-      ],
-      row.project!.path
-    );
+    const args = [
+      'herdr',
+      'init',
+      row.label!,
+      '--all',
+      // The dashboard never moves the person to another workspace
+      '--no-focus',
+      ...(withRoutines ? ['--start'] : []),
+    ];
+    // On another machine the same command runs there, in the project's folder
+    const init = row.remote
+      ? await onMachine(
+          row.remote.target,
+          `run -p ${quoted(row.project!.path)} ${args.map(quoted).join(' ')}`
+        )
+      : await runSelf(args, row.project!.path);
     return init.isOk ? null : lastLine(init.output);
   };
 
@@ -1673,11 +1890,13 @@ function Dashboard({
           // The dashboard's own workspace always stays
           if (!row.workspace || isOwn(row)) continue;
           setBusy(`closing ${row.name}...`);
-          const close = await herdrDo([
-            'workspace',
-            'close',
-            row.workspace.workspace_id,
-          ]);
+          const close =
+            row.remote && !isDryRun
+              ? await onMachine(
+                  row.remote.target,
+                  `herdr workspace close ${quoted(row.workspace.workspace_id)}`
+                )
+              : await herdrDo(['workspace', 'close', row.workspace.workspace_id]);
           if (!close.isOk) {
             failures.push(`${row.name}: ${lastLine(close.output)}`);
           }
@@ -1697,6 +1916,7 @@ function Dashboard({
 
     setMarked([]);
     await refresh();
+    if (action.rows.some((row) => row.remote)) await refreshRemote();
     isBusy.current = false;
     setBusy('');
   };
@@ -1720,6 +1940,12 @@ function Dashboard({
       : [];
 
   const showPanes = (row: Row) => {
+    if (row.remote) {
+      setMessage(
+        `${row.name} runs on ${row.machine}: its panes are not listed here yet, switch to it in herdr`
+      );
+      return;
+    }
     setPanes([]);
     setPaneSelected(0);
     setTabOpen(null);
@@ -2241,6 +2467,16 @@ function Dashboard({
     (row) => row.workspace && !row.project
   ).length;
 
+  // The other machines and whether each answers, for the header
+  const machineNote = [...new Set(remoteRows.map((row) => row.machine))]
+    .map((label) => {
+      const isUp = remoteRows.some(
+        (row) => row.machine === label && row.remote?.isReachable
+      );
+      return ` · ${label} ${isUp ? 'online' : 'offline'}`;
+    })
+    .join('');
+
   const info: [string, string][] = [
     ['Root', root],
     [
@@ -2248,8 +2484,8 @@ function Dashboard({
       herdr.isRunning
         ? `running, ${herdr.workspaces.length} workspace${
             herdr.workspaces.length === 1 ? '' : 's'
-          }`
-        : 'not running',
+          }${machineNote}`
+        : `not running${machineNote}`,
     ],
     ['Projects', `${projects.length} (${live} open, ${strays} stray)`],
     // The view in force is always named: `all` is the one that is always there
@@ -2725,7 +2961,12 @@ function Dashboard({
                 {segment.text}
               </Text>
             ))}
-            {' '.repeat(Math.max(width - used, 0))}
+            {/* The filler is given a colour so it is never plain text: Ink drops
+                plain spaces at the end of a line, and on a theme with no
+                background that would leave the previous frame showing */}
+            <Text color={theme.dim}>
+              {' '.repeat(Math.max(width - used, 0))}
+            </Text>
           </Text>
         );
       })}
@@ -2786,9 +3027,10 @@ export default async function projects(program: any) {
             );
             Deno.exit(1);
           }
-          const listed = buildRows(found, herdr).filter(
-            (row) => !view || isInView(row, view)
-          );
+          const listed = [
+            ...buildRows(found, herdr),
+            ...(await readAllMachineRows()),
+          ].filter((row) => !view || isInView(row, view));
 
           if (options.json) {
             // One object per line of the table, with what the table has no
@@ -2796,7 +3038,9 @@ export default async function projects(program: any) {
             const projects = await Promise.all(
               listed.map(async (row) => ({
                 name: row.name,
+                machine: row.machine,
                 status: statusOf(row),
+                label: row.label,
                 path: row.path || null,
                 folder: row.project ? row.folder : null,
                 org: row.project?.org || null,
@@ -2817,7 +3061,7 @@ export default async function projects(program: any) {
                       agents: row.workspace.agents,
                     }
                   : null,
-                ...(options.panes && row.workspace
+                ...(options.panes && row.workspace && !row.remote
                   ? {
                       panes: await readPanes(
                         row.workspace.workspace_id,
