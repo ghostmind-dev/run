@@ -57,6 +57,8 @@ interface HerdrPane {
   description?: string;
   /** Routine this pane usually runs; typed into the pane by `init --start` */
   routine?: string;
+  /** Profiles its routine is part of; see `init --profile` */
+  profiles?: string[];
   size?: string;
   path?: string;
   env?: Record<string, string>;
@@ -187,6 +189,12 @@ let isFocusAllowed = true;
  * Set by `init --only`.
  */
 let startOnly: Set<string> | null = null;
+
+/**
+ * The profile whose routines --start runs; null runs them all.
+ * Set by `init --profile`.
+ */
+let startProfile: string | null = null;
 let isFocusedOnPurpose = false;
 
 /**
@@ -768,10 +776,14 @@ async function createTab(
   // into a pane that is already busy.
   if (start) {
     for (const [paneName, paneId] of paneMap.entries()) {
-      const routine = findPaneInSection(sectionToProcess, paneName)?.routine;
+      const paneConfig = findPaneInSection(sectionToProcess, paneName);
+      const routine = paneConfig?.routine;
       if (!routine) continue;
-      // With --only, the panes left out stay empty shells
+      // With --only or --profile, the panes left out stay empty shells
       if (startOnly && !startOnly.has(`${tabLabel}/${paneName}`)) continue;
+      if (startProfile && !paneConfig?.profiles?.includes(startProfile)) {
+        continue;
+      }
 
       await herdrJson(['pane', 'run', paneId, `run routine ${routine}`]);
       console.log(chalk.gray(`      ▶️  ${paneName}: run routine ${routine}`));
@@ -1092,6 +1104,10 @@ export default async function herdr(program: any) {
       '--only <panes>',
       'with --start: run the routine of these panes only, as tab/pane, comma-separated'
     )
+    .option(
+      '--profile <name>',
+      'with --start: run only the routines of the panes in this profile'
+    )
     .option('--no-focus', 'stay on the current workspace whatever the config says')
     .action(
       async (
@@ -1101,11 +1117,13 @@ export default async function herdr(program: any) {
           reset?: boolean;
           start?: boolean;
           only?: string;
+          profile?: string;
           focus?: boolean;
         }
       ) => {
         try {
           const { all, reset, start } = options;
+          startProfile = options.profile ?? null;
           startOnly = options.only
             ? new Set(options.only.split(',').map((pane) => pane.trim()))
             : null;

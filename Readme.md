@@ -124,7 +124,7 @@ Move between buttons with `tab` or the left and right arrows, press with `enter`
 
 The **target** is the row under the cursor, or every marked row when some are marked.
 
-When an Open builds a workspace whose panes name a routine, the dashboard lists them, all ticked, and asks which to start: `space` ticks or unticks the one under the cursor, `a` ticks or unticks them all, `enter` (or `y`) opens and starts the ticked ones, `n` opens the panes empty.
+When an Open builds a workspace whose panes name a routine, the dashboard lists them, all ticked, and asks which to start: `space` ticks or unticks the one under the cursor, `a` ticks or unticks them all, `enter` (or `y`) opens and starts the ticked ones, `n` opens the panes empty. When panes name profiles, `p` (or the left and right arrows) steps through them, ticking exactly the routines of each one.
 
 ### Keys
 
@@ -284,6 +284,7 @@ One project is one herdr workspace, named by `label`. The project's `meta.json` 
 - **Compact types:** `single` (1 pane), `vertical` and `horizontal` (2), `main-side` (3), `two-by-two` (4).
 - **Folder:** a pane starts in the folder of the `meta.json` that defines its tab.
 - **`routine`:** the routine the pane usually runs. One per pane. It only runs when asked: `--start` on the command line, or `y` in the dashboard.
+- **`profiles`:** on a pane that names a routine: the profiles it is part of, as names without spaces (`["web", "mobile"]`). A profile is a set of routines started together, across the project's apps. Pick one in the Open question, or with `--profile`.
 - **`prefix`:** `false` keeps the tab's label as written; otherwise it is prefixed with the app's name.
 - **`focus`:** on a pane or a tab, it chooses what is active inside the workspace and never moves you there. On the workspace itself, it takes you to it when built from the command line.
 - **`color`:** on the workspace, next to `label`: the project's colour, shown as a small `■` beside it in herdr's sidebar. One of `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple`, `pink`.
@@ -358,6 +359,7 @@ run herdr init <label> [options]    build the workspace; tabs that exist are ski
   --all        build from every meta.json of the project
   --start      type each new pane's routine into it
   --only <panes>  with --start: only these panes, as tab/pane, comma-separated
+  --profile <name>  with --start: only the panes in this profile
   --reset      close the workspace first
   --no-focus   stay on the current workspace whatever the config says
 

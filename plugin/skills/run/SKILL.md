@@ -1,6 +1,6 @@
 ---
 name: run
-description: How the Ghostmind `run` CLI works - the `run projects` dashboard, herdr workspaces, routines and meta.json. Use when the user mentions `run projects`, `run routine`, `run herdr`, the projects dashboard or TUI, opening, starting or closing a project's workspace, or when writing or editing a meta.json (routines, herdr tabs and panes, a pane's routine, a project's colour, tags, groups, type project/app), or wants project colours in herdr's sidebar shown or hidden (`run herdr colors`). Also use when a routine fails, a project is missing from the dashboard, or a workspace shows as a stray.
+description: How the Ghostmind `run` CLI works - the `run projects` dashboard, herdr workspaces, routines and meta.json. Use when the user mentions `run projects`, `run routine`, `run herdr`, the projects dashboard or TUI, opening, starting or closing a project's workspace, or when writing or editing a meta.json (routines, herdr tabs and panes, a pane's routine or profiles, a project's colour, tags, groups, type project/app), or wants project colours in herdr's sidebar shown or hidden (`run herdr colors`). Also use when a routine fails, a project is missing from the dashboard, or a workspace shows as a stray.
 ---
 
 # run
@@ -82,6 +82,10 @@ When an open builds a workspace whose panes name routines, the dashboard lists
 them, all ticked, and asks which to start: `space` ticks or unticks the one
 under the cursor, `a` all of them, `enter` or `y` opens and starts the ticked
 ones, `n` opens the panes empty. The choice is not remembered.
+
+When panes name **profiles**, the question shows them on a line (`all`, each
+profile, `none`): `p` or the left and right arrows step through them, ticking
+exactly the routines of that profile. Ticks can still be changed by hand after.
 
 The usual switch of context: go to the `here` row, **Close others**, then mark
 the projects wanted and **Open**, or `t`, pick the group and `o`; then `enter`.
@@ -247,6 +251,7 @@ project's and each app's) contributes tabs to it.
 - Compact types: `single` (1 pane), `vertical` and `horizontal` (2), `main-side` (3), `two-by-two` (4).
 - A pane starts in the folder of the `meta.json` that defines its tab.
 - `routine` names the routine the pane usually runs. One per pane; it only runs when asked.
+- `profiles` lists the profiles a pane is part of, on a pane that names a `routine`: `"profiles": ["web", "mobile"]`. A profile is a set of routines started together, for one way of working on the project. Names have no spaces. A pane can be in several, and a pane in none only starts under `all` or by hand. Each app's `meta.json` tags its own panes, so a profile spans the project's apps. There is no list of profiles to declare: a profile exists because a pane names it.
 - `"prefix": false` keeps the tab label as written; otherwise it is prefixed with the app's name.
 - `"focus": true` on a pane or a tab chooses what is active inside the workspace; it never moves you there. Only `"focus": true` on the workspace itself does, and only from the command line.
 
@@ -257,6 +262,7 @@ From the command line, in the project's folder:
 | `run herdr init <label> --all` | Builds the workspace from every `meta.json` of the project. Tabs that exist are skipped |
 | `… --start` | Also types `run routine <name>` into each new pane that names one |
 | `… --start --only <tab/pane,...>` | Starts only those panes; the tab is named as herdr shows it, with its app prefix |
+| `… --start --profile <name>` | Starts only the panes whose `profiles` include that name |
 | `… --reset` | Closes the workspace first |
 | `… --no-focus` | Ignores a workspace's `"focus": true`: you stay where you are. The dashboard always passes it |
 | `run herdr terminate <label>` | Closes it |
