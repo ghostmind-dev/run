@@ -190,6 +190,15 @@
           "type": "string",
           "description": "Name of the routine this pane usually runs, from the `routines` of the same meta.json. `run herdr init --start` types `run routine <name>` into the pane; without --start the pane stays an empty shell. One routine per pane: anything else is typed by hand."
         },
+        "profiles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\S+$"
+          },
+          "uniqueItems": true,
+          "description": "Names of the profiles this pane's routine is part of: a profile is a set of routines started together (for example 'web'). A name has no spaces. A pane can be in several profiles. Only meaningful on a pane that names a `routine`. Picked in the dashboard's Open question, or with `run herdr init --start --profile <name>`."
+        },
         "size": {
           "type": "string",
           "pattern": "^[0-9]+%?$",

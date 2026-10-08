@@ -1,6 +1,6 @@
 {
   "name": "@ghostmind/run",
-  "version": "0.15.1",
+  "version": "0.16.0",
   "license": "MIT",
   "description": "A CLI toolkit for Ghostmind projects: a projects dashboard, herdr workspaces, routines, and more",
   "exports": {

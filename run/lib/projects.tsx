@@ -68,6 +68,8 @@ export interface PaneRoutine {
   /** The pane's name, which is its label in herdr */
   pane: string;
   routine: string;
+  /** The profiles the pane is part of: sets of routines started together */
+  profiles: string[];
   /** Folder of the meta.json that defines the routine */
   path: string;
 }
@@ -169,7 +171,13 @@ function paneRoutines(tab: any, tabLabel: string, path: string): PaneRoutine[] {
   const visit = (item: any) => {
     if (!item || typeof item !== 'object') return;
     if (item.name && item.routine) {
-      found.push({ tab: tabLabel, pane: item.name, routine: item.routine, path });
+      found.push({
+        tab: tabLabel,
+        pane: item.name,
+        routine: item.routine,
+        profiles: Array.isArray(item.profiles) ? item.profiles : [],
+        path,
+      });
     }
     for (const child of item.items ?? []) visit(child);
   };
@@ -1715,6 +1723,8 @@ function Dashboard({
   // The open question: the routine under the cursor, and those unticked
   const [askIndex, setAskIndex] = useState(0);
   const [askOff, setAskOff] = useState<string[]>([]);
+  // The profile the ticks were last set from: 'all', 'none' or a name
+  const [askProfile, setAskProfile] = useState('all');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState('');
   const isBusy = useRef(false);
@@ -1960,17 +1970,32 @@ function Dashboard({
   }  `;
 
   // The routines an open would start: those of the closed projects it opens
-  const routinesToStart = (action: Action): { key: string; text: string }[] =>
+  const routinesToStart = (
+    action: Action
+  ): { key: string; text: string; profiles: string[] }[] =>
     action.kind === 'open'
       ? action.rows
           .filter((row) => !row.workspace)
           .flatMap((row) =>
-            (row.project?.routines ?? []).map(({ tab, pane, routine }) => ({
-              key: `${row.key}/${tab}/${pane}`,
-              text: `${row.name}  ${pane}: ${routine}`,
-            }))
+            (row.project?.routines ?? []).map(
+              ({ tab, pane, routine, profiles }) => ({
+                key: `${row.key}/${tab}/${pane}`,
+                text: `${row.name}  ${pane}: ${routine}`,
+                profiles,
+              })
+            )
           )
       : [];
+
+  // What the Open question can tick in one go: everything, each profile the
+  // routines name, nothing
+  const profilesOf = (action: Action): string[] => [
+    'all',
+    ...[
+      ...new Set(routinesToStart(action).flatMap(({ profiles }) => profiles)),
+    ].sort(),
+    'none',
+  ];
 
   const showPanes = (row: Row) => {
     if (row.remote) {
@@ -2078,6 +2103,7 @@ function Dashboard({
       setPending(action);
       setAskIndex(0);
       setAskOff([]);
+      setAskProfile('all');
       setMode('ask');
     } else {
       perform(action);
@@ -2368,7 +2394,25 @@ function Dashboard({
       }
       if (input === 'a') {
         // Tick them all, or untick them all when they all are
+        setAskProfile(askOff.length === 0 ? 'none' : 'all');
         setAskOff((off) => (off.length === 0 ? asked.map(({ key }) => key) : []));
+        return;
+      }
+      if (pending && (input === 'p' || key.rightArrow || key.leftArrow)) {
+        // The next profile (or the previous one): tick exactly its routines
+        const names = profilesOf(pending);
+        const step = key.leftArrow ? names.length - 1 : 1;
+        const next =
+          names[(Math.max(names.indexOf(askProfile), 0) + step) % names.length];
+        setAskProfile(next);
+        setAskOff(
+          asked
+            .filter(
+              ({ profiles }) =>
+                next === 'none' || (next !== 'all' && !profiles.includes(next))
+            )
+            .map(({ key }) => key)
+        );
         return;
       }
       // enter or y starts the ticked routines, n opens without any, anything
@@ -2425,6 +2469,7 @@ function Dashboard({
             setPending(action);
             setAskIndex(0);
             setAskOff([]);
+            setAskProfile('all');
             setMode('ask');
           } else {
             perform(action);
@@ -2700,7 +2745,7 @@ function Dashboard({
   if (mode === 'ask' && pending) {
     const routines = routinesToStart(pending);
     const ticked = routines.filter(({ key }) => !askOff.includes(key)).length;
-    const room = Math.max(bodyRows - 6, 1);
+    const room = Math.max(bodyRows - 7, 1);
     const top = Math.min(
       Math.max(askIndex - Math.floor(room / 2), 0),
       Math.max(routines.length - room, 0)
@@ -2710,6 +2755,31 @@ function Dashboard({
       color: theme.label,
       bold: true,
     });
+    // The profiles, when the routines name any: the one the ticks come from
+    // is marked, until a tick is changed by hand
+    const profileNames = profilesOf(pending);
+    if (profileNames.length > 2) {
+      const expected = routines
+        .filter(
+          ({ profiles }) =>
+            askProfile === 'none' ||
+            (askProfile !== 'all' && !profiles.includes(askProfile))
+        )
+        .map(({ key }) => key);
+      const isExact =
+        expected.length === askOff.length &&
+        expected.every((key) => askOff.includes(key));
+      dialog.push({
+        text:
+          ' Profile: ' +
+          profileNames
+            .map((name) =>
+              name === askProfile && isExact ? `[${name}]` : ` ${name} `
+            )
+            .join(' '),
+        color: theme.title,
+      });
+    }
     dialog.push({ text: '' });
     routines.slice(top, top + room).forEach(({ key, text }, index) => {
       const isAt = top + index === askIndex;
@@ -2726,7 +2796,7 @@ function Dashboard({
     });
     dialog.push({ text: '' });
     dialog.push({
-      text: ' space tick · a all · enter start · n open only · esc cancel',
+      text: ' space tick · p profile · a all · enter start · n open only · esc cancel',
       color: theme.dim,
     });
   } else if (mode === 'confirm' && pending) {
