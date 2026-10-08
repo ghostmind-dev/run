@@ -1712,6 +1712,9 @@ function Dashboard({
   viewingRef.current = viewing;
   const [pickIndex, setPickIndex] = useState(0);
   const [pending, setPending] = useState<Action | null>(null);
+  // The open question: the routine under the cursor, and those unticked
+  const [askIndex, setAskIndex] = useState(0);
+  const [askOff, setAskOff] = useState<string[]>([]);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState('');
   const isBusy = useRef(false);
@@ -1851,9 +1854,10 @@ function Dashboard({
 
   const startRow = async (
     row: Row,
-    withRoutines: boolean
+    only: string[] | null
   ): Promise<string | null> => {
     if (isDryRun) return null;
+    const all = row.project?.routines ?? [];
     const args = [
       'herdr',
       'init',
@@ -1861,7 +1865,11 @@ function Dashboard({
       '--all',
       // The dashboard never moves the person to another workspace
       '--no-focus',
-      ...(withRoutines ? ['--start'] : []),
+      // `only` holds the panes to start, as tab/pane; null starts none
+      ...(only && only.length > 0 ? ['--start'] : []),
+      ...(only && only.length > 0 && only.length < all.length
+        ? ['--only', only.join(',')]
+        : []),
     ];
     // On another machine the same command runs there, in the project's folder
     const init = row.remote
@@ -1873,7 +1881,12 @@ function Dashboard({
     return init.isOk ? null : lastLine(init.output);
   };
 
-  const perform = async (action: Action, withRoutines = false) => {
+  // `skipped` lists the routines not to start, by their key in the question;
+  // null opens without starting any
+  const perform = async (action: Action, skipped: string[] | null = null) => {
+    const withRoutines =
+      skipped !== null &&
+      routinesToStart(action).some(({ key }) => !skipped.includes(key));
     if (isBusy.current) return;
     isBusy.current = true;
     setMessage('');
@@ -1885,7 +1898,17 @@ function Dashboard({
         for (const row of action.rows) {
           if (row.workspace) continue;
           setBusy(`opening ${row.name}...`);
-          const failure = await startRow(row, withRoutines);
+          const failure = await startRow(
+            row,
+            skipped === null
+              ? null
+              : (row.project?.routines ?? [])
+                  .filter(
+                    ({ tab, pane }) =>
+                      !skipped.includes(`${row.key}/${tab}/${pane}`)
+                  )
+                  .map(({ tab, pane }) => `${tab}/${pane}`)
+          );
           if (failure) failures.push(`${row.name}: ${failure}`);
         }
       }
@@ -1909,7 +1932,11 @@ function Dashboard({
       }
 
       const verb = action.kind === 'open' ? 'opened' : 'closed';
-      const started = withRoutines ? ' and started their routines' : '';
+      const started = !withRoutines
+        ? ''
+        : skipped!.length > 0
+          ? ' and started the chosen routines'
+          : ' and started their routines';
       setMessage(
         failures.length > 0
           ? `failed: ${failures.join('; ')}`
@@ -1933,14 +1960,15 @@ function Dashboard({
   }  `;
 
   // The routines an open would start: those of the closed projects it opens
-  const routinesToStart = (action: Action): string[] =>
+  const routinesToStart = (action: Action): { key: string; text: string }[] =>
     action.kind === 'open'
       ? action.rows
           .filter((row) => !row.workspace)
           .flatMap((row) =>
-            (row.project?.routines ?? []).map(
-              ({ pane, routine }) => `${row.name}  ${pane}: ${routine}`
-            )
+            (row.project?.routines ?? []).map(({ tab, pane, routine }) => ({
+              key: `${row.key}/${tab}/${pane}`,
+              text: `${row.name}  ${pane}: ${routine}`,
+            }))
           )
       : [];
 
@@ -2048,6 +2076,8 @@ function Dashboard({
     } else if (routinesToStart(action).length > 0) {
       // Opening builds the panes; whether their routines run is asked
       setPending(action);
+      setAskIndex(0);
+      setAskOff([]);
       setMode('ask');
     } else {
       perform(action);
@@ -2284,9 +2314,34 @@ function Dashboard({
     }
 
     if (mode === 'ask') {
-      // y starts the routines, n opens without them, anything else cancels
-      if (pending && (input === 'y' || input === 'n')) {
-        perform(pending, input === 'y');
+      const asked = pending ? routinesToStart(pending) : [];
+      if (key.downArrow || input === 'j') {
+        setAskIndex((index) => Math.min(index + 1, asked.length - 1));
+        return;
+      }
+      if (key.upArrow || input === 'k') {
+        setAskIndex((index) => Math.max(index - 1, 0));
+        return;
+      }
+      if (input === ' ' && asked[askIndex]) {
+        // Tick or untick the routine under the cursor
+        const { key: at } = asked[askIndex];
+        setAskOff((off) =>
+          off.includes(at) ? off.filter((key) => key !== at) : [...off, at]
+        );
+        return;
+      }
+      if (input === 'a') {
+        // Tick them all, or untick them all when they all are
+        setAskOff((off) => (off.length === 0 ? asked.map(({ key }) => key) : []));
+        return;
+      }
+      // enter or y starts the ticked routines, n opens without any, anything
+      // else cancels
+      if (pending && (key.return || input === 'y')) {
+        perform(pending, askOff);
+      } else if (pending && input === 'n') {
+        perform(pending, null);
       }
       setPending(null);
       setMode('browse');
@@ -2333,6 +2388,8 @@ function Dashboard({
           };
           if (routinesToStart(action).length > 0) {
             setPending(action);
+            setAskIndex(0);
+            setAskOff([]);
             setMode('ask');
           } else {
             perform(action);
@@ -2591,21 +2648,34 @@ function Dashboard({
   const dialog: Segment[] = [];
   if (mode === 'ask' && pending) {
     const routines = routinesToStart(pending);
+    const ticked = routines.filter(({ key }) => !askOff.includes(key)).length;
+    const room = Math.max(bodyRows - 6, 1);
+    const top = Math.min(
+      Math.max(askIndex - Math.floor(room / 2), 0),
+      Math.max(routines.length - room, 0)
+    );
     dialog.push({
-      text: ` Start the routines too? (${routines.length})`,
+      text: ` Start the routines too? (${ticked} of ${routines.length})`,
       color: theme.label,
       bold: true,
     });
     dialog.push({ text: '' });
-    for (const routine of routines.slice(0, 10)) {
-      dialog.push({ text: ` ${routine}`, color: theme.dialogText });
-    }
-    if (routines.length > 10) {
-      dialog.push({ text: ` +${routines.length - 10} more`, color: theme.dim });
-    }
+    routines.slice(top, top + room).forEach(({ key, text }, index) => {
+      const isAt = top + index === askIndex;
+      const isOn = !askOff.includes(key);
+      dialog.push({
+        text: ` ${isOn ? '[x]' : '[ ]'} ${text} `,
+        color: isAt
+          ? theme.selectionText
+          : isOn
+            ? theme.dialogText
+            : theme.dim,
+        background: isAt ? theme.accent : undefined,
+      });
+    });
     dialog.push({ text: '' });
     dialog.push({
-      text: ' y start them · n just open · esc cancel',
+      text: ' space tick · a all · enter start · n open only · esc cancel',
       color: theme.dim,
     });
   } else if (mode === 'confirm' && pending) {
@@ -2798,7 +2868,7 @@ function Dashboard({
     });
   }
   const dialogWidth = Math.min(
-    mode === 'help' || mode === 'view' ? 64 : 44,
+    mode === 'ask' ? 84 : mode === 'help' || mode === 'view' ? 64 : 44,
     inner - 4
   );
   const dialogTop = Math.max(Math.floor((bodyRows - dialog.length - 2) / 2), 0);

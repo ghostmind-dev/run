@@ -79,10 +79,12 @@ directory inside a pane changes nothing.
 - **Close others**: closes every open workspace except the target and `here`, strays included. Asks first.
 
 When an open builds a workspace whose panes name routines, the dashboard lists
-them and asks: `y` starts them, `n` opens the panes empty.
+them, all ticked, and asks which to start: `space` ticks or unticks the one
+under the cursor, `a` all of them, `enter` or `y` opens and starts the ticked
+ones, `n` opens the panes empty. The choice is not remembered.
 
 The usual switch of context: go to the `here` row, **Close others**, then mark
-the projects wanted and **Open**, or `t`, pick the group and `o`; then `y`.
+the projects wanted and **Open**, or `t`, pick the group and `o`; then `enter`.
 
 ### The panes of an open project
 
@@ -254,6 +256,7 @@ From the command line, in the project's folder:
 |---|---|
 | `run herdr init <label> --all` | Builds the workspace from every `meta.json` of the project. Tabs that exist are skipped |
 | `… --start` | Also types `run routine <name>` into each new pane that names one |
+| `… --start --only <tab/pane,...>` | Starts only those panes; the tab is named as herdr shows it, with its app prefix |
 | `… --reset` | Closes the workspace first |
 | `… --no-focus` | Ignores a workspace's `"focus": true`: you stay where you are. The dashboard always passes it |
 | `run herdr terminate <label>` | Closes it |

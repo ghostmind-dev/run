@@ -181,6 +181,12 @@ async function focusedWorkspaceId(): Promise<string | null> {
 // A workspace's own `focus: true` is the only thing that may move the person
 // to another workspace, and `init --no-focus` switches even that off.
 let isFocusAllowed = true;
+
+/**
+ * The panes whose routine --start runs, as `tab/pane`; null runs them all.
+ * Set by `init --only`.
+ */
+let startOnly: Set<string> | null = null;
 let isFocusedOnPurpose = false;
 
 /**
@@ -764,6 +770,8 @@ async function createTab(
     for (const [paneName, paneId] of paneMap.entries()) {
       const routine = findPaneInSection(sectionToProcess, paneName)?.routine;
       if (!routine) continue;
+      // With --only, the panes left out stay empty shells
+      if (startOnly && !startOnly.has(`${tabLabel}/${paneName}`)) continue;
 
       await herdrJson(['pane', 'run', paneId, `run routine ${routine}`]);
       console.log(chalk.gray(`      ▶️  ${paneName}: run routine ${routine}`));
@@ -1080,6 +1088,10 @@ export default async function herdr(program: any) {
     .option('--all', 'process all herdr configurations found in the project')
     .option('--reset', 'close and rebuild the workspace if it exists')
     .option('--start', 'run each new pane\'s routine once it is built')
+    .option(
+      '--only <panes>',
+      'with --start: run the routine of these panes only, as tab/pane, comma-separated'
+    )
     .option('--no-focus', 'stay on the current workspace whatever the config says')
     .action(
       async (
@@ -1088,11 +1100,15 @@ export default async function herdr(program: any) {
           all?: boolean;
           reset?: boolean;
           start?: boolean;
+          only?: string;
           focus?: boolean;
         }
       ) => {
         try {
           const { all, reset, start } = options;
+          startOnly = options.only
+            ? new Set(options.only.split(',').map((pane) => pane.trim()))
+            : null;
 
           // Focusing a pane or a tab of the new workspace makes herdr switch
           // to that workspace. That is a side effect, not a request: note
