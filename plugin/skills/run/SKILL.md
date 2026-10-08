@@ -1,6 +1,6 @@
 ---
 name: run
-description: How the Ghostmind `run` CLI works - the `run projects` dashboard, herdr workspaces, routines and meta.json. Use when the user mentions `run projects`, `run routine`, `run herdr`, the projects dashboard or TUI, opening, starting or closing a project's workspace, or when writing or editing a meta.json (routines, herdr tabs and panes, a pane's routine, tags, groups, type project/app). Also use when a routine fails, a project is missing from the dashboard, or a workspace shows as a stray.
+description: How the Ghostmind `run` CLI works - the `run projects` dashboard, herdr workspaces, routines and meta.json. Use when the user mentions `run projects`, `run routine`, `run herdr`, the projects dashboard or TUI, opening, starting or closing a project's workspace, or when writing or editing a meta.json (routines, herdr tabs and panes, a pane's routine, a project's colour, tags, groups, type project/app), or wants project colours in herdr's sidebar shown or hidden (`run herdr colors`). Also use when a routine fails, a project is missing from the dashboard, or a workspace shows as a stray.
 ---
 
 # run
@@ -258,6 +258,17 @@ From the command line, in the project's folder:
 | `… --no-focus` | Ignores a workspace's `"focus": true`: you stay where you are. The dashboard always passes it |
 | `run herdr terminate <label>` | Closes it |
 | `run herdr list` | Lists open workspaces |
+| `run herdr colors [on\|off]` | Shows or hides every project's colour in herdr's sidebar. **With no argument it toggles**, so pass `on` or `off` unless a toggle is what was asked |
+
+### Project colours
+
+A project can have a colour: a small `■` beside its workspace in herdr's sidebar.
+
+- **Set it** with `"color"` on the workspace in the project's own `meta.json`, next to `label`: `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple` or `pink`. Any other value is ignored.
+- **Switch all of them** with `run herdr colors on` or `run herdr colors off`. The choice is kept (`colors` in `~/.config/run/projects.json`) and applies at once to every open workspace; a workspace built later follows it. `on` prints how many open workspaces were marked.
+- **There is no command to read the state**: `run herdr colors` alone changes it. Read `colors` in `~/.config/run/projects.json` instead (absent means on).
+- **How it reaches herdr:** `run` reports one token per workspace through herdr's API (`herdr workspace report-metadata <id> --source run --token color_<name>=■`, and `--clear-token color_<name>` for the others). herdr only paints a token its own config names, so `~/.config/herdr/config.toml` must list the `$color_*` tokens with their colours under `[ui.sidebar.spaces]`; after editing it, `herdr server reload-config`.
+- **A colour does not show**: colours are off, the value is not one of the eight, the workspace's label matches no project, or herdr's config lacks that `$color_*` token.
 
 ## Traps
 
