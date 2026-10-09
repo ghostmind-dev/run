@@ -140,7 +140,7 @@ and herdr shows the workspace in its sidebar under that machine.
 - **How it acts:** Open runs `run herdr init` there; Close runs `herdr workspace close` there. **Close others** only closes workspaces on the machines its targets are on.
 - **When a machine does not answer:** its rows stay, dimmed, with status `offline`, and nothing can be done to them. The header says which machines are online.
 - **The same project on two machines** is two rows: each has its own branch and changes.
-- **Not available for another machine yet:** the pane view (`p`). Switch to the workspace in herdr.
+- **The pane view (`p`) works for another machine too:** its panes are read and its routines started through `herdr --machine <label>`, and `--json --panes` includes them. It refreshes a little slower than a local one.
 - Setting `RUN_NO_MACHINES=1` lists this machine only.
 
 ## Views: saved filters
