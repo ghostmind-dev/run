@@ -174,7 +174,7 @@ Each of its projects then appears with `workbox` in the MACHINE column. Opening 
 - **How it works:** this machine runs `run projects --json` there over SSH about every 10 seconds, and sends Open and Close as commands to run there.
 - **When it does not answer:** its rows stay, dimmed, with status `offline`, and cannot be acted on. The header shows which machines are online.
 - **Close others** never closes a workspace on a machine its targets are not on.
-- The pane view (`p`) is not available for another machine yet.
+- **The pane view (`p`) works there too:** it lists the panes of a project on another machine and starts their routines, through `herdr --machine`. It refreshes a little slower than a local one.
 
 ## Views
 

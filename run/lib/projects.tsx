@@ -474,6 +474,14 @@ async function capture(
 }
 
 /**
+ * Run a herdr command against this machine's server, or a saved machine's
+ * (`herdr --machine <label>`), so a pane there is reached like one here
+ */
+function herdrOn(machine: string | null, args: string[]) {
+  return capture('herdr', machine ? ['--machine', machine, ...args] : args);
+}
+
+/**
  * Read the state of the herdr server
  *
  * @returns Whether the server answers, and its open workspaces
@@ -522,12 +530,14 @@ export async function readHerdrState(): Promise<HerdrState> {
  * @param workspaceId - The herdr workspace
  * @param routines - The routines the project's panes name
  * @param sources - Where each tab of the project's workspace is defined
+ * @param machine - The saved machine the workspace is on; null for this one
  * @returns One entry per pane, in herdr's order
  */
 export async function readPanes(
   workspaceId: string,
   routines: PaneRoutine[],
-  sources: TabSource[] = []
+  sources: TabSource[] = [],
+  machine: string | null = null
 ): Promise<PaneState[]> {
   const parse = (output: string) => {
     try {
@@ -538,8 +548,8 @@ export async function readPanes(
   };
 
   const [tabList, paneList] = await Promise.all([
-    capture('herdr', ['tab', 'list', '--workspace', workspaceId]),
-    capture('herdr', ['pane', 'list', '--workspace', workspaceId]),
+    herdrOn(machine, ['tab', 'list', '--workspace', workspaceId]),
+    herdrOn(machine, ['pane', 'list', '--workspace', workspaceId]),
   ]);
   const tabs: any[] = parse(tabList.output).tabs ?? [];
   const panes: any[] = parse(paneList.output).panes ?? [];
@@ -553,7 +563,7 @@ export async function readPanes(
       const info =
         parse(
           (
-            await capture('herdr', [
+            await herdrOn(machine, [
               'pane',
               'process-info',
               '--pane',
@@ -1759,15 +1769,24 @@ function Dashboard({
   const ticks = useRef(0);
   themeRef.current = themeName;
   const rescan = async () => setProjects(await discoverProjects(root));
+  const isReadingPanes = useRef(false);
   const refreshPanes = async (row: Row | null = viewingRef.current) => {
     if (!row?.workspace) return;
-    setPanes(
-      await readPanes(
+    // Another machine answers slower than the beat: one read at a time
+    if (row.remote && isReadingPanes.current) return;
+    isReadingPanes.current = true;
+    try {
+      const read = await readPanes(
         row.workspace.workspace_id,
         row.project?.routines ?? [],
-        row.project?.tabs ?? []
-      )
-    );
+        row.project?.tabs ?? [],
+        row.remote ? row.machine : null
+      );
+      // The answer of a project the person has already left is dropped
+      if (viewingRef.current?.key === row.key) setPanes(read);
+    } finally {
+      isReadingPanes.current = false;
+    }
   };
   const refresh = async () => {
     ticks.current += 1;
@@ -1775,7 +1794,9 @@ function Dashboard({
     // so a slow or absent machine cannot hold the local table up
     if (ticks.current % 5 === 1) refreshRemote();
     setHerdr(await readHerdrState());
-    await refreshPanes();
+    // A remote pane view is refreshed on the side, like the remote rows
+    if (viewingRef.current?.remote) refreshPanes();
+    else await refreshPanes();
     // Branches change under the dashboard, so they are re-read with herdr
     setProjects(
       await Promise.all(
@@ -1998,20 +2019,20 @@ function Dashboard({
   ];
 
   const showPanes = (row: Row) => {
-    if (row.remote) {
-      setMessage(
-        `${row.name} runs on ${row.machine}: its panes are not listed here yet, switch to it in herdr`
-      );
-      return;
-    }
     setPanes([]);
     setPaneSelected(0);
     setTabOpen(null);
     setIsFlat(readSettings().panes === 'flat');
     setViewing(row);
+    // refreshPanes compares against the ref, which the render has not set yet
+    viewingRef.current = row;
     setMessage('');
     refreshPanes(row);
   };
+
+  // The machine the panes on screen are on; null for this one
+  const paneMachine = () =>
+    viewingRef.current?.remote ? viewingRef.current.machine : null;
 
   // Types a pane's routine into it. Only an idle shell is typed into.
   const startPanes = async (wanted: PaneState[]) => {
@@ -2036,7 +2057,9 @@ function Dashboard({
         pane.cwd === path
           ? `run routine ${routine}`
           : `run -p ${path} routine ${routine}`;
-      if (!isDryRun) await capture('herdr', ['pane', 'run', pane.paneId, command]);
+      if (!isDryRun) {
+        await herdrOn(paneMachine(), ['pane', 'run', pane.paneId, command]);
+      }
     }
 
     setMessage(
@@ -2058,7 +2081,9 @@ function Dashboard({
       pane.cwd === path
         ? `run routine ${routine}`
         : `run -p ${path} routine ${routine}`;
-    if (!isDryRun) await capture('herdr', ['pane', 'run', pane.paneId, command]);
+    if (!isDryRun) {
+      await herdrOn(paneMachine(), ['pane', 'run', pane.paneId, command]);
+    }
     setMessage(`${isDryRun ? 'dry run: ' : ''}started ${pane.name}: ${routine}`);
     await refreshPanes();
   };
@@ -3257,12 +3282,13 @@ export default async function projects(program: any) {
                       agents: row.workspace.agents,
                     }
                   : null,
-                ...(options.panes && row.workspace && !row.remote
+                ...(options.panes && row.workspace
                   ? {
                       panes: await readPanes(
                         row.workspace.workspace_id,
                         row.project?.routines ?? [],
-                        row.project?.tabs ?? []
+                        row.project?.tabs ?? [],
+                        row.remote ? row.machine : null
                       ),
                     }
                   : {}),
