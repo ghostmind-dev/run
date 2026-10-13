@@ -1258,9 +1258,11 @@ export interface ProjectView {
   status?: string[];
   /**
    * Its git state: `pending` when it has uncommitted files or commits to push
-   * or pull, `clean` when it has none. A folder with no repository is neither.
+   * or pull, `uncommitted` when it has uncommitted files (commits waiting to
+   * be pushed or pulled do not count), `clean` when it has none of these. A
+   * folder with no repository is none of them.
    */
-  changes?: 'pending' | 'clean';
+  changes?: 'pending' | 'uncommitted' | 'clean';
 }
 
 interface Settings {
@@ -1299,6 +1301,8 @@ function isInView(row: Row, view: ProjectView): boolean {
     (!view.changes ||
       (view.changes === 'clean'
         ? row.changes === 'clean'
+        : view.changes === 'uncommitted'
+        ? /^\d/.test(row.changes)
         : !['clean', '-', ''].includes(row.changes)))
   );
 }

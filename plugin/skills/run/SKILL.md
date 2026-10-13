@@ -159,6 +159,7 @@ applies and deletes them but does not create them.
     "learning": { "folders": ["library"] },
     "work": { "folders": ["ghostmind"], "openOnly": true },
     "todo": { "changes": "pending" },
+    "uncommitted": { "changes": "uncommitted" },
     "apps": { "orgs": ["ghostmind-app"] },
     "unpublished": { "orgs": ["none"] },
     "closed": { "status": ["closed"] }
@@ -175,7 +176,7 @@ applies and deletes them but does not create them.
 | `machines` | it is on one of these machines: `local`, or a saved machine's label (the MACHINE column) |
 | `orgs` | its repository is pushed to one of these organizations or users (the ORG column); `none` takes the projects with no remote |
 | `openOnly` | it has a workspace open in herdr |
-| `changes` | `"pending"`: it has uncommitted files or commits to push or pull. `"clean"`: it has none. A folder with no repository passes neither |
+| `changes` | `"pending"`: it has uncommitted files or commits to push or pull. `"uncommitted"`: it has uncommitted files; commits waiting to be pushed or pulled do not count. `"clean"`: it has none of these. A folder with no repository passes neither |
 | `status` | its STATUS is one of these: `open` (which also takes `focused` and `here`), `closed`, `no herdr`, `stray` |
 
 A project is listed when it passes every rule the view gives; a rule left out
