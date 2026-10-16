@@ -450,7 +450,7 @@ export async function readChanges(path: string): Promise<string> {
 /**
  * Run a command without letting it draw over the dashboard
  */
-async function capture(
+export async function capture(
   command: string,
   args: string[],
   cwd?: string
@@ -603,7 +603,10 @@ export async function readPanes(
 /**
  * Run a `run` subcommand with this same CLI, from a project's folder
  */
-function runSelf(args: string[], cwd: string) {
+export function runSelf(
+  args: string[],
+  cwd: string
+): Promise<{ isOk: boolean; output: string; stdout: string }> {
   const entry = new URL('../bin/cmd.ts', import.meta.url).href;
   return capture(Deno.execPath(), ['run', '-A', entry, ...args], cwd);
 }

@@ -63,6 +63,7 @@ program.version(
 import commandHerdr from '../lib/herdr.ts';
 import commandProjects from '../lib/projects.tsx';
 import commandRoutine from '../lib/routine.ts';
+import commandStart from '../lib/start.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
@@ -121,6 +122,7 @@ function deprecationWarning(what: string) {
 await commandHerdr(program);
 await commandProjects(program);
 await commandRoutine(program);
+await commandStart(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // PROGRAM EXIT

@@ -355,6 +355,12 @@ run projects [options]
 ```
 
 ```
+run project start [profile] [--dry-run]   start the routines of the current folder's project: one profile, or all;
+                                          opens the tabs it lacks, types only into idle panes (what runs is left alone)
+run project status                        what each routine pane of the current folder's project is running
+```
+
+```
 run herdr init <label> [options]    build the workspace; tabs that exist are skipped
 
   --all        build from every meta.json of the project

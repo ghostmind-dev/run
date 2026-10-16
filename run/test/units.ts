@@ -1,6 +1,7 @@
 import { assertEquals } from 'jsr:@std/assert';
 import { join } from 'node:path';
 import { discoverProjects } from '../lib/projects.tsx';
+import { planStart, profilesOf } from '../lib/start.ts';
 
 async function writeMeta(folder: string, meta: Record<string, unknown>) {
   await Deno.mkdir(folder, { recursive: true });
@@ -101,4 +102,40 @@ Deno.test('discoverProjects lists project roots and counts their apps', async ()
   } finally {
     await Deno.remove(root, { recursive: true });
   }
+});
+
+Deno.test('planStart leaves a busy pane alone and starts the idle ones of the profile', () => {
+  const routine = (pane: string, profiles: string[]) => ({
+    tab: 'app-dev',
+    pane,
+    routine: 'dev',
+    profiles,
+    path: '/p/app',
+  });
+  const pane = (name: string, isIdle: boolean) => ({
+    paneId: name,
+    tab: 'app-dev',
+    name,
+    cwd: '/p/app',
+    routine: null,
+    source: null,
+    isIdle,
+    isAgent: false,
+    running: isIdle ? '' : 'deno task dev',
+  });
+  const routines = [
+    routine('db', ['mcp', 'ios']),
+    routine('mcp', ['mcp']),
+    routine('ios', ['ios']),
+    routine('console', ['ios']),
+  ];
+  const panes = [pane('db', false), pane('mcp', false), pane('ios', true)];
+
+  const plan = planStart(routines, panes, 'ios');
+  assertEquals(plan.start.map(({ routine }) => routine.pane), ['ios']);
+  assertEquals(plan.busy.map(({ routine }) => routine.pane), ['db']);
+  assertEquals(plan.missing.map(({ pane }) => pane), ['console']);
+
+  assertEquals(planStart(routines, panes, null).busy.length, 2);
+  assertEquals(profilesOf(routines), ['mcp', 'ios']);
 });
