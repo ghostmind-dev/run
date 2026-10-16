@@ -1,25 +1,120 @@
-name: Test module installation
+# Publish run when a merge to main raises its version: to JSR (@ghostmind/run, the program) and then to
+# npm (@ghostmind-dev/run, a launcher that runs the JSR release of the same version). Each registry is
+# skipped when it already has the version, so a re-run only publishes what is missing.
+#
+# No token is stored anywhere: both registries trust this workflow through OIDC. One-time setup for npm,
+# by the package owner (needs your npm login and 2FA), and again whenever the repo moves or is renamed:
+#
+#   npm trust github @ghostmind-dev/run --file publish.yaml --repo ghostmind-dev/run --allow-publish
+#
+# deno.json and npm/package.json carry the same version; the run fails before publishing anything if
+# they differ. To retry the same commit, use "Re-run jobs", or Actions → Publish → Run workflow.
+name: Publish
+
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write # the version tag and the GitHub release
+  id-token: write # JSR and npm trusted publishing, npm provenance
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
 jobs:
-  publish:
+  jsr:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write # The OIDC ID token is used for authentication with JSR.
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      published: ${{ steps.version.outputs.published }}
     steps:
-      - name: 'Check out repository'
-        uses: actions/checkout@v3
-      - uses: denoland/setup-deno@v1
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: |
-          deno install --allow-all --force --name run ./run/bin/cmd.ts
-          echo "$HOME/.deno/bin" >> $GITHUB_PATH
-          $HOME/.deno/bin/run
-        if: ${{ github.event.inputs.LOCAL }}
-      - run: deno publish --allow-dirty
-        if: ${{ !github.event.inputs.LOCAL }}
+
+      - name: Same version on JSR and npm?
+        id: version
+        run: |
+          version=$(jq -r .version deno.json)
+          npm_version=$(jq -r .version npm/package.json)
+          if [ "$version" != "$npm_version" ]; then
+            echo "deno.json is $version but npm/package.json is $npm_version: bump both." >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if curl -sf https://jsr.io/@ghostmind/run/meta.json | jq -e --arg v "$version" '.versions[$v]' >/dev/null; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "@ghostmind/run@$version is already on JSR."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            echo "@ghostmind/run@$version is new: publishing."
+          fi
+
+      - name: Test
+        if: steps.version.outputs.published == 'false'
+        run: deno test --allow-all run/test/units.ts
+
+      - name: Publish to JSR
+        if: steps.version.outputs.published == 'false'
+        run: deno publish --allow-dirty
+
+  npm:
+    needs: jsr
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: npm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24 # its npm supports trusted publishing
+          registry-url: https://registry.npmjs.org
+
+      - name: Is this version already on npm?
+        id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "@ghostmind-dev/run@$version" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "@ghostmind-dev/run@$version is already on npm: nothing to publish."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            echo "@ghostmind-dev/run@$version is new: publishing."
+          fi
+
+      - uses: denoland/setup-deno@v2
+        if: steps.version.outputs.published == 'false'
+        with:
+          deno-version: v2.x
+
+      - name: The launcher starts the JSR release
+        if: steps.version.outputs.published == 'false'
+        run: |
+          expected="@ghostmind/run v${{ needs.jsr.outputs.version }}"
+          # JSR can take a moment to serve a version it just accepted
+          for attempt in 1 2 3 4 5 6; do
+            got=$(cd "$RUNNER_TEMP" && node "$GITHUB_WORKSPACE/npm/bin/run.mjs" --version || true)
+            [ "$got" = "$expected" ] && echo "$got" && exit 0
+            sleep 10
+          done
+          echo "expected '$expected', got '$got'" >&2
+          exit 1
+
+      - name: Publish to npm
+        if: steps.version.outputs.published == 'false'
+        run: npm publish --access public --provenance # trusted publishing: no token
+
+      - name: Tag and release
+        if: needs.jsr.outputs.published == 'false' || steps.version.outputs.published == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v${{ needs.jsr.outputs.version }}"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --generate-notes

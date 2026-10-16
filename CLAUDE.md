@@ -13,3 +13,10 @@ This folder has two jobs.
 - A project's own work continues in its own space. Open it with `run herdr init <project> --all`, and hand over through the agent channel (`toolkits:agent-channel-write`) so the session there has the context.
 - A feature idea for another project goes in that project's own notes (its `README.md` "next" section or equivalent), not here.
 - Ask before changing shared infrastructure; prod changes go through a merge to `main` in the project's repo.
+
+## Releasing run
+
+A version goes out when it reaches `main` (PR from `dev`): `.github/workflows/publish.yaml` publishes it to
+JSR as `@ghostmind/run`, then to npm as `@ghostmind-dev/run`, a launcher in `npm/` that runs the JSR release
+of the same version. Bump the version in `deno.json`, `npm/package.json` and
+`plugin/.claude-plugin/plugin.json` together; the workflow refuses to publish when the first two differ.

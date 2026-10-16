@@ -31,6 +31,12 @@ Everything `run` knows comes from a `meta.json` file in each project.
 deno install --allow-all --global --name run jsr:@ghostmind/run/cmd
 ```
 
+Or from npm, which installs a `run` launcher for the JSR release of the same version (it still needs Deno):
+
+```bash
+npm install --global @ghostmind-dev/run
+```
+
 Tell `run` where your projects are, in your shell profile:
 
 ```bash
