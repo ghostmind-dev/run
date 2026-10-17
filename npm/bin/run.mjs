@@ -17,10 +17,12 @@ const entry = `jsr:@ghostmind/run@${version}/cmd`;
 // Recent Deno refuses a package published in the last 24 hours. This launcher
 // asks for one exact release of run (whose own dependencies are pinned), so it
 // lets that release through as soon as it is out; older Deno has no such flag.
-const help = spawnSync(deno, ['run', '--help'], { encoding: 'utf8' });
-const ageFlag = help.stdout?.includes('--minimum-dependency-age')
-  ? ['--minimum-dependency-age=0']
-  : [];
+// (Deno 2.9.7 accepts the flag without listing it, so ask whether it is accepted.)
+const ageFlag =
+  spawnSync(deno, ['run', '--minimum-dependency-age=0', '--help'], { stdio: 'ignore' })
+    .status === 0
+    ? ['--minimum-dependency-age=0']
+    : [];
 
 const child = spawn(deno, ['run', '--quiet', '--allow-all', ...ageFlag, entry, ...process.argv.slice(2)], {
   stdio: 'inherit',
