@@ -272,6 +272,8 @@ From the command line, in the project's folder:
 | `run herdr list` | Lists open workspaces |
 | `run herdr colors [on\|off]` | Shows or hides every project's colour in herdr's sidebar. **With no argument it toggles**, so pass `on` or `off` unless a toggle is what was asked |
 
+To close every workspace and rebuild only some (after a restart of the Mac, or "close everything and give me X"), use the `reset` skill (`/run:reset`), not `--reset` one workspace at a time.
+
 ### Starting later, without restarting
 
 `run project` acts on the project of the current folder (`run projects` is all of

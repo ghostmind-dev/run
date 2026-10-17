@@ -398,7 +398,13 @@ run routine [name...]               run routines of the current folder
 
 ## Claude skill
 
-The repository ships a Claude plugin whose skill teaches an agent the dashboard, views, routines, herdr workspaces and `meta.json`:
+The repository ships a Claude plugin with two skills:
+
+- **`run`** teaches an agent the dashboard, views, routines, herdr workspaces and `meta.json`.
+- **`reset`** (`/run:reset`) starts herdr again from nothing: it closes every workspace, keeps or builds the
+  `run` hub, then builds only the projects asked for, with nothing started, one profile (`relay:mobile`) or
+  every routine (`relay:all`). Use it after a restart of the Mac, when the workspaces no longer know their
+  project.
 
 ```
 /plugin install run --marketplace ghostmind-dev/run
