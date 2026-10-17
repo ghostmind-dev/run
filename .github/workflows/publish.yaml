@@ -98,9 +98,10 @@ jobs:
         if: steps.version.outputs.published == 'false'
         run: |
           expected="@ghostmind/run v${{ needs.jsr.outputs.version }}"
-          # JSR can take a moment to serve a version it just accepted
-          for attempt in 1 2 3 4 5 6; do
-            got=$(cd "$RUNNER_TEMP" && node "$GITHUB_WORKSPACE/npm/bin/run.mjs" --version || true)
+          # JSR can take a few minutes to serve a version it just accepted, and Deno caches the version
+          # list it got, so each attempt starts from an empty cache
+          for attempt in $(seq 30); do
+            got=$(cd "$RUNNER_TEMP" && DENO_DIR=$(mktemp -d) node "$GITHUB_WORKSPACE/npm/bin/run.mjs" --version || true)
             [ "$got" = "$expected" ] && echo "$got" && exit 0
             sleep 10
           done
