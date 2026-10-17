@@ -5,13 +5,15 @@ description: How the Ghostmind `run` CLI works - the `run projects` dashboard, h
 
 # run
 
-`run` is the command that operates Ghostmind projects on the Mac. It has three
+`run` is the command that operates Ghostmind projects on the Mac. It has four
 commands and everything it knows comes from each folder's `meta.json`.
 
 | Command | What it does |
 |---|---|
 | `run projects` | The dashboard: every project, its herdr workspace, its git state. Where almost all the work happens |
 | `run routine <name>` | Runs an entry of the folder's `routines` |
+| `run project start [profile]` | Starts the routines of the current folder's project: one profile, or all. What already runs is left alone |
+| `run project status` | What each routine pane of the current folder's project is running |
 | `run herdr …` | Builds and closes herdr workspaces from the command line |
 
 `run --version` prints the version. `run -p <folder> <command>` runs a command
@@ -140,7 +142,7 @@ and herdr shows the workspace in its sidebar under that machine.
 - **How it acts:** Open runs `run herdr init` there; Close runs `herdr workspace close` there. **Close others** only closes workspaces on the machines its targets are on.
 - **When a machine does not answer:** its rows stay, dimmed, with status `offline`, and nothing can be done to them. The header says which machines are online.
 - **The same project on two machines** is two rows: each has its own branch and changes.
-- **Not available for another machine yet:** the pane view (`p`). Switch to the workspace in herdr.
+- **The pane view (`p`) works for another machine too:** its panes are read and its routines started through `herdr --machine <label>`, and `--json --panes` includes them. It refreshes a little slower than a local one.
 - Setting `RUN_NO_MACHINES=1` lists this machine only.
 
 ## Views: saved filters
@@ -159,6 +161,7 @@ applies and deletes them but does not create them.
     "learning": { "folders": ["library"] },
     "work": { "folders": ["ghostmind"], "openOnly": true },
     "todo": { "changes": "pending" },
+    "uncommitted": { "changes": "uncommitted" },
     "apps": { "orgs": ["ghostmind-app"] },
     "unpublished": { "orgs": ["none"] },
     "closed": { "status": ["closed"] }
@@ -175,7 +178,7 @@ applies and deletes them but does not create them.
 | `machines` | it is on one of these machines: `local`, or a saved machine's label (the MACHINE column) |
 | `orgs` | its repository is pushed to one of these organizations or users (the ORG column); `none` takes the projects with no remote |
 | `openOnly` | it has a workspace open in herdr |
-| `changes` | `"pending"`: it has uncommitted files or commits to push or pull. `"clean"`: it has none. A folder with no repository passes neither |
+| `changes` | `"pending"`: it has uncommitted files or commits to push or pull. `"uncommitted"`: it has uncommitted files; commits waiting to be pushed or pulled do not count. `"clean"`: it has none of these. A folder with no repository passes neither |
 | `status` | its STATUS is one of these: `open` (which also takes `focused` and `here`), `closed`, `no herdr`, `stray` |
 
 A project is listed when it passes every rule the view gives; a rule left out
@@ -268,6 +271,24 @@ From the command line, in the project's folder:
 | `run herdr terminate <label>` | Closes it |
 | `run herdr list` | Lists open workspaces |
 | `run herdr colors [on\|off]` | Shows or hides every project's colour in herdr's sidebar. **With no argument it toggles**, so pass `on` or `off` unless a toggle is what was asked |
+
+To close every workspace and rebuild only some (after a restart of the Mac, or "close everything and give me X"), use the `reset` skill (`/run:reset`), not `--reset` one workspace at a time.
+
+### Starting later, without restarting
+
+`run project` acts on the project of the current folder (`run projects` is all of
+them). A workspace opened empty can be started afterwards, and a second profile added
+to a first, from anywhere inside the project:
+
+| Command | Effect |
+|---|---|
+| `run project start <profile>` | Opens the workspace or adds the tabs it lacks (like `init --all --no-focus`), then types each routine of that profile into its pane, **only if the pane is idle**. A pane already running something (a database two profiles share) is left as it is |
+| `run project start` | The same for every routine |
+| `… --dry-run` | Says what would start, types nothing |
+| `run project status` | Each pane that names a routine: running (and what), idle, or not open, with its profiles |
+
+`init --start` only starts panes of the tabs it creates; `run project start` is the one
+that works on a workspace already open.
 
 ### Project colours
 

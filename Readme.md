@@ -31,6 +31,12 @@ Everything `run` knows comes from a `meta.json` file in each project.
 deno install --allow-all --global --name run jsr:@ghostmind/run/cmd
 ```
 
+Or from npm, which installs a `run` launcher for the JSR release of the same version (it still needs Deno):
+
+```bash
+npm install --global @ghostmind-dev/run
+```
+
 Tell `run` where your projects are, in your shell profile:
 
 ```bash
@@ -174,7 +180,7 @@ Each of its projects then appears with `workbox` in the MACHINE column. Opening 
 - **How it works:** this machine runs `run projects --json` there over SSH about every 10 seconds, and sends Open and Close as commands to run there.
 - **When it does not answer:** its rows stay, dimmed, with status `offline`, and cannot be acted on. The header shows which machines are online.
 - **Close others** never closes a workspace on a machine its targets are not on.
-- The pane view (`p`) is not available for another machine yet.
+- **The pane view (`p`) works there too:** it lists the panes of a project on another machine and starts their routines, through `herdr --machine`. It refreshes a little slower than a local one.
 
 ## Views
 
@@ -190,6 +196,7 @@ Views are written in the settings file, `~/.config/run/projects.json`. The dashb
     "learning": { "folders": ["library"] },
     "work": { "folders": ["ghostmind"], "openOnly": true },
     "todo": { "changes": "pending" },
+    "uncommitted": { "changes": "uncommitted" },
     "apps": { "orgs": ["ghostmind-app"] },
     "unpublished": { "orgs": ["none"] },
     "closed": { "status": ["closed"] }
@@ -206,7 +213,7 @@ Views are written in the settings file, `~/.config/run/projects.json`. The dashb
 | `machines` | It is on one of these machines: `local`, or a saved machine's label |
 | `orgs` | Its repository is pushed to one of these organizations or users. `none` takes the projects with no remote |
 | `openOnly` | It has a workspace open in herdr |
-| `changes` | `"pending"`: it has uncommitted files or commits to push or pull. `"clean"`: it has none. A folder with no repository passes neither |
+| `changes` | `"pending"`: it has uncommitted files or commits to push or pull. `"uncommitted"`: it has uncommitted files; commits waiting to be pushed or pulled do not count. `"clean"`: it has none of these. A folder with no repository passes neither |
 | `status` | Its STATUS is one of these: `open` (which also takes `focused` and `here`), `closed`, `no herdr`, `stray` |
 
 A project is listed when it passes every rule the view gives. A rule left out lets everything through.
@@ -354,6 +361,12 @@ run projects [options]
 ```
 
 ```
+run project start [profile] [--dry-run]   start the routines of the current folder's project: one profile, or all;
+                                          opens the tabs it lacks, types only into idle panes (what runs is left alone)
+run project status                        what each routine pane of the current folder's project is running
+```
+
+```
 run herdr init <label> [options]    build the workspace; tabs that exist are skipped
 
   --all        build from every meta.json of the project
@@ -385,7 +398,13 @@ run routine [name...]               run routines of the current folder
 
 ## Claude skill
 
-The repository ships a Claude plugin whose skill teaches an agent the dashboard, views, routines, herdr workspaces and `meta.json`:
+The repository ships a Claude plugin with two skills:
+
+- **`run`** teaches an agent the dashboard, views, routines, herdr workspaces and `meta.json`.
+- **`reset`** (`/run:reset`) starts herdr again from nothing: it closes every workspace, keeps or builds the
+  `run` hub, then builds only the projects asked for, with nothing started, one profile (`relay:mobile`) or
+  every routine (`relay:all`). Use it after a restart of the Mac, when the workspaces no longer know their
+  project.
 
 ```
 /plugin install run --marketplace ghostmind-dev/run
