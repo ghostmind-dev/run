@@ -61,6 +61,7 @@ program.version(
 ////////////////////////////////////////////////////////////////////////////////
 
 import commandHerdr from '../lib/herdr.ts';
+import commandPlugins from '../lib/plugins.tsx';
 import commandProjects from '../lib/projects.tsx';
 import commandRoutine from '../lib/routine.ts';
 import commandStart from '../lib/start.ts';
@@ -120,6 +121,7 @@ function deprecationWarning(what: string) {
 ////////////////////////////////////////////////////////////////////////////////
 
 await commandHerdr(program);
+await commandPlugins(program);
 await commandProjects(program);
 await commandRoutine(program);
 await commandStart(program);

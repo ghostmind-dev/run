@@ -1087,7 +1087,7 @@ const REFRESH_MS = 2000;
 /**
  * The colours of the dashboard. A colour left undefined is the terminal's own.
  */
-interface Theme {
+export interface Theme {
   background?: string;
   dialogBackground: string;
   dialogText?: string;
@@ -1116,7 +1116,7 @@ interface Theme {
   stray: string;
 }
 
-const THEMES: Record<string, Theme> = {
+export const THEMES: Record<string, Theme> = {
   navy: {
     background: '#0f1a2b',
     dialogBackground: '#1d3557',
@@ -1222,7 +1222,7 @@ const THEMES: Record<string, Theme> = {
   },
 };
 
-const DEFAULT_THEME = 'navy';
+export const DEFAULT_THEME = 'navy';
 
 /**
  * Where the dashboard keeps what the person chose (the theme)
@@ -1426,7 +1426,7 @@ type ActionKind = 'open' | 'stop' | 'only';
 /**
  * A piece of one screen line, drawn in one style
  */
-interface Segment {
+export interface Segment {
   text: string;
   color?: string;
   background?: string;
@@ -1454,7 +1454,7 @@ const OWN_WORKSPACE = Deno.env.get('HERDR_WORKSPACE_ID');
  * Fill the whole terminal with the dashboard's background colour, so the
  * cells the tree does not cover match it
  */
-function paintBackground(theme: Theme) {
+export function paintBackground(theme: Theme) {
   let colour = '\x1b[49m';
   if (theme.background) {
     const [red, green, blue] = [1, 3, 5].map((at) =>
@@ -1476,7 +1476,7 @@ function isOwn(row: Row): boolean {
   );
 }
 
-function fit(text: string, width: number): string {
+export function fit(text: string, width: number): string {
   return text.slice(0, Math.max(width, 0)).padEnd(Math.max(width, 0));
 }
 

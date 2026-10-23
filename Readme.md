@@ -1,12 +1,13 @@
 # @ghostmind/run
 
-`run` operates a folder full of projects from the terminal. It has three commands:
+`run` operates a folder full of projects from the terminal. It has four commands:
 
 | Command | What it does |
 |---|---|
 | `run projects` | A full-screen dashboard: every project, its herdr workspace, its git state. Open, start and close workspaces from it |
 | `run routine <name>` | Runs a named command from the folder's `meta.json` |
 | `run herdr …` | Builds and closes herdr workspaces from the command line |
+| `run kit` | A control panel for Claude: plugins, skills, agents and MCP servers, searched, inspected, turned on or off everywhere or per project |
 
 Everything `run` knows comes from a `meta.json` file in each project.
 
