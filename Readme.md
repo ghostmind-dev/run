@@ -1,12 +1,13 @@
 # @ghostmind/run
 
-`run` operates a folder full of projects from the terminal. It has three commands:
+`run` operates a folder full of projects from the terminal. It has four commands:
 
 | Command | What it does |
 |---|---|
 | `run projects` | A full-screen dashboard: every project, its herdr workspace, its git state. Open, start and close workspaces from it |
 | `run routine <name>` | Runs a named command from the folder's `meta.json` |
 | `run herdr …` | Builds and closes herdr workspaces from the command line |
+| `run kit` | A control panel for Claude: plugins, skills, agents and MCP servers, searched, inspected, turned on or off everywhere or per project |
 
 Everything `run` knows comes from a `meta.json` file in each project.
 
@@ -258,6 +259,10 @@ A routine is a named command in a folder's `meta.json`:
 ```
 
 `run routine dev` runs it from that folder. With no name, `run routine` asks which one.
+
+The routines of `~/.config/run/meta.json` are global: they run from any folder, in that folder, so each
+machine can keep its own (setting it up, starting the day's tools). A folder's own routine wins over a
+global one with the same name; `run routine -g <name>` runs the global one anyway.
 
 - **There is no shell.** The command is split on spaces. Anything with `cd`, `&&`, pipes, quotes or redirects belongs in a script: write `scripts/migrate.sh` and make the routine `bash scripts/migrate.sh`.
 - `run routine a b` runs several routines at once.

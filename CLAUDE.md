@@ -20,3 +20,9 @@ A version goes out when it reaches `main` (PR from `dev`): `.github/workflows/pu
 JSR as `@ghostmind/run`, then to npm as `@ghostmind-dev/run`, a launcher in `npm/` that runs the JSR release
 of the same version. Bump the version in `deno.json`, `npm/package.json` and
 `plugin/.claude-plugin/plugin.json` together; the workflow refuses to publish when the first two differ.
+
+What the first releases met:
+
+- **JSR refuses an exported function without an explicit return type** (`deno publish`: *missing explicit return type in the public API*, "slow types"). Type every export that `run/main.ts` or `run/bin/cmd.ts` reaches.
+- **npm answers `404 Not Found - PUT …/@ghostmind-dev%2frun`** while the workflow is not yet trusted for the package. It is not a missing package: the owner runs the `npm trust github …` line at the top of `publish.yaml` once, then re-runs the job.
+- **Deno 2.9 refuses a package published less than 24 hours ago** (*blocked by the minimum dependency age policy*). The npm launcher passes `--minimum-dependency-age=0`, detected by trying it, because Deno 2.9.7 accepts the flag without listing it in `--help`. `deno install jsr:@ghostmind/run/cmd` without a version gets the previous release for the first day.

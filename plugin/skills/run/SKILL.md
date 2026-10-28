@@ -1,6 +1,6 @@
 ---
 name: run
-description: How the Ghostmind `run` CLI works - the `run projects` dashboard, herdr workspaces, routines and meta.json. Use when the user mentions `run projects`, `run routine`, `run herdr`, the projects dashboard or TUI, opening, starting or closing a project's workspace, or when writing or editing a meta.json (routines, herdr tabs and panes, a pane's routine or profiles, a project's colour, tags, groups, type project/app), or wants project colours in herdr's sidebar shown or hidden (`run herdr colors`). Also use when a routine fails, a project is missing from the dashboard, or a workspace shows as a stray.
+description: How the Ghostmind `run` CLI works - the `run projects` dashboard, herdr workspaces, routines and meta.json. Use when the user mentions `run projects`, `run routine`, `run herdr`, the projects dashboard or TUI, opening, starting or closing a project's workspace, or when writing or editing a meta.json (routines, herdr tabs and panes, a pane's routine or profiles, a project's colour, tags, groups, type project/app), or wants project colours in herdr's sidebar shown or hidden (`run herdr colors`), or wants to see, search or turn on and off Claude's plugins, skills, agents or MCP servers (`run kit`, alias `run plugins`). Also use when a routine fails, a project is missing from the dashboard, or a workspace shows as a stray.
 ---
 
 # run
@@ -15,6 +15,7 @@ commands and everything it knows comes from each folder's `meta.json`.
 | `run project start [profile]` | Starts the routines of the current folder's project: one profile, or all. What already runs is left alone |
 | `run project status` | What each routine pane of the current folder's project is running |
 | `run herdr …` | Builds and closes herdr workspaces from the command line |
+| `run kit` | The control panel for what Claude loads: plugins, skills, agents, MCP servers. Search, inspect, turn on or off everywhere or in one project |
 
 `run --version` prints the version. `run -p <folder> <command>` runs a command
 as if started in that folder.
@@ -110,6 +111,32 @@ projects.
 
 `run projects --dry-run` shows what each action would do without doing it.
 `run projects --list` prints the table once.
+
+## The control panel: `run kit`
+
+Too many plugins, skills and MCP servers load into every session. `run kit` (alias `run plugins`) lists them all,
+with what each one costs a session in tokens (estimated from its listed name and description), and turns them on or
+off **everywhere** or **here**, in one project. It starts on the project around the current folder; `p` picks another.
+
+| Key | Does |
+|---|---|
+| `/` | Search names, descriptions and sources across every plugin |
+| `tab` | One kind only: plugin, skill, mcp, agent |
+| `enter` | Open a plugin: its skills, agents and MCP servers |
+| `space` / `g` | On or off here / everywhere |
+| `m` / `M` | A standalone skill's mode here / everywhere: on, name only, only by `/name`, off |
+| `o` | Sort by cost |
+
+Where it writes: everywhere is `~/.claude/settings.json` (`enabledPlugins`, `skillOverrides`); here is the project's
+`.claude/settings.local.json` (same keys, wins over the user file, not committed) and, for an MCP server, the
+project's `disabledMcpServers` in `~/.claude.json`. Setting here to what everywhere says removes the project's entry.
+Open sessions see a change after `/reload-plugins`.
+
+**A plugin's skills go on and off with their plugin.** Claude Code reads `skillOverrides` for a plugin skill from
+managed settings only; a user or project entry for `toolkits:ship` does nothing (tried on 2.1.309). Standalone
+skills (`~/.claude/skills`, `.claude/skills`) take their override. An MCP server is turned off per project only.
+
+`run kit --json` prints every item and its state.
 
 ## Asking what is there, as an agent
 
@@ -225,6 +252,7 @@ the current folder. With no name it asks which one.
 
 - **There is no shell.** The command is split on spaces. Anything with `cd`, `&&`, pipes, quotes or redirects goes in `scripts/<name>.sh`, and the routine is `bash scripts/<name>.sh`.
 - `run routine a b` runs several routines at once. A routine cannot call other routines by name.
+- **Global routines**: the `routines` of `~/.config/run/meta.json` can be run from any folder, in that folder. Each machine has its own file (setup, starting the day's tools). A folder's own routine wins over a global one with the same name; `run routine -g <name>` runs the global one anyway. With no name, the list marks the global ones `(global)`.
 
 ## Herdr workspaces
 
