@@ -10,6 +10,7 @@
 
 import { $, cd, within } from 'npm:zx@8.1.0';
 import inquirer from 'npm:inquirer@9.2.22';
+import { join } from 'node:path';
 import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
@@ -28,6 +29,26 @@ $.verbose = false;
 let currentPath = Deno.cwd();
 
 cd(currentPath);
+
+////////////////////////////////////////////////////////////////////////////////
+// GLOBAL ROUTINES
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * The folder of the machine's global meta.json, ~/.config/run
+ */
+export function globalMetaFolder(): string {
+  return join(Deno.env.get('HOME') ?? '.', '.config', 'run');
+}
+
+/**
+ * The routines of the machine's global meta.json (~/.config/run/meta.json),
+ * which run from any folder. Empty when the file does not exist.
+ */
+export async function globalRoutines(): Promise<Record<string, string>> {
+  const metaConfig = await verifyIfMetaJsonExists(globalMetaFolder());
+  return metaConfig?.routines ?? {};
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // GENERATE TREE COMMANDS
@@ -194,34 +215,34 @@ export default async function routine(program: any) {
   routine
     .description('run npm style scripts')
     .argument('[script...]', 'script to run')
-    .action(async (scripts: string[], _options: any) => {
+    .option('-g, --global', 'only the routines of ~/.config/run/meta.json')
+    .action(async (scripts: string[], options: any) => {
       $.verbose = false;
       Deno.env.set('FORCE_COLOR', '1');
 
       let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
-      const routines = metaConfig?.routines;
+      // the folder's own routines win over the global ones of the same name
+      const global = await globalRoutines();
+      const local = options.global ? {} : metaConfig?.routines ?? {};
+      const routines = { ...global, ...local };
 
-      if (!routines) {
+      if (Object.keys(routines).length === 0) {
         console.log('No routines found');
         Deno.exit(0);
       }
 
       // Add interactive script selection when no scripts are provided
       if (scripts.length === 0) {
-        const availableScripts = Object.keys(routines);
-
-        if (availableScripts.length === 0) {
-          console.log('No scripts available to run');
-          Deno.exit(0);
-        }
-
         const { selectedScript } = await inquirer.prompt([
           {
             type: 'list',
             name: 'selectedScript',
             message: 'Select a script to run:',
-            choices: availableScripts,
+            choices: Object.keys(routines).map((name) => ({
+              name: name in local ? name : `${name} (global)`,
+              value: name,
+            })),
           },
         ]);
 
