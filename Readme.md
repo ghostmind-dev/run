@@ -260,9 +260,9 @@ A routine is a named command in a folder's `meta.json`:
 
 `run routine dev` runs it from that folder. With no name, `run routine` asks which one.
 
-The routines of `~/.config/run/meta.json` are global: they run from any folder, in that folder, so each
-machine can keep its own (setting it up, starting the day's tools). A folder's own routine wins over a
-global one with the same name; `run routine -g <name>` runs the global one anyway.
+`run routine -g <name>` (`--global`) runs a routine of `~/.config/run/meta.json` instead: the machine's
+own routines (setting it up, starting the day's tools), run from any folder and in that folder. Without
+the flag, only the folder's `meta.json` is read.
 
 - **There is no shell.** The command is split on spaces. Anything with `cd`, `&&`, pipes, quotes or redirects belongs in a script: write `scripts/migrate.sh` and make the routine `bash scripts/migrate.sh`.
 - `run routine a b` runs several routines at once.

@@ -252,7 +252,7 @@ the current folder. With no name it asks which one.
 
 - **There is no shell.** The command is split on spaces. Anything with `cd`, `&&`, pipes, quotes or redirects goes in `scripts/<name>.sh`, and the routine is `bash scripts/<name>.sh`.
 - `run routine a b` runs several routines at once. A routine cannot call other routines by name.
-- **Global routines**: the `routines` of `~/.config/run/meta.json` can be run from any folder, in that folder. Each machine has its own file (setup, starting the day's tools). A folder's own routine wins over a global one with the same name; `run routine -g <name>` runs the global one anyway. With no name, the list marks the global ones `(global)`.
+- **Global routines**: `run routine -g <name>` (`--global`) runs a routine of `~/.config/run/meta.json` instead of the folder's, from any folder and in that folder. Each machine has its own file (setup, starting the day's tools). `run routine -g` with no name asks which one. Without the flag, only the folder's `meta.json` is read.
 
 ## Herdr workspaces
 
