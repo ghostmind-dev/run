@@ -23,7 +23,7 @@
 
 import { $ } from 'npm:zx@8.1.0';
 import { Command } from 'npm:commander@12.1.0';
-import { setSecretsOnLocal } from '../utils/divers.ts';
+import { globalMetaFolder, setSecretsOnLocal } from '../utils/divers.ts';
 import { argv } from 'node:process';
 import { existsSync } from 'node:fs';
 import denoJson from '../../deno.json' with { type: 'json' };
@@ -65,6 +65,7 @@ import commandPlugins from '../lib/plugins.tsx';
 import commandProjects from '../lib/projects.tsx';
 import commandRoutine from '../lib/routine.ts';
 import commandStart from '../lib/start.ts';
+import commandUpgrade from '../lib/upgrade.ts';
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN ENTRY POINT
@@ -80,11 +81,22 @@ program
   .option('-c, --cible <env context>', 'target environment context')
   .option('-e, --env <env path>', 'path to load env variables from')
   .option('-p, --path <path>', 'run the script from a specific path')
+  .option('-g, --global', "use ~/.config/run/meta.json instead of the folder's")
   .hook('preAction', async (thisCommand: any) => {
-    const { path, cible, env: envPath } = thisCommand.opts();
+    const { path, global, cible, env: envPath } = thisCommand.opts();
 
     if (path) {
       Deno.chdir(path);
+    }
+
+    // The machine's own meta.json stands in for the folder's, for every command
+    if (global) {
+      const folder = globalMetaFolder();
+      if (!existsSync(join(folder, 'meta.json'))) {
+        console.error(`No global meta.json: create ${folder}/meta.json`);
+        Deno.exit(1);
+      }
+      Deno.chdir(folder);
     }
 
     if (cible || envPath) {
@@ -125,6 +137,7 @@ await commandPlugins(program);
 await commandProjects(program);
 await commandRoutine(program);
 await commandStart(program);
+await commandUpgrade(program);
 
 ////////////////////////////////////////////////////////////////////////////////
 // PROGRAM EXIT

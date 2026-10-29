@@ -15,10 +15,13 @@ commands and everything it knows comes from each folder's `meta.json`.
 | `run project start [profile]` | Starts the routines of the current folder's project: one profile, or all. What already runs is left alone |
 | `run project status` | What each routine pane of the current folder's project is running |
 | `run herdr …` | Builds and closes herdr workspaces from the command line |
+| `run upgrade` | Installs the latest release the way `run` was installed (JSR or npm), then updates this plugin. `--check` only compares. A `run` from a checkout says to `git pull` instead |
 | `run kit` | The control panel for what Claude loads: plugins, skills, agents, MCP servers. Search, inspect, turn on or off everywhere or in one project |
 
 `run --version` prints the version. `run -p <folder> <command>` runs a command
-as if started in that folder.
+as if started in that folder. `run -g <command>` (`--global`) does the same with
+the machine's own `~/.config/run/meta.json`, for every command (`run -g routine
+morning`, `run -g herdr init home`). Without `-g` the global file is never read.
 
 ## The dashboard: `run projects`
 
@@ -165,7 +168,7 @@ The table also lists the projects of every machine saved in herdr
 one builds its workspace **on that machine**: its panes and routines run there,
 and herdr shows the workspace in its sidebar under that machine.
 
-- **How it reads them:** this machine runs `run projects --json` on the other one over SSH, about every 10 seconds, and merges the answer. So the other machine needs `run` (0.12 or later), `herdr` and its projects.
+- **How it reads them:** this machine runs `run projects --json` on the other one over SSH, about every 10 seconds, and merges the answer. So the other machine needs `run` (0.12 or later), `herdr` and its projects. `ssh <host> run upgrade` brings its `run` up to date.
 - **How it acts:** Open runs `run herdr init` there; Close runs `herdr workspace close` there. **Close others** only closes workspaces on the machines its targets are on.
 - **When a machine does not answer:** its rows stay, dimmed, with status `offline`, and nothing can be done to them. The header says which machines are online.
 - **The same project on two machines** is two rows: each has its own branch and changes.
@@ -252,7 +255,7 @@ the current folder. With no name it asks which one.
 
 - **There is no shell.** The command is split on spaces. Anything with `cd`, `&&`, pipes, quotes or redirects goes in `scripts/<name>.sh`, and the routine is `bash scripts/<name>.sh`.
 - `run routine a b` runs several routines at once. A routine cannot call other routines by name.
-- **Global routines**: `run routine -g <name>` (`--global`) runs a routine of `~/.config/run/meta.json` instead of the folder's, from any folder and in that folder. Each machine has its own file (setup, starting the day's tools). `run routine -g` with no name asks which one. Without the flag, only the folder's `meta.json` is read.
+- **Global routines**: `run -g routine <name>` runs a routine of `~/.config/run/meta.json`, from any folder. It runs in `~/.config/run`, so a routine that needs another folder goes in a script. Each machine has its own file (setup, starting the day's tools).
 
 ## Herdr workspaces
 

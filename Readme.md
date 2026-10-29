@@ -46,6 +46,10 @@ export RUN_PROJECT=/path/to/projects
 
 Without it, `run projects` uses the folder it is started from.
 
+To upgrade, run `run upgrade`. It finds how `run` was installed (JSR or npm), installs the latest release the
+same way, then updates the Claude plugin. `run upgrade --check` only says whether a newer release is out. A `run`
+installed from a checkout runs its source, so `git pull` there is its upgrade.
+
 ## Quick start
 
 1. Give a project a `meta.json` at its root:
@@ -260,13 +264,20 @@ A routine is a named command in a folder's `meta.json`:
 
 `run routine dev` runs it from that folder. With no name, `run routine` asks which one.
 
-`run routine -g <name>` (`--global`) runs a routine of `~/.config/run/meta.json` instead: the machine's
-own routines (setting it up, starting the day's tools), run from any folder and in that folder. Without
-the flag, only the folder's `meta.json` is read.
+`run -g routine <name>` runs a routine of the machine's own `~/.config/run/meta.json` instead (setting it
+up, starting the day's tools), from any folder. See [The global meta.json](#the-global-metajson).
 
 - **There is no shell.** The command is split on spaces. Anything with `cd`, `&&`, pipes, quotes or redirects belongs in a script: write `scripts/migrate.sh` and make the routine `bash scripts/migrate.sh`.
 - `run routine a b` runs several routines at once.
 - `run -p <folder> routine <name>` runs a routine of another folder.
+
+### The global meta.json
+
+`run -g <command>` (`--global`) works with `~/.config/run/meta.json` instead of the current folder's, for
+every command: `run -g routine morning`, `run -g herdr init home`, `run -g project start`. Each machine has
+its own. It is the same as `run -p ~/.config/run <command>`, so commands run in that folder. Without the
+flag the global file is never read, and a folder without a `meta.json` says so. The flag also goes after
+the command: `run routine -g morning`.
 
 ## Herdr workspaces
 
@@ -349,6 +360,7 @@ run [options] [command]
 
   -v, --version              show version information
   -p, --path <path>          run the command as if started in that folder
+  -g, --global               use ~/.config/run/meta.json instead of the folder's
   -c, --cible <env context>  legacy: load .env.<context> (being removed)
   -e, --env <env path>       legacy: folder to load .env files from (being removed)
 ```
@@ -389,6 +401,11 @@ run herdr colors [on|off]           show or hide each project's colour in herdr'
 
 ```
 run routine [name...]               run routines of the current folder
+```
+
+```
+run upgrade [--check]               install the latest release the way run was installed (JSR or npm), then
+                                    update the Claude plugin; --check only compares versions
 ```
 
 ## Troubleshooting
