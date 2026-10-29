@@ -43,7 +43,7 @@ export function globalMetaFolder(): string {
 
 /**
  * The routines of the machine's global meta.json (~/.config/run/meta.json),
- * which run from any folder. Empty when the file does not exist.
+ * run from any folder with `run routine -g`. Empty when the file does not exist.
  */
 export async function globalRoutines(): Promise<Record<string, string>> {
   const metaConfig = await verifyIfMetaJsonExists(globalMetaFolder());
@@ -215,17 +215,21 @@ export default async function routine(program: any) {
   routine
     .description('run npm style scripts')
     .argument('[script...]', 'script to run')
-    .option('-g, --global', 'only the routines of ~/.config/run/meta.json')
+    .option('-g, --global', 'the routines of ~/.config/run/meta.json')
     .action(async (scripts: string[], options: any) => {
       $.verbose = false;
       Deno.env.set('FORCE_COLOR', '1');
 
       let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
-      // the folder's own routines win over the global ones of the same name
-      const global = await globalRoutines();
-      const local = options.global ? {} : metaConfig?.routines ?? {};
-      const routines = { ...global, ...local };
+      if (!options.global && !metaConfig) {
+        console.log('No meta.json in this folder (-g runs the global routines)');
+        Deno.exit(0);
+      }
+
+      const routines: Record<string, string> = options.global
+        ? await globalRoutines()
+        : metaConfig?.routines ?? {};
 
       if (Object.keys(routines).length === 0) {
         console.log('No routines found');
@@ -239,10 +243,7 @@ export default async function routine(program: any) {
             type: 'list',
             name: 'selectedScript',
             message: 'Select a script to run:',
-            choices: Object.keys(routines).map((name) => ({
-              name: name in local ? name : `${name} (global)`,
-              value: name,
-            })),
+            choices: Object.keys(routines),
           },
         ]);
 
