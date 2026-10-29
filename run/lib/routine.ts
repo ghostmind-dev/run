@@ -10,7 +10,6 @@
 
 import { $, cd, within } from 'npm:zx@8.1.0';
 import inquirer from 'npm:inquirer@9.2.22';
-import { join } from 'node:path';
 import {
   verifyIfMetaJsonExists,
   recursiveDirectoriesDiscovery,
@@ -21,34 +20,6 @@ import {
 ////////////////////////////////////////////////////////////////////////////////
 
 $.verbose = false;
-
-////////////////////////////////////////////////////////////////////////////////
-// RUNNING COMMAND LOCATION
-////////////////////////////////////////////////////////////////////////////////
-
-let currentPath = Deno.cwd();
-
-cd(currentPath);
-
-////////////////////////////////////////////////////////////////////////////////
-// GLOBAL ROUTINES
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * The folder of the machine's global meta.json, ~/.config/run
- */
-export function globalMetaFolder(): string {
-  return join(Deno.env.get('HOME') ?? '.', '.config', 'run');
-}
-
-/**
- * The routines of the machine's global meta.json (~/.config/run/meta.json),
- * run from any folder with `run routine -g`. Empty when the file does not exist.
- */
-export async function globalRoutines(): Promise<Record<string, string>> {
-  const metaConfig = await verifyIfMetaJsonExists(globalMetaFolder());
-  return metaConfig?.routines ?? {};
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 // GENERATE TREE COMMANDS
@@ -83,8 +54,6 @@ export async function generateTreeCommands(
     ////////////////////////////////////////////////////////////////////////////////
     // CURRENT METADATA
     ////////////////////////////////////////////////////////////////////////////////
-
-    let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
     const command = routines[task];
 
@@ -215,21 +184,22 @@ export default async function routine(program: any) {
   routine
     .description('run npm style scripts')
     .argument('[script...]', 'script to run')
-    .option('-g, --global', 'the routines of ~/.config/run/meta.json')
-    .action(async (scripts: string[], options: any) => {
+    .action(async (scripts: string[], _options: any) => {
       $.verbose = false;
       Deno.env.set('FORCE_COLOR', '1');
 
+      // read here, not on import: -p and -g change the folder before this runs
+      const currentPath = Deno.cwd();
+      cd(currentPath);
+
       let metaConfig = await verifyIfMetaJsonExists(currentPath);
 
-      if (!options.global && !metaConfig) {
-        console.log('No meta.json in this folder (-g runs the global routines)');
+      if (!metaConfig) {
+        console.log('No meta.json in this folder (run -g uses the global one)');
         Deno.exit(0);
       }
 
-      const routines: Record<string, string> = options.global
-        ? await globalRoutines()
-        : metaConfig?.routines ?? {};
+      const routines: Record<string, string> = metaConfig.routines ?? {};
 
       if (Object.keys(routines).length === 0) {
         console.log('No routines found');

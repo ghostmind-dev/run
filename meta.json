@@ -18,7 +18,7 @@
         "color": "blue",
         "tabs": [
           {
-            "label": "single",
+            "label": "claude",
             "prefix": false,
             "layout": "compact",
             "compact": {
@@ -27,21 +27,30 @@
             }
           },
           {
-            "label": "quad",
+            "label": "projects",
             "prefix": false,
             "layout": "compact",
             "compact": {
-              "type": "two-by-two",
-              "panes": ["top-left", "top-right", "bottom-left", "bottom-right"]
+              "type": "single",
+              "panes": ["main"]
             }
           },
           {
-            "label": "split",
+            "label": "k9s",
             "prefix": false,
             "layout": "compact",
             "compact": {
-              "type": "vertical",
-              "panes": ["left", "right"]
+              "type": "single",
+              "panes": ["main"]
+            }
+          },
+          {
+            "label": "terminal",
+            "prefix": false,
+            "layout": "compact",
+            "compact": {
+              "type": "single",
+              "panes": ["main"]
             }
           }
         ]
